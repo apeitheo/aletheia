@@ -1,0 +1,595 @@
+.TH ALETHEIA 1 "15 June 2023" "Aletheia User Manual"
+
+.SH NAME
+Aletheia - command-line media player that allows for easy, real-time adjustment of pitch and tempo for a personalized listening experience
+
+.SH SYNOPSIS
+.B aletheia
+[\fI OPTION \fR] [\fI <FILE/DIRECTORY>\fR | \fIKEYWORD \fR]
+
+.SH DESCRIPTION
+Aletheia is a command-line media player with a wide range of features designed to make it easy to adjust pitch and tempo in real-time using customizable intervals, allowing precise control over the playback speed and tonality of media files. It also supports loop creation with customizable start and end points for seamless looping. Aletheia has optional voice feedback and the ability to play videos, import downloads, and export playlists and loops. In addition, it offers various scaling features to smoothly transition between separate intervals.
+
+.SH OPTIONS
+The following options are available:
+
+.TP
+.B --music [\fIKEYWORD\fR]
+Generate random playlist from music found in ~/Music/ that match the optional [KEYWORD].
+
+.TP
+.B --sound [\fIKEYWORD\fR]
+Generate sorted playlist from soundscapes found in ~/Sounds/ that match the optional [KEYWORD].
+
+.TP
+.B --video [\fIKEYWORD\fR]
+Generate sorted playlist from videos found in ~/Videos/ that match the optional [KEYWORD].
+
+.TP
+.B --file [\fIFILE\fR]
+Generate a playlist with just one file.
+
+.TP
+.B --directory [\fIDIRECTORY\fR]
+Generate sorted playlist from media found in specified directory.
+
+.TP
+.B --playlist [\fIFILE\fR]
+Use a playlist file instead of generating one from available media. \fIFILE\fR should be a simple text file with the full paths of each file.
+
+.TP
+.B --version
+Display the version and exit.
+
+.TP
+.B --help
+.RS
+Display a brief synopsis of available command-line options.
+.RE
+
+.SH CONTROLS
+
+.SS MENU
+
+The menu is accessible via the 'i' key and is presented initially when loading Aletheia without any options. Use 'j' and 'k' (or arrow keys) to move the selection down or up, and enter to make a selection. The first three options (Music, Sound, Video) scan ~/Music/, ~/Sounds/, or ~/Videos/ by default and generate a playlist based on available media. The next option, Queue, presents the user with available playlists in ~/.aletheia/playlists/. Type the number listed next to the playlist and push enter to select, or simply push enter to select the top playlist. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference.
+
+.RS 7
+.TP
+.B i
+Toggle main menu.
+
+.RE
+.SS VOICE FEEDBACK
+
+Voice feedback is enabled by default, but can be disabled or enabled in real-time via the 'd' key. To save your selection for next time, use the '#' key. The 'T' key is also available to only speak the artist and track title, rather than general voice feedback.
+
+.RS 7
+.TP
+.B d
+Toggle voice feedback. Enabled by default.
+
+.TP
+.B T
+Toggle artist/title feedback only. Disabled by default.
+
+.TP
+.B I
+Provide voice feedback for one of the four corners of information. Input should be the following: 'u' for PCM and Master volumes (upper left), 'i' for current equalizer settings (upper right), 'j' for interval information (lower left), and 'k' for queue information (lower right).
+
+.TP
+.B #
+Saves all settings, including voice, panels, color, and white invert settings. Asks for confirmation before saving (y/n).
+
+.TP
+.B ,
+Speak the current artist and title of the media.
+
+.SS MAIN SCREEN 
+
+The middle of the screen displays the current playlist and selection, as well as an indicator on the left side that signifies whether a file has a locked interval ($), one or more loops saved (&), or both (#).
+
+.RS 7
+.TP
+.B z
+Redraw Screen. Useful as Aletheia does not currently support automatically adjusting dimensions if the screen is resized.
+
+.TP
+.B ?
+Help screen that shows available key controls. Page down and up via 'j' and 'k' or the arrow keys.
+
+.TP
+.B q
+Used to escape a mode, prompt, or to quit the program if used on the main screen. Quit asks for confirmation before exiting (y/n).
+
+.RE
+In each corner of the screen there are a group of three (3) numbers that represent a different function:
+
+.TP
+.B Upper Left
+PCM (software) and left/right channels of the Master volume. PCM is set to 50 (half) by default.
+
+.RS 7
+.TP
+.B 1, !
+Lower PCM (software) volume by 5% or 1%.
+
+.TP
+.B 2, @
+Raise PCM (software) volume by 5% or 1%.
+
+.TP
+.B 8, *
+Lower Master (hardware) volume by 3% or 1%.
+
+.TP
+.B 9, (
+Raise Master (hardware) volume by 3% or 1%.
+
+.TP
+.B [, {
+Balance Master to the left by 2%.
+
+.TP
+.B ], }
+Balance Master to the right by 2%.
+
+.TP
+.B 0
+Reset to equal balance.
+
+.TP
+.B 3
+Slowly fade PCM volume down or up. Input should be direction to fade. Specify 'j' to fade down, and 'k' to fade up.
+
+.RE
+.TP
+.B Upper Right
+
+Equalizer settings for bass, mid, and treble. Supported range is currently -12 to 12 for each.
+
+.RS 7
+.TP
+.B a
+Set the equalizer settings. Input will be bass first, then mid, and treble. You can use 'j' or 'k' to increase or decrease setting, or input a number from -12 to 12.
+
+.RE
+.TP
+.B Lower Left
+
+Information relating to pitch and playback speed. The first number is the change in music interval (negative numbers slow playback speed and lower pitch; positive numbers speed up playback speed and increase pitch, and 0 indicates no change at all.) The second number is the current EDO, or Equal Division of the Octave. This is the number of steps to the next octave. Finally, the last number is an indicator for whether or not to adjust pitch and speed together (0: default), speed/tempo alone (1), or pitch alone (2). Use 12-EDO (set via '/' key) for semitones, 24-EDO for quarter-tones, etc. The default is 60-EDO.
+
+.RS 7
+.TP
+.B j
+Move down one interval.
+
+.TP
+.B k
+Move up one interval.
+
+.TP
+.B x
+Lock or unlock the current interval change. Creates a small text file that matches the current filename, but with a '.locked' extension.
+
+.TP
+.B J
+Decrease the EDO.
+
+.TP
+.B K
+Increase the EDO.
+
+.TP
+.B v
+Adjust pitch and tempo together (default), tempo alone with pitch locked at original, or pitch alone with tempo locked at original. In the lower left of the screen, the third number is an indicator of this setting with the following options: '0' pitch and tempo together (default), '1' for tempo alone, and '2' for pitch alone.
+
+.RE
+.TP
+.B Lower Right
+
+Information relating to the current queue. First, the current position in the queue, next the total number of media in the queue, and finally a toggle for various playlist functions. '0' indicates no playlist functions, '1' indicates to loop the current file, '2' indicates to loop the current artist, '3' indicates random selection, and '4' indicates to play only files that have had an interval change locked.
+
+.RS 7
+.TP
+.B n
+Skip to the next track.
+
+.TP
+.B b
+Skip to the previous track.
+
+.TP
+.B e
+Toggle between looping a single song or an artist.
+
+.RE
+.SS PLAYLIST CONTROLS
+
+.TP
+.B ;
+Display current playlist. Input a position to jump, or hit 's' to search. Use 'j' and 'k' keys to page down or up, and 'h' and 'l' keys to move the selection down or up respectively. Hit enter to jump to the selection.
+
+.TP
+.B s
+Search and jump to the first file that matches the input keywords in the current queue.
+
+.TP
+.B S
+Start a new playlist with only files that match the input keywords.
+
+.TP
+.B ^f
+Add files matching input keywords to the end of the current playlist.
+
+.TP
+.B Z
+Export current playlist to a playlist file in ~/.aletheia/playlists/ with the input name and can be loaded via the "Queue" option in the menu.
+
+.TP
+.B r
+Rename current file with the given input. Do not add extension (such as .mp3) as it's computed automatically. Be mindful that Aletheia currently hides album and track number in the format "artist - album - track number - title". When renaming, be sure to include the full name and exclude the extension.
+
+.TP
+.B D
+Delete current file from hard disk. Asks for a confirmation (y/n) before removing. WARNING: Will eventually remove from hard disk. Currently moves applicable files to ~/.aletheia/deleted. Use the playlist editor (vim), available via the 'O' key to delist files from the current playlist. For those unaccustomed to vim, to delist a song, you would use the 'j' and 'k' keys to move up and down in the playlist, 'dd' to remove the current file/line, and ':wq' to save and return to Aletheia. There's also 'yy' to copy a line and 'p' to paste. The playlist will be adjusted automatically upon exiting vim.
+
+.TP
+.B A
+Sort the current queue by file path/name while continuing to play the current file.
+
+.TP
+.B R
+Shuffle the current queue while continuing to play the current file in position 1 of the queue.
+
+.TP
+.B O
+Edit the playlist using the VIM editor. Displays the full paths separate by newline. For those unaccustomed to vim, to move the cursor between lines, you would use the 'j' and 'k' keys to move down and up, 'dd' to remove the current line, and ':wq' to save and return to Aletheia. There's also 'yy' to copy a line and 'p' to paste. You can also paste lines deleted using 'dd'. The playlist will be adjusted automatically on save with ':wq'.
+
+.TP
+.B '
+Jump to the first file of the current artist (the first field of a filename delineated by " - ").
+
+.TP
+.B \[dq]
+Jump to the last file of the current artist (the first field of a filename delineated by " - ").
+
+.TP
+.B N
+Jump to the next artist (the first field of a filename delineated by " - ").
+
+
+.TP
+.B B
+Jump to the previous artist (the first field of a filename delineated by " - ").
+
+.TP
+.B ^u
+Turn off/on the playback of saved interval changes. If off, everything starts at interval 0, regardless if a file's been locked or not.
+
+.TP
+.B e
+Toggle between looping single songs and artists.
+
+.TP
+.B E
+Loop current media.
+
+.TP
+.B V
+Loop current artist (the first field of a filename delineated by " - ").
+
+.TP
+.B ^r
+Selects random playback mode.
+
+.TP
+.B $
+Plays only files that have had an interval change locked via 'x'.
+
+.RE
+.SS MEDIA CONTROL
+
+.TP
+.B h, l
+Move backward, or forward in playback.
+
+.TP
+.B p
+Pause playback.
+
+.TP
+.B \\\\
+Restart playback from beginning.
+
+.TP
+.B ^h
+Jump to custom positon set by the '5' key. This position is also currently used as the starting position for the looping function that's accessible via the '6' key and \fILOOP MODE\fR (^e).
+
+.TP
+.B c
+Mute playback.
+
+.TP
+.B 6, ^e
+\'6\' enters loop mode for the current media, whereas '^e' enters \fILOOP MODE\fR, continuing to do so until disabled with the 'q' key. See \fILOOP MODE\fR for more information.
+
+.TP
+.B P
+Displays a progress bar at the bottom of the screen. Currently supports only a subset of secondary functions, like pause, interval controls ('j' and 'k'), and seek controls ('h' and 'l') and can not be enabled by default.
+
+.RE
+.SS INTERVAL/SPEED CONTROL
+
+Aletheia includes support for adjusting by music intervals rather than the conventional way of altering pitch and playback speed. The first two numbers on the lower left of the screen are the shift in interval and EDO (equal division of the octave). The default EDO is 60 (60 steps to the next octave). Each interval down transposes the file down by 1/60. -60/60 would be an entire octave down from the original, for example. 15/60 would be one fourth of an octave up from the original.
+
+To increase precision use the 'o' key to double the EDO and adjust interval accordingly, and 'm' to halve the EDO (loses precision). This is useful for stepping between the steps that are available in 60-EDO. You can continue to increase precision until you no longer hear any noticeable audible difference in steps. 
+
+.RS 7
+.TP
+.B j, k
+Transpose down or up one interval.
+
+.TP
+.B x
+Lock or unlock the current interval change for the current file. Creates a file in the same directory as the media files with the same name but with a '.locked' extension.
+
+.TP
+.B J, K
+Decrease or increase the EDO by one.
+
+.TP
+.B v
+Adjust pitch and speed together or just speed of playback with pitch locked at original. '1' is speed only, '0' is pitch and speed (default).
+
+.TP
+.B o, m
+Increase or decrease precision in interval steps (double or halve interval/EDO).
+
+.TP
+.B H, L
+Normal precision (60-EDO, by default), or full precision (1966080-EDO, by default).
+
+.TP
+.B .
+Set a custom interval. Input should be a number between -156 and 120 (in default 60-EDO).
+
+.TP
+.B /
+Set a custom EDO, and adjust interval accordingly. Input should be a number above 0. Possible options include 12 for semitones, 24 for quartertones, and so on. Can lose precision if the selected EDO is smaller.
+
+.TP
+.B w
+Reset the interval change and EDO to what is in the media's .locked file.
+
+.TP
+.B y
+Reset to 60-EDO, and adjust interval accordingly.
+
+.TP
+.B _, +
+Jump to exactly one octave down, or one up, or to the limit. For example, at 0:45, '_' would jump to -45:45, and '_' again would jump to -90:45, etc.
+
+.TP
+.B M
+Invert the interval change from positive to negative and vice versa. For example, -10:45 would become 10:45.
+
+.TP
+.B Y
+Jump to interval 0 or return to the previous interval.
+
+.RE
+.SS SCALE CONTROLS
+
+These key controls allow for a steady increase or decrease in interval/speed.
+
+.RS 7
+.TP
+.B u
+Scale interval either down or up. Input should be an interval or either 'j' or 'k'. Help menu is available via '?'.
+
+.TP
+.B U
+Scale EDO either down or up. Input should be an interval or either 'j' or 'k'. Automatically adjusts interval in real-time.
+
+.TP
+.B t
+Scale to interval 0, or scale back to previous interval.
+
+.TP
+.B g
+Scale to the invert of current interval.
+
+.TP
+.B -, =
+Scale to one octave down, or one up, or to the limit. For example, at 0:45, '_' would scale to -45:45, and '_' again would jump to -90:45, etc.
+
+.TP
+.B G
+Oscillate between the current interval and another at current scaling speed (set/reset via the 'X' key), or the current interval's inverse, if enter is pushed at the prompt. Input should be an interval, or hit enter for the current interval's inverse.
+
+.TP
+.B X
+Set or reset the scaling speed. Default is 0.2 seconds. Input should be a number above 0.
+
+.RE
+.SS LOOP MODE
+
+This mode allows for seamless looping over a section of a song. Instead of the normal queue information in the lower right of the screen, a set of three numbers are displayed that indicate the starting position (in seconds), the ending position (in seconds), and the pause/gap between loop iterations (in 1/12th of a second).
+
+To enable, wait until the desired section begins to play and press '5' to select to the start position, and then '7' to set the end position. '6' enters loop mode for the current song, while '^e' enables LOOP MODE until exit with the 'q' key. Loop mode only works if there is a set loop (using both '5' and '7' keys) or a saved loop. Otherwise, loop mode will skip over tracks that do not have anything saved.
+
+.RS 7
+.TP
+.B s, S
+Move start position backward by 0.05 or 0.01.
+
+.TP
+.B f, F
+Move start position forward by 0.05 or 0.01.
+
+.TP
+.B h, H
+Move end position backward by 0.05 or 0.01.
+
+.TP
+.B l, L
+Move end position forward by 0.05 or 0.01.
+
+.TP
+.B 6
+Switch to the next saved loop.
+
+.TP
+.B Z
+Export the current loop to its own file. Input should be how many times to loop after the initial playback.
+
+.TP
+.B &
+Save the current loop in a file with the same name as media with a .repeats extension.
+
+.TP
+.B ^x
+Update the current loop with the new parameters.
+
+.TP
+.B ,
+Decrease the silence by 1/12th of a second between each loop iteration. Useful for creating seamless transition when a small pause is required.
+
+.TP
+.B .
+Increase the silence by 1/12th of a second between each loop iteration. Useful for creating seamless transition when a small pause is required.
+
+.RE
+.SS VIDEO CONTROL
+
+.RS 7
+.TP
+.B < 
+Enable the video stream of the current media file. Automatically restarts playback.
+
+.TP
+.B >
+Enable fullscreen video. Disabled by default.
+
+.TP
+.B ^t
+Enable "Always on Top" for the video window to allow for control of Aletheia while watching the video in the background.
+
+.RE
+.SS MANAGE DOWNLOADS
+
+.RS 7
+.TP
+.B W 
+Add new files (to ~/Music/, for example) to the end of the current playlist.
+
+.TP
+.B ^w 
+Jump to the first new file.
+
+.TP
+.B ^n
+Combines the above two actions to add and jump to new files.
+
+.RE
+.SS SLEEP MODE
+
+The '~' key enables sleep mode (fade volume & optionally suspend) for the current file. It first asks the time to wait until sleeping, and then asks if you'd like to suspend as well (y/n), or simply fade volume and exit Aletheia. Once sleep mode is enabled, pressing any key will cancel sleep and bring you back to the main screen.
+
+.SH CONFIGURATION
+
+Located in ~/.aletheia/config and includes several options. Several controls are also available for customizing the appearance and voice feedback.
+
+.TP
+.B ^p
+Toggles the display of panels on the top and bottom of screen, as well as a panel behind the current file on the main screen.
+
+.TP
+.B ^o
+Inverts the use of white text so that light terminal themes can be used in addition to dark.
+
+.TP
+.B ^y
+Toggles the use of color. Panels are needed when color is disabled to see the playlist selection on the main screen.
+
+.TP
+.B #
+Saves all settings, including voice, panels, color, and white invert settings. Asks for confirmation before saving (y/n).
+
+.SH FILES
+.TP
+.B ~/.aletheia/config
+The Aletheia configuration file.
+
+.TP
+.B ~/.aletheia/playlists/
+The Aletheia playlists directory.
+
+.TP
+.B ~/.aletheia/voices/
+The cache directory for the voice files
+
+.TP
+.B ~/.aletheia/deleted/
+The directory where deleted files are sent. In the future, it may be an option whether to delete permanently, or to move to this directory.
+
+.SH AVAILABLE CONFIGURATION OPTIONS
+Format of ~/.aletheia/config is KEY=VALUE separated by newline. Comments are not currently supported, but will be in the future. Do not add quotes around VALUE. Case is insensitive. '#' not required for hex color codes.
+
+.TP
+.B VOICE_ENABLED=
+Status of voice feedback. Input: true or false. (Default: false).
+
+.TP
+.B BLACK_BACKGROUND=
+Useful to specify whether to darken light text if terminal background color is light. Input: true or false (Default: true).
+
+.TP
+.B DEFAULT_EQUALIZER=
+10 numbers from -12 to 12 separated by a colon (':'). For example, DEFAULT_EQUALIZER=5:5:5:2:2:2:2:2:2:2 Bass are the left three numbers, followed by mid, which are the center four numbers, and finally treble with the last three numbers. Currently Aletheia does not support fine-grain control of the equalizer from within the program, but this option is available in the meantime. (Default: 0:0:0:0:0:0:0:0:0:0).
+
+.TP
+.B VOICE_PITCH=
+Transpose voice feedback by this value in 60-EDO. Input -156 to 120, but should be within reason. Caches all voice feedback clips in the specified interval in ~/.aletheia/voices/. (Default: 0).
+
+.TP
+.B DEFAULT_VOLUME=
+Default software volume level. Input: 0 to 100 (Default: 50).
+
+.TP
+.B ONLY_VOICE_TITLES=
+In lieu of full voice feedback, speak only track title. Input: true or false (Default: false).
+
+.TP
+.B COLORS_ENABLED=
+Whether to use color or simply white, or black text depending on BLACK_BACKGROUND= setting. Input: true or false. (Default: true).
+
+.TP
+.B PANELS_ENABLED=
+Status of panels for the top and bottom of the screen, as well as for the current selection. Input: true or false. (Default: false).
+
+.TP
+.B VOICE_VOLUME=
+Volume of voice compared to system. Input: 0.0 to 1.0. (Default: 0.3).
+
+.TP
+.B COLOR_HIGHLIGHT=
+Hex color code for the primary color. (Default: )
+
+.TP
+.B COLOR_SELECTED=
+Hex color code for selected items (Default: )
+
+.TP
+.B COLOR_UNSELECTED=
+Hex color code for the secondary color (Default: )
+
+.SH SEE ALSO
+.TP
+.B mplayer(1), aletheiactl(1)
+
+.SH AUTHOR
+Brad Hermanson.
+
+.SH BUGS
+Report bugs to apeitheo@gmail.com

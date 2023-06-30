@@ -1,0 +1,10 @@
+#!/bin/bash
+
+sudo rm -f /usr/local/bin/aletheia
+sudo rm -f /usr/local/share/man/man1/aletheia.1
+sudo rm -f /usr/share/icons/aletheia.png
+if [ -e "/usr/local/bin/aletheia" ] || [ -e "/usr/local/share/man/man1/aletheia.1" ] || [ -e "/usr/share/icons/aletheia.png" ]; then
+	echo -e "\033[1;31mUninstall not successful\033[0m"
+else
+	echo -e "\033[1;36mAletheia successfully uninstalled\033[0m"
+fi

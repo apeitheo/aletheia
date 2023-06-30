@@ -1,0 +1,128 @@
+#!/bin/bash
+
+GREEN="\033[1;32m"
+BLUE="\033[1;36m"
+NOCOLOR="\033[0m"
+MAGENTA="\033[1;35m"
+RED="\033[1;31m"
+
+DESTDIR=${DESTDIR:-/usr/local}
+
+quit=false
+
+echo -ne "${GREEN}Aletheia `cat aletheia | grep \"VERSION=\" | cut -d'\"' -f2`\n\n"
+echo -ne "${BLUE}Checking for dependencies...\n\n"
+
+echo -ne "${NOCOLOR}checking for pactl... "
+if [ "`which pactl 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	#exit 0
+	quit=true
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for calc... "
+if [ "`which calc 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	#exit 0
+	quit=true
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for bc... "
+if [ "`which bc 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	#exit 0
+	quit=true
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for gtts-cli... "
+if [ "`which gtts-cli 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for play... "
+if [ "`which play 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for espeak-ng... "
+if [ "`which espeak-ng 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for sox... "
+if [ "`which sox 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for ffprobe... "
+if [ "`which ffprobe 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
+echo -ne "${NOCOLOR}checking for mplayer... "
+if [ "`which mplayer 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
+if [ "$quit" == true ]; then
+	echo -ne "\n${RED}Error: Unresolved dependencies$NOCOLOR\n"
+	exit 1
+fi
+
+if [ ! -w "$DESTDIR" ]; then
+	echo -ne "\n${BLUE}Sudo password required to install in $DESTDIR\n\n$NOCOLOR"
+fi
+
+#export $DESTDIR
+#sudo make install_aletheia
+sudo mkdir -p "$DESTDIR/bin/"
+sudo mkdir -p "$DESTDIR/share/icons/"
+sudo mkdir -p "$DESTDIR/share/man/man1/"
+sudo install -m 755 aletheia "$DESTDIR/bin/"
+sudo install -m 444 aletheia.png "$DESTDIR/share/icons/"
+sudo install -m 644 aletheia.1 "$DESTDIR/share/man/man1/"
+#install -m 555 xfce4-terminal.desktop $(DESTDIR)/share/applications/
+sudo chown root:root "$DESTDIR/bin/aletheia"
+sudo chown root:root "$DESTDIR/share/icons/aletheia.png"
+sudo chown root:root "$DESTDIR/share/man/man1/aletheia.1"
+#chown root:root $(DESTDIR)/share/applications/xfce4-terminal.desktop
+sudo mandb
+echo ""
+echo -e "${GREEN}Aletheia successfully installed in:$NOCOLOR"
+echo ""
+echo "${DESTDIR}/bin/aletheia"
+echo "${DESTDIR}/share/icons/aletheia.png"
+echo "${DESTDIR}/share/man/man1/aletheia.1"
+echo ""
+echo -e "${GREEN}Use ./uninstall to remove$NOCOLOR"
+echo ""
