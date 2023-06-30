@@ -3711,12 +3711,34 @@ main_menu() {
 				if [ "$tmp_z" != "" ]; then
 					z=$tmp_z
 				else
+					new_LINES=`tput lines`
+					new_COLS=`tput cols`
+					if [ "$new_LINES" != "$LINES" ] || [ "$new_COLS" != "$COLS" ]; then
+						COLS=$new_COLS
+						LINES=$new_LINES
+						draw_wait
+						#reset_dimensions
+						#redraw_screen false
+						#if [ "$MUTE" == true ]; then
+						#	draw_banner "MUTE"
+						#elif [ "$PAUSE" == true ]; then
+						#	draw_banner "PAUSE"
+						#fi
+						#espeak_say_natural "screen redrawn"
+						screen_redrawn=true
+						break
+					else
+						screen_redrawn=false
+					fi
 					read -rsn1 -t 0.25 z
 					if [ "$?" == "0" ]; then
 						break
 					fi
 				fi
 			done
+		fi
+		if [ "$screen_redrawn" == true ]; then
+			continue
 		fi
 		if [ "$z" == "j" ]; then
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
@@ -10404,6 +10426,21 @@ master() {
 	#IFS=$'\n'
 	#ticker=1
 	while true; do
+		new_LINES=`tput lines`
+		new_COLS=`tput cols`
+		if [ "$new_LINES" != "$LINES" ] || [ "$new_COLS" != "$COLS" ]; then
+			COLS=$new_COLS
+			LINES=$new_LINES
+			draw_wait
+			reset_dimensions
+			redraw_screen false
+			if [ "$MUTE" == true ]; then
+				draw_banner "MUTE"
+			elif [ "$PAUSE" == true ]; then
+				draw_banner "PAUSE"
+			fi
+			espeak_say_natural "screen redrawn"
+		fi
 		#ticker=$(($ticker+1))
 		#if [ "$(($ticker%6))" == "0" ] && [ "$input" != "j" ] && [ "$input" != "k" ] && [ "$input" != "J" ] && [ "$input" != "K" ] && [ "$input" != "v" ]; then
 		#	draw_volume
