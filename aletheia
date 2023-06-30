@@ -980,12 +980,12 @@ set_loop() {
 		LOOP_ARTIST=false
 		TRACK_RANDOM=false
 		ONLY_LOCKED=false
-		echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe" &
+		echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "LOOP SONG"
 	else
 		espeak_say_natural "loop off"
 		LOOP=false
-		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "RESET"
 	fi
 	#stty -echo
@@ -1021,7 +1021,7 @@ set_loop_artist() {
 		espeak_say_natural "loop off"
 		LOOP=false
 		LOOP_ARTIST=false
-		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "RESET"
 	#	QBUFFER="$ORIG_QBUF"
 	#	TOTAL_QUEUE="`echo -ne \"$QBUFFER\" | wc -l`"
@@ -1179,7 +1179,7 @@ set_only_locked() {
 					POSITION="$tmp"
 				fi
 			fi
-			echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+			echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 			draw_banner "ONLY LOCKED"
 			reset_buffer
 			redraw_buffer
@@ -1279,7 +1279,7 @@ track_toggle() {
 		set_loop true
 	#elif [ "$LOOP_ARTIST" == false ] && [ "$TRACK_RANDOM" == false ] && [ "$ONLY_LOCKED" == false ]; then
 	elif [ "$LOOP_ARTIST" == false ]; then
-		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		set_loop_artist true
 	#elif [ "$TRACK_RANDOM" == false ] && [ "$ONLY_LOCKED" == false ]; then
 	#	set_random true
@@ -1352,7 +1352,7 @@ about() {
 
 	if [ "$VOICE_ENABLED" == true ]; then
 		#if [ "$PAUSE" == false ]; then
-		#	echo -e "pause" >"$ALETHEIA/pipe" &
+		#	echo -e "pause" >"$ALETHEIA/pipe$$" &
 		#fi
 
 		#killall espeak-ng play gtts-cli >/dev/null 2>/dev/null
@@ -1466,17 +1466,17 @@ set_scale_speed() {
 less_precise() {
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 	fi
 	while [ "$EDO" -gt "$LOCKED_EDO" ]; do
 		INTERVAL="$(($INTERVAL/2))"
 		EDO="$(($EDO/2))"
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		draw_pitch
 		sleep 0.01
 	done
-	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	draw_pitch
 	#INTERVAL_LIMIT=$(($EDO * 3))
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
@@ -1488,20 +1488,20 @@ more_precise() {
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
 		MUTE=false
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 	fi
 	while [ "$EDO" -lt "$EDO_LIMIT" ]; do
 		if [ "$INTERVAL" -lt "$EDO_LIMIT" ]; then
 			INTERVAL="$(($INTERVAL*2))"
 			EDO="$(($EDO*2))"
-			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			draw_pitch
 			sleep 0.01
 		else
 			break
 		fi
 	done
-	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	draw_pitch
 	#INTERVAL_LIMIT=$(($EDO * 3))
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
@@ -1512,7 +1512,7 @@ more_precise() {
 zero_interval_jump() {
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 		draw_pitch
 	fi
@@ -1521,13 +1521,13 @@ zero_interval_jump() {
 		SAVED_EDO="$EDO"
 		INTERVAL="$DEFAULT_INTERVAL"
 		EDO="$SAVED_EDO"
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		#espeak_say_natural " $INTERVAL of $EDO"
 	else
 		if [ "$SAVED_INTERVAL" != "" ]; then
 			INTERVAL="$SAVED_INTERVAL"
 			EDO="$SAVED_EDO"
-			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			#espeak_say_natural " $INTERVAL of $EDO"
 		else
 			#continue
@@ -1546,15 +1546,15 @@ draw_loop() {
 }
 
 repeat() {
-	echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe" &
-	echo "get_time_length" >"$ALETHEIA/pipe" &
+	echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
+	echo "get_time_length" >"$ALETHEIA/pipe$$" &
 	sleep 0.2
 	TOTAL_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 	if [ "`isnum \"$TOTAL_TIME\"`" == "0" ] || [ "`echo -e \"$TOTAL_TIME < 0.1\" | bc`" == "1" ]; then
 		TOTAL_TIME=0.1
 	fi
 	if [ "$REPEAT_ONLY" == true ]; then
-		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 	fi
 	if [ "$REPEAT_ONLY" == false ]; then
 		espeak_say_natural "loop $REPEAT_CURRENT of $REPEAT_TOTAL"
@@ -1625,7 +1625,7 @@ repeat() {
 			draw_pitch
 			draw_position
 			if [ "$LOOP" == false ]; then
-				echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+				echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 			fi
 			return 200
 		fi
@@ -1660,9 +1660,9 @@ repeat() {
 				x=0
 				if [ "$throwaway" == "" ]; then
 					if [ "$space" -gt "0" ]; then
-						echo -e "pause" >"$ALETHEIA/pipe" &
+						echo -e "pause" >"$ALETHEIA/pipe$$" &
 						read -rsn1 -t `calc "$space/12" | sed -e "s/\t//g" | cut -d'~' -f2` throwaway
-						echo -e "pause" >"$ALETHEIA/pipe" &
+						echo -e "pause" >"$ALETHEIA/pipe$$" &
 					fi
 				fi
 				if [ "$throwaway" != "" ]; then
@@ -1674,7 +1674,7 @@ repeat() {
 				#time="`calc \"($etime-$CURRENT_TIME)*($s)\" | sed -e \"s/\t//g\" | cut -d'~' -f2`"
 				#s="`calc \"1/(2^($INTERVAL/$EDO))\" | sed -e \"s/\t//g\" | cut -d'~' -f2`"
 				new_flaggy=false
-				echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+				echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 				time_before=`date +%s.%N`
 				if [ "$scale" == true ]; then
 					#if [ "$scale_down" == true ]; then
@@ -1682,7 +1682,7 @@ repeat() {
 					#elif [ "$scale_down" == false ]; then
 					#	INTERVAL=$(($INTERVAL+1))
 					#fi
-					#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$$! &
 
 					#LOCKED=false
 					#draw_pitch
@@ -1697,7 +1697,7 @@ repeat() {
 					#	elif [ "$scale_down" == false ]; then
 					#		INTERVAL=$(($INTERVAL+1))
 					#	fi
-					#	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					#	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					#	draw_pitch
 					#fi
 
@@ -1727,7 +1727,7 @@ repeat() {
 						old_time_before=$time_before
 						time_before=`date +%s.%N`
 						if [ "$skip" == false ]; then
-							echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+							echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 						else
 							skip=false
 						fi
@@ -1885,14 +1885,14 @@ repeat() {
 				draw_loop
 
 				if [ "`echo -e \"$(calc \"$etime-$CURRENT_TIME\") < 1.5\" | bc`" == "1" ]; then
-					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 -t $time throwaway
 					else
 						read -rsn1 -t $time throwaway <$ALETHEIA/input_fifo
 					fi
 				else
-					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe" &
+					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2`  throwaway
 					else
@@ -2018,7 +2018,7 @@ repeat() {
 				draw_pitch
 				draw_position
 				if [ "$LOOP" == false ]; then
-					echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+					echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 				fi
 				break
 			elif [ "$throwaway" == "a" ]; then
@@ -2201,7 +2201,7 @@ repeat() {
 				#	loops_flagged=false
 				#fi
 				if [ "$LOOP" == false ]; then
-					echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+					echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 				fi
 				return 200
 			#	old_time_before=$time_before
@@ -2215,7 +2215,7 @@ repeat() {
 			#		read -n1 throwaway_
 			#		if [ "$throwaway_" == "y" ]; then
 			#			echo -ne "$NOCOLOR"
-			#			echo "quit 0" >$ALETHEIA/pipe &
+			#			echo "quit 0" >$ALETHEIA/pipe$$ &
 			#			kill $MPLAYER_PID >/dev/null 2>/dev/null
 			#			clear
 			#			stty echo
@@ -2303,18 +2303,18 @@ repeat() {
 				time_before=`date +%s.%N`
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 				fi
 				orig_orig_old_s="`calc \"(2^($INTERVAL/$EDO))\" | sed -e \"s/\t//g\"`"
 				INTERVAL="$((-($INTERVAL)))"
-				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				orig_old_s="`calc \"(2^($INTERVAL/$EDO))\" | sed -e \"s/\t//g\"`"
 				#espeak_say_natural " $INTERVAL $EDO"
 				#if [ "$SCALETEMPO" == true ]; then
 				#	SCALETEMPO=false
-				#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-					#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+				#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+					#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 				#fi
 				draw_pitch
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
@@ -2356,14 +2356,14 @@ repeat() {
 				#echo -ne "$BLUE_BLACK$CURRENT_TIME$WHITE_BLACK:$BLUE_BLACK$etime$WHITE_BLACK:$BLUE_BLACK$space"
 				draw_loop
 				if [ "`echo -e \"$(calc \"$etime-$CURRENT_TIME\") < 1.5\" | bc`" == "1" ]; then
-					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t $time throwaway
 					else
 						read -n1 -t $time throwaway <$ALETHEIA/input_fifo
 					fi
 				else
-					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe" &
+					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2`  throwaway
 					else
@@ -2381,14 +2381,14 @@ repeat() {
 				#echo -ne "$BLUE_BLACK$CURRENT_TIME$WHITE_BLACK:$BLUE_BLACK$etime$WHITE_BLACK:$BLUE_BLACK$space"
 				draw_loop
 				if [ "`echo -e \"$(calc \"$etime-$CURRENT_TIME\") < 1.5\" | bc`" == "1" ]; then
-					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t $time throwaway
 					else
 						read -n1 -t $time throwaway <$ALETHEIA/input_fifo
 					fi
 				else
-					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe" &
+					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2`  throwaway
 					else
@@ -2423,35 +2423,35 @@ repeat() {
 				if [ "$throwaway" == "2" ]; then
 					if [ "$VOLUME" -le "95" ]; then
 						VOLUME=$(($VOLUME+5))
-						echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					espeak_say_natural "$VOLUME"
 				elif [ "$throwaway" == "1" ]; then
 					if [ "$VOLUME" -ge "5" ]; then
 						VOLUME=$(($VOLUME-5))
-						echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					espeak_say_natural "$VOLUME"
 				elif [ "$throwaway" == "@" ]; then
 					if [ "$VOLUME" -le "99" ]; then
 						VOLUME=$(($VOLUME+1))
-						echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					espeak_say_natural "$VOLUME"
 				elif [ "$throwaway" == "!" ]; then
 					if [ "$VOLUME" -ge "1" ]; then
 						VOLUME=$(($VOLUME-1))
-						echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					espeak_say_natural "$VOLUME"
 				elif [ "$throwaway" == "8" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
-						echo "mute" >$ALETHEIA/pipe &
+						echo "mute" >$ALETHEIA/pipe$$ &
 						MUTE=false
 						draw_pitch
 					fi
@@ -2459,7 +2459,7 @@ repeat() {
 				elif [ "$throwaway" == "9" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
-						echo "mute" >$ALETHEIA/pipe &
+						echo "mute" >$ALETHEIA/pipe$$ &
 						MUTE=false
 						draw_pitch
 					fi
@@ -2467,7 +2467,7 @@ repeat() {
 				elif [ "$throwaway" == "*" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
-						echo "mute" >$ALETHEIA/pipe &
+						echo "mute" >$ALETHEIA/pipe$$ &
 						MUTE=false
 						draw_pitch
 					fi
@@ -2475,7 +2475,7 @@ repeat() {
 				elif [ "$throwaway" == "(" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
-						echo "mute" >$ALETHEIA/pipe &
+						echo "mute" >$ALETHEIA/pipe$$ &
 						MUTE=false
 						draw_pitch
 					fi
@@ -2555,14 +2555,14 @@ repeat() {
 			elif [ "$throwaway" == "e" ]; then
 				#espeak_say_natural "Ends"
 				if [ "`echo -e \"$(calc \"$etime-$CURRENT_TIME\") < 1.5\" | bc`" == "1" ]; then
-					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+					echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t $time throwaway
 					else
 						read -n1 -t $time throwaway <$ALETHEIA/input_fifo
 					fi
 				else
-					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe" &
+					echo "seek `calc \"$etime-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2`  throwaway
 					else
@@ -2574,11 +2574,11 @@ repeat() {
 				flagged=false
 			elif [ "$throwaway" == "q" ]; then
 				if [ "$LOOP" == false ]; then
-					echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+					echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 				fi
 				break
 			elif [ "$throwaway" == "5" ]; then
-				echo "get_time_pos" >"$ALETHEIA/pipe" &
+				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.7
 				CURRENT_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 				#espeak_say_natural " $CURRENT_TIME"
@@ -2592,7 +2592,7 @@ repeat() {
 				flagged=false
 			elif [ "$throwaway" == "7" ]; then
 				#espeak_say_natural "end"
-				echo "get_time_pos" >"$ALETHEIA/pipe" &
+				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.7
 				etime="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 				#espeak_say_natural " $etime"
@@ -2690,7 +2690,7 @@ repeat() {
 					draw_pitch
 					draw_position
 					if [ "$LOOP" == false ]; then
-						echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+						echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 					fi
 					break
 				fi
@@ -2726,7 +2726,7 @@ repeat() {
 				time_before=`date +%s.%N`
 				#PAUSE=false
 				#if [ "$MUTE" == true ]; then
-				#	echo "mute" >$ALETHEIA/pipe &
+				#	echo "mute" >$ALETHEIA/pipe$$ &
 				#	MUTE=false
 				#	draw_pitch
 				#fi
@@ -2742,7 +2742,7 @@ repeat() {
 				#INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 				#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
 				#espeak_say_natural " $INTERVAL of $EDO"
-				#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				set_default_edo
 				time_x=`date +%s.%N`
 				LOCKED=false
@@ -2774,7 +2774,7 @@ repeat() {
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -2787,7 +2787,7 @@ repeat() {
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -3011,7 +3011,7 @@ repeat() {
 		draw_pitch
 		draw_position
 		if [ "$LOOP" == false ]; then
-			echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe" &
+			echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		fi
 		return 200
 	fi
@@ -3050,7 +3050,7 @@ zero_interval() {
 	
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 	fi
 
@@ -3119,7 +3119,7 @@ zero_interval() {
 			elif [ "$c" == "" ]; then
 				old_int="$(($old_int-1))"
 				INTERVAL="$(($INTERVAL-1))"
-				echo -e "speed_set `calc \"2^($old_int/$old_edo)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($old_int/$old_edo)\"`" >$ALETHEIA/pipe$$ &
 			fi
 			draw_pitch 1
 		done
@@ -3165,7 +3165,7 @@ zero_interval() {
 			elif [ "$c" == "" ]; then
 				old_int="$(($old_int+1))"
 				INTERVAL="$(($INTERVAL+1))"
-				echo -e "speed_set `calc \"2^($old_int/$old_edo)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($old_int/$old_edo)\"`" >$ALETHEIA/pipe$$ &
 				draw_pitch 1
 			fi
 		done
@@ -3315,7 +3315,7 @@ scale_edo() {
 		draw_pitch
 		PAUSE=false
 		if [ "$MUTE" == true ]; then
-			echo "mute" >$ALETHEIA/pipe &
+			echo "mute" >$ALETHEIA/pipe$$ &
 			MUTE=false
 		fi
 		original_edo="$EDO"
@@ -3353,7 +3353,7 @@ scale_edo() {
 					#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
 					#temp="`calc \"$EDO/$orig_edo\" | cut -d'~' -f2`"
 					#INTERVAL="`echo \"$orig_interval*$temp\" | bc | cut -d'~' -f2 |  cut -d'.' -f1`"
-					#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					#draw_pitch
 				elif [ "$c" == "j" ]; then
 					orig_interval=$INTERVAL
@@ -3384,7 +3384,7 @@ scale_edo() {
 					if [ "$EDO" == "1" ]; then
 						flaggy=true
 					fi
-					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					draw_pitch
 				fi
 				if [ "$EDO" == "$stopat" ]; then
@@ -3430,7 +3430,7 @@ scale_edo() {
 
 					#temp="`calc \"$orig_edo/$EDO\" | cut -d'~' -f2`"
 					#INTERVAL="`echo \"$orig_interval*$temp\" | bc | cut -d'~' -f2 |  cut -d'.' -f1`"
-					#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					#draw_pitch
 				elif [ "$c" == "j" ]; then
 					orig_interval=$INTERVAL
@@ -3464,7 +3464,7 @@ scale_edo() {
 					if [ "$INTERVAL" == "0" ]; then
 						flaggy=true
 					fi
-					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					draw_pitch 2
 				fi
 				if [ "$EDO" == "$stopat" ]; then
@@ -3688,9 +3688,8 @@ main_menu() {
 			tput cup $first
 
 			echo -ne "$menu_buf"
-			belowmenu=$(($LINES-($LINES-6-${TOTAL_OPTS})))
 
-			for i in `seq $belowmenu $(($LINES-2))`; do
+			for i in `seq $(($first+$TOTAL_OPTS+2)) $(($LINES-2))`; do
 				tput cup $i
 				tput el
 			done
@@ -4604,7 +4603,7 @@ scale() {
 		draw_pitch
 		PAUSE=false
 		if [ "$MUTE" == true ]; then
-			echo "mute" >$ALETHEIA/pipe &
+			echo "mute" >$ALETHEIA/pipe$$ &
 			MUTE=false
 		fi
 		orig_int="$INTERVAL"
@@ -4638,8 +4637,8 @@ scale() {
 					if [  "$backwards" == true ] && [ "$c" != "c" ]; then
 						#if [ "$INTERVAL" == "0" ] && [ "$SCALETEMPO" == true ]; then
 						#	SCALETEMPO=false
-						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 						#fi
 						INTERVAL="$(($INTERVAL-1))"
 					elif [ "$backwards" == true ] && [ "$c" == "c" ]; then
@@ -4648,8 +4647,8 @@ scale() {
 					else 
 						#if [ "$INTERVAL" == "0" ] && [ "$SCALETEMPO" == true ]; then
 						#	SCALETEMPO=false
-						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 						#fi
 						backwards=true
 						interval_change="$(($interval_change*-1))"
@@ -4671,11 +4670,11 @@ scale() {
 				elif [ "$c" == "" ]; then
 					#if [ "$INTERVAL" == "0" ] && [ "$SCALETEMPO" == true ]; then
 					#	SCALETEMPO=false
-						echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-						#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+						echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+						#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 					#fi
 					INTERVAL="$(($INTERVAL-1))"
-					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					draw_pitch
 				fi
 				if [ "$INTERVAL" == "$stopat" ]; then
@@ -4721,8 +4720,8 @@ scale() {
 					if [ "$backwards" == true ] && [ "$c" != "c" ]; then
 						#if [ "$INTERVAL" == "0" ] && [ "$SCALETEMPO" == true ]; then
 						#	SCALETEMPO=false
-						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 						#fi
 						INTERVAL="$(($INTERVAL-1))"
 					elif [ "$backwards" == true ] && [ "$c" == "c" ]; then
@@ -4731,8 +4730,8 @@ scale() {
 					else
 						#if [ "$INTERVAL" == "0" ] && [ "$SCALETEMPO" == true ]; then
 						#	SCALETEMPO=false
-						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+						#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+							#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 						#fi
 						backwards=true
 						INTERVAL="$(($INTERVAL-1))"
@@ -4753,7 +4752,7 @@ scale() {
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then	
 					INTERVAL="$(($INTERVAL+1))"
-					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+					echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 					draw_pitch
 				fi
 				if [ "$INTERVAL" == "$stopat" ]; then
@@ -4782,7 +4781,7 @@ scale_octave() {
 	draw_banner "OCTAVE" false true
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 	fi
 	if [ "$1" == "-" ]; then
@@ -4790,7 +4789,7 @@ scale_octave() {
 		if [ "$(($INTERVAL-$EDO))" -ge "-`echo -n $INTERVAL_LIMIT | cut -d'.' -f1`" ]; then
 			if [ "$2" == true ]; then
 				INTERVAL=$(($INTERVAL-$EDO))
-				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				draw_pitch
 			else
 				#espeak_say_natural "Scaling to $(($INTERVAL-$EDO))"
@@ -4812,7 +4811,7 @@ scale_octave() {
 						break
 					elif [ "$c" == "" ]; then
 						INTERVAL="$(($INTERVAL-1))"
-						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 						draw_pitch
 						x=$(($x+1))
 					fi
@@ -4825,7 +4824,7 @@ scale_octave() {
 		if [ "$(($INTERVAL+$EDO))" -le "`echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1`" ]; then
 			if [ "$2" == true ]; then
 				INTERVAL=$(($INTERVAL+$EDO))
-				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				draw_pitch
 			else
 				#espeak_say_natural "Scaling to $(($INTERVAL+$EDO))"
@@ -4847,7 +4846,7 @@ scale_octave() {
 						break
 					elif [ "$c" == "" ]; then
 						INTERVAL="$(($INTERVAL+1))"
-						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 						draw_pitch
 						x=$(($x+1))
 					fi
@@ -4875,7 +4874,7 @@ set_custom_int() {
 	fi
 	if [ "$interval_jump" != "" ]; then
 		PAUSE=false
-		echo -e "speed_set `calc \"2^($interval_jump/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($interval_jump/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		INTERVAL="$interval_jump"
 	else
 		espeak_say_natural "closed"
@@ -4885,7 +4884,7 @@ set_custom_int() {
 }
 
 toggle_mute() {
-	echo "pausing_keep mute" >$ALETHEIA/pipe &
+	echo "pausing_keep mute" >$ALETHEIA/pipe$$ &
 	if [ $MUTE = false ]; then
 		pactl set-sink-mute @DEFAULT_SINK@ 1 >/dev/null 2>/dev/null
 		espeak_say_natural "muted"
@@ -4900,7 +4899,7 @@ toggle_mute() {
 }
 
 toggle_pause() {
-	echo -e "pause" >$ALETHEIA/pipe &
+	echo -e "pause" >$ALETHEIA/pipe$$ &
 	#if [ "$RIGHT_BANNER_WIDTH" -gt "$POSITION_WIDTH" ]; then
 	#	result="$(($PANE_WIDTH - $RIGHT_BANNER_WIDTH))"
 	#else
@@ -4923,7 +4922,7 @@ toggle_pause() {
 
 interval_to_zero() {
 	INTERVAL="0"
-	echo "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+	echo "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	LOCKED=false
 	#espeak_say_natural " $INTERVAL of $EDO"
 	draw_volume
@@ -4935,21 +4934,21 @@ interval_to_zero() {
 reset_all_tuning() {
 	#VOLUME="$DEFAULT_VOLUME"
 	#EQUALIZER="$DEFAULT_EQUALIZER"
-	#echo -e "af_del equalizer" >"$ALETHEIA/pipe" &
+	#echo -e "af_del equalizer" >"$ALETHEIA/pipe$$" &
 	#equal="`echo $EQUALIZER | cut -d':' -f1`"
 	#equal="$equal:`echo $EQUALIZER | cut -d':' -f4`"
 	#equal="$equal:`echo $EQUALIZER | cut -d':' -f8`"
 	SCALETEMPO=false
-	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-	#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+	#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 	INTERVAL="$DEFAULT_INTERVAL"
 	EDO="$DEFAULT_EDO"
 	#INTERVAL_LIMIT=$(($EDO * 3))
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
-	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	#sleep 0.1
-	#echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+	#echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 	espeak_say_natural "reset"
 	draw_volume
 	draw_equalizer
@@ -4980,8 +4979,8 @@ reset_to_locked() {
 			equal="$equal:`echo $EQUALIZER | cut -d':' -f8`"
 		else
 			if [ "$EQUALIZER" != "0:0:0:0:0:0:0:0:0:0" ]; then
-				echo -e "af_del equalizer" >"$ALETHEIA/pipe" &
-				echo -e "af_add equalizer=$EQUALIZER" >"$ALETHEIA/pipe" &
+				echo -e "af_del equalizer" >"$ALETHEIA/pipe$$" &
+				echo -e "af_add equalizer=$EQUALIZER" >"$ALETHEIA/pipe$$" &
 
 				equal="`echo $EQUALIZER | cut -d':' -f1`"
 				equal="$equal:`echo $EQUALIZER | cut -d':' -f4`"
@@ -4991,20 +4990,20 @@ reset_to_locked() {
 
 		if [ "$SCALETEMPO_FLAG" == "" ]; then
 			SCALETEMPO=false
-			echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-			#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+			#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 		elif [ "$SCALETEMPO_FLAG" == "0" ]; then
 			SCALETEMPO=false
-			echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
-			#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
+			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+			#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
 		else
 			SCALETEMPO=true
-			echo -e "af_add scaletempo" >"$ALETHEIA/pipe" &
-			#echo -e "af_cmdline scaletempo=speed=tempo" >"$ALETHEIA/pipe" &
+			echo -e "af_add scaletempo" >"$ALETHEIA/pipe$$" &
+			#echo -e "af_cmdline scaletempo=speed=tempo" >"$ALETHEIA/pipe$$" &
 		fi
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		sleep 0.1
-		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		#espeak_say_natural " $INTERVAL of $EDO"
 	else
 		INTERVAL="$DEFAULT_INTERVAL"
@@ -5012,9 +5011,9 @@ reset_to_locked() {
 		#INTERVAL_LIMIT=$(($EDO * 3))
 		INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
-		echo "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		VOLUME="$DEFAULT_VOLUME"
-		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		#espeak_say_natural " $INTERVAL of $EDO"
 	fi
 	draw_equalizer
@@ -5069,7 +5068,7 @@ set_custom_edo() {
 		LOCKED_EDO="$EDO"
 		INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		LOCKED=false
 		redraw_buffer
 		draw_volume
@@ -5087,7 +5086,7 @@ double_precise() {
 	if [ "$EDO" -lt "$EDO_LIMIT" ]; then
 		INTERVAL=$(($INTERVAL * 2))
 		EDO=$(($EDO*2))
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		#espeak_say_natural " $INTERVAL"
 		#espeak_say_natural "double"
 		draw_pitch
@@ -5111,7 +5110,7 @@ half_precise() {
 			fi
 			EDO="$new_edo"
 			new="`calc \"($INTERVAL/$EDO)\"`"
-			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			#espeak_say_natural "half"
 			#espeak_say_natural " $INTERVAL"
 			INTERVAL_LIMIT=`calc "$EDO * 2.6"`
@@ -5129,7 +5128,7 @@ half_precise() {
 pitch_down() {
 	ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 	if [ "$?" == "1" ]; then
-	#if [ ! -p "$ALETHEIA/pipe" & ]; then
+	#if [ ! -p "$ALETHEIA/pipe$$" & ]; then
 		#kill $MPLAYER_PID >/dev/null 2>/dev/null
 		if [ "$TRACK_RANDOM" == true ]; then
 			return $RETURN_TRACK_RANDOM
@@ -5148,7 +5147,7 @@ pitch_down() {
 	fi
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 		if [ "$2" == false ] || [ "$2" == "" ]; then
 			draw_pitch
@@ -5156,13 +5155,13 @@ pitch_down() {
 	fi
 	#if [ "$INTERVAL" == "0" ] && [ "$SCALETEMPO" == true ]; then
 	#	SCALETEMPO=false
-	#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
+	#	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 	#fi
 	if [ "$INTERVAL" -gt "-`echo -n $INTERVAL_LIMIT | cut -d'.' -f1`" ]; then
 		INTERVAL=$(($INTERVAL-1))
 		#BPM="`calc \"$BPM * (2^(-1/$EDO))\" | cut -d'~' -f2-`"
 		#BPM="`printf '%0.2f' $BPM`"
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 
 		LOCKED=false
 		if [ "$2" == false ] || [ "$2" == "" ]; then
@@ -5188,7 +5187,7 @@ pitch_down() {
 pitch_up() {
 	ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 	if [ "$?" == "1" ]; then
-	#if [ ! -p "$ALETHEIA/pipe" & ]; then
+	#if [ ! -p "$ALETHEIA/pipe$$" & ]; then
 		#kill $MPLAYER_PID >/dev/null 2>/dev/null
 		if [ "$TRACK_RANDOM" == true ]; then
 			return $RETURN_TRACK_RANDOM
@@ -5207,7 +5206,7 @@ pitch_up() {
 	fi
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 		if [ "$2" == false ] || [ "$2" == "" ]; then
 			draw_pitch
@@ -5217,7 +5216,7 @@ pitch_up() {
 		INTERVAL=$(($INTERVAL+1))
 		#BPM="`calc \"$BPM * (2^(1/$EDO))\" | cut -d'~' -f2`"
 		#BPM="`printf '%0.2f' $BPM`"
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 
 		LOCKED=false
 		if [ "$2" == false ] || [ "$2" == "" ]; then
@@ -5243,7 +5242,7 @@ pitch_up() {
 edo_down() {
 	ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 	if [ "$?" == "1" ]; then
-	#if [ ! -p "$ALETHEIA/pipe" & ]; then
+	#if [ ! -p "$ALETHEIA/pipe$$" & ]; then
 		if [ "$TRACK_RANDOM" == true ]; then
 			return $RETURN_TRACK_RANDOM
 		elif [ "$LOOP_ARTIST" == true ]; then
@@ -5261,14 +5260,14 @@ edo_down() {
 	fi
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 		draw_pitch
 	fi
 	#if [ "$EDO" -gt "-`echo -n $INTERVAL_LIMIT | cut -d'.' -f1`" ]; then
 	if [ "$EDO" -gt "1" ]; then
 		EDO=$(($EDO-1))
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		tmpz=$(($EDO*2))
 		if [ "$INTERVAL" -gt "$tmpz" ] || [ "$INTERVAL" -lt "$((-$tmpz))" ]; then
 			if [ "$INTERVAL" -lt "0" ]; then
@@ -5299,7 +5298,7 @@ set_default_edo() {
 	#espeak_say_natural "default e d o"
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 		draw_pitch
 	fi
@@ -5316,7 +5315,7 @@ set_default_edo() {
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
 	#espeak_say_natural " $INTERVAL of $EDO"
-	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	LOCKED=false
 	draw_pitch 1
 }
@@ -5341,13 +5340,13 @@ edo_up() {
 	fi
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 		draw_pitch
 	fi
 	if [ "$EDO" -lt "2000000" ]; then
 		EDO=$(($EDO+1))
-		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 
 		LOCKED=false
 		draw_pitch 2
@@ -5368,8 +5367,8 @@ edo_up() {
 
 toggle_scale_tempo() {
 	if [ "$SCALETEMPO" == false ]; then
-		#echo -e "af_cmdline scaletempo=speed=tempo" >"$ALETHEIA/pipe" &
-		echo -e "af_add scaletempo" >"$ALETHEIA/pipe" &
+		#echo -e "af_cmdline scaletempo=speed=tempo" >"$ALETHEIA/pipe$$" &
+		echo -e "af_add scaletempo" >"$ALETHEIA/pipe$$" &
 		espeak_say_natural "tempo"
 		SCALETEMPO=true
 		ONLY_PITCH=false
@@ -5377,12 +5376,12 @@ toggle_scale_tempo() {
 		if [ "$ONLY_PITCH" == false ]; then
 			ONLY_PITCH=true
 			espeak_say_natural "pitch"
-			echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
+			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 			#sleep 0.2
-			echo -e "af_add scaletempo=speed=pitch" >"$ALETHEIA/pipe" &
+			echo -e "af_add scaletempo=speed=pitch" >"$ALETHEIA/pipe$$" &
 		else
-			#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe" &
-			echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
+			#echo -e "af_cmdline scaletempo=speed=both" >"$ALETHEIA/pipe$$" &
+			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 			espeak_say_natural "pitch and tempo"
 			SCALETEMPO=false
 			ONLY_PITCH=false
@@ -5403,10 +5402,10 @@ secondary_scale_func() {
 		pitch_up
 	elif [ "$1" == "l" ]; then
 		espeak_say_natural "forward"
-		echo "seek +5%" >"$ALETHEIA/pipe" &
+		echo "seek +5%" >"$ALETHEIA/pipe$$" &
 	elif [ "$1" == "h" ]; then
 		espeak_say_natural "backward"
-		echo "seek -5%" >"$ALETHEIA/pipe" &
+		echo "seek -5%" >"$ALETHEIA/pipe$$" &
 	elif [ "$1" == "8" ]; then
 		master_volume_change "-3% -3%"
 	elif [ "$1" == "9" ]; then
@@ -5422,7 +5421,7 @@ secondary_scale_func() {
 	elif [ "$1" == "o" ]; then
 		pause=false
 		if [ "$mute" == true ]; then
-			echo "mute" >$ALETHEIA/pipe
+			echo "mute" >$ALETHEIA/pipe$$
 			mute=false
 			draw_pitch
 		fi
@@ -5430,7 +5429,7 @@ secondary_scale_func() {
 	elif [ "$1" == "m" ]; then
 		pause=false
 		if [ "$mute" == true ]; then
-			echo "mute" >$ALETHEIA/pipe
+			echo "mute" >$ALETHEIA/pipe$$
 			mute=false
 			draw_pitch
 		fi
@@ -5450,13 +5449,13 @@ secondary_scale_func() {
 		#	draw_pitch
 		#fi
 		#if [ "$MUTE" == true ]; then
-		#	echo "mute" >$ALETHEIA/pipe &
+		#	echo "mute" >$ALETHEIA/pipe$$ &
 		#	MUTE=false
 		#	draw_pitch
 		#fi
 		#if [ "$VOLUME" -ge "1" ]; then
 		#	VOLUME="$(($VOLUME-1))"
-		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		#	espeak_say_natural " $VOLUME"
 		#	#LOCKED=false
 		#	draw_equalizer
@@ -5469,13 +5468,13 @@ secondary_scale_func() {
 		#	draw_pitch
 		#fi
 		#if [ "$MUTE" == true ]; then
-		#	echo "mute" >$ALETHEIA/pipe &
+		#	echo "mute" >$ALETHEIA/pipe$$ &
 		#	MUTE=false
 		#	draw_pitch
 		#fi
 		#if [ "$VOLUME" -le "99" ]; then
 		#	VOLUME="$(($VOLUME+1))"
-		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		#	espeak_say_natural " $VOLUME"
 		#	#LOCKED=false
 		#	draw_equalizer
@@ -5488,13 +5487,13 @@ secondary_scale_func() {
 		#	draw_pitch
 		#fi
 		#if [ "$MUTE" == true ]; then
-		#	echo "mute" >$ALETHEIA/pipe &
+		#	echo "mute" >$ALETHEIA/pipe$$ &
 		#	MUTE=false
 		#	draw_pitch
 		#fi
 		#if [ "$VOLUME" -ge "5" ]; then
 		#	VOLUME="$(($VOLUME-5))"
-		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		#	espeak_say_natural " $VOLUME"
 		#	#LOCKED=false
 		#	draw_equalizer
@@ -5507,13 +5506,13 @@ secondary_scale_func() {
 		#	draw_pitch
 		#fi
 		#if [ "$MUTE" == true ]; then
-		#	echo "mute" >$ALETHEIA/pipe &
+		#	echo "mute" >$ALETHEIA/pipe$$ &
 		#	MUTE=false
 		#	draw_pitch
 		#fi
 		#if [ "$VOLUME" -le "95" ]; then
 		#	VOLUME="$(($VOLUME+5))"
-		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		#	espeak_say_natural " $VOLUME"
 		#	#LOCKED=false
 		#	draw_equalizer
@@ -5535,7 +5534,7 @@ secondary_scale_func() {
 		set_only_display_song
 		redraw_buffer
 	elif [ "$1" == "\\" ]; then
-		echo "seek 0 2" >"$ALETHEIA/pipe" &
+		echo "seek 0 2" >"$ALETHEIA/pipe$$" &
 	else
 		#if [ "$1" == "" ]; then
 		#	read -n2 -t 0.03 key >/dev/null 2>/dev/null
@@ -5683,7 +5682,7 @@ oscillate() {
 
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
-		echo "mute" >$ALETHEIA/pipe &
+		echo "mute" >$ALETHEIA/pipe$$ &
 		MUTE=false
 	fi
 	while [ "$x" -lt "$result" ]; do
@@ -5752,7 +5751,7 @@ oscillate() {
 				INTERVAL="$(($old_int+1))"
 				old_int="$(($old_int+1))"
 			fi
-			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			draw_pitch
 			x="$(($x+1))"
 		fi
@@ -5814,7 +5813,7 @@ oscillate() {
 			elif [ "$c" == "q" ] || [ "$c" == "" ]; then
 				break
 			elif [ "$c" == "" ]; then
-				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			fi
 		fi
 
@@ -5849,13 +5848,13 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$MUTE" == true ]; then
-			echo "mute" >$ALETHEIA/pipe &
+			echo "mute" >$ALETHEIA/pipe$$ &
 			MUTE=false
 			draw_pitch
 		fi
 		if [ "$VOLUME" -ge "5" ]; then
 			VOLUME="$(($VOLUME-5))"
-			echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			#LOCKED=false
 			draw_equalizer
 			draw_volume 1
@@ -5866,13 +5865,13 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$MUTE" == true ]; then
-			echo "mute" >$ALETHEIA/pipe &
+			echo "mute" >$ALETHEIA/pipe$$ &
 			MUTE=false
 			draw_pitch
 		fi
 		if [ "$VOLUME" -le "95" ]; then
 			VOLUME="$(($VOLUME+5))"
-			echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			#LOCKED=false
 			draw_equalizer
 			draw_volume 1
@@ -5883,13 +5882,13 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$MUTE" == true ]; then
-			echo "mute" >$ALETHEIA/pipe &
+			echo "mute" >$ALETHEIA/pipe$$ &
 			MUTE=false
 			draw_pitch
 		fi
 		if [ "$VOLUME" -ge "1" ]; then
 			VOLUME="$(($VOLUME-1))"
-			echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			#LOCKED=false
 			draw_equalizer
 			draw_volume 1
@@ -5900,13 +5899,13 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$MUTE" == true ]; then
-			echo "mute" >$ALETHEIA/pipe &
+			echo "mute" >$ALETHEIA/pipe$$ &
 			MUTE=false
 			draw_pitch
 		fi
 		if [ "$VOLUME" -le "99" ]; then
 			VOLUME="$(($VOLUME+1))"
-			echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			#LOCKED=false
 			draw_equalizer
 			draw_volume 1
@@ -6073,7 +6072,7 @@ fade_volume() {
 			fi
 			VOLUME="$(($VOLUME-1))"
 		fi
-		echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+		echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		draw_volume
 		read -rsn1 -t 0.25 c
 		ps -p $MPLAYER_PID >/dev/null 2>/dev/null
@@ -6122,7 +6121,7 @@ sleep_countdown() {
 		espeak_say_natural "sleep canceled"
 		tput cup $(($LINES-3))
 		tput el
-		echo -e "loop -1 1" >"$ALETHEIA/pipe" &
+		echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
 		echo -ne "${PADDING}${WHITE}Sleep canceled"
 		draw_pitch
 		return
@@ -6136,7 +6135,7 @@ sleep_countdown() {
 		x="$VOLUME"
 		while [ "$x" -ge "0" ] && [ "$VOLUME" -gt "0" ]; do
 			VOLUME="$(($VOLUME-1))"
-			echo "volume $x 1" >"$ALETHEIA/pipe" &
+			echo "volume $x 1" >"$ALETHEIA/pipe$$" &
 			draw_volume
 			if [ "$SLEEP_MODE" == "0" ]; then
 				read -rsn1 -t 0.7 tmp
@@ -6144,7 +6143,7 @@ sleep_countdown() {
 				read -rsn1 -t 0.7 tmp <$ALETHEIA/input_fifo
 			fi
 			if [ "$tmp" != "" ]; then
-				echo -e "loop -1 1" >"$ALETHEIA/pipe" &
+				echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
 				return
 			fi
 			x=$(($x-1))
@@ -6221,10 +6220,10 @@ set_sleep() {
 			fi
 			PAUSE=false
 			if [ "$MUTE" == true ]; then
-				echo "mute" >$ALETHEIA/pipe &
+				echo "mute" >$ALETHEIA/pipe$$ &
 				MUTE=false
 			fi
-			echo -e "loop 0 1" >"$ALETHEIA/pipe" &
+			echo -e "loop 0 1" >"$ALETHEIA/pipe$$" &
 			LOOP=true
 			draw_position
 			sleep_countdown "$answer"
@@ -6783,7 +6782,7 @@ cleanup_sigint() {
 		killall node >/dev/null 2>/dev/null
 	fi
 	killall play >/dev/null 2>/dev/null
-	killall mplayer >/dev/null 2>/dev/null
+	kill $MPLAYER_PID >/dev/null 2>/dev/null
 
 	#tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
 	#tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
@@ -6804,7 +6803,8 @@ cleanup_sigint() {
 	stty echo
 	#stty ixon
 	#kill $MPLAYER_PID 2>/dev/null >/dev/null
-	killall aletheia >/dev/null 2>/dev/null
+	rm -f "$ALETHEIA/pipe$$"
+	#killall aletheia >/dev/null 2>/dev/null
 	exit 0
 }
 
@@ -6827,9 +6827,10 @@ cleanup() {
 	#clear
 	tput cnorm
 	stty ixon
+	rm -f "$ALETHEIA/pipe$$"
 	kill $MPLAYER_PID 2>/dev/null >/dev/null
 	# FIXME
-	killall aletheia >/dev/null 2>/dev/null
+	#killall aletheia >/dev/null 2>/dev/null
 	exit 0
 }
 
@@ -7480,7 +7481,7 @@ load_only_loops() {
 		#		return $repeat_tmp
 		#	fi
 		#else
-			#killall mplayer >/dev/null 2>/dev/null
+			#kill $MPLAYER_PID >/dev/null 2>/dev/null
 			#killall play >/dev/null 2>/dev/null
 			#JUMP="1"
 			#return $RETURN_JUMP
@@ -9547,7 +9548,7 @@ set_equalizer() {
 
 	EQUALIZER="$bass:$mid:$treble"
 	if [ "$1" == false ] || [ "$1" == "" ]; then
-		echo -e "af_cmdline equalizer $EQUALIZER" >"$ALETHEIA/pipe" &
+		echo -e "af_cmdline equalizer $EQUALIZER" >"$ALETHEIA/pipe$$" &
 	fi
 
 	equal="`echo $EQUALIZER | cut -d':' -f1`"
@@ -9953,7 +9954,7 @@ print_queue() {
 					return $RETURN_LOOP_ARTIST
 				else
 					if [ "$POSITION" == "$TOTAL_QUEUE" ]; then
-						killall mplayer >/dev/null 2>/dev/null
+						kill $MPLAYER_PID >/dev/null 2>/dev/null
 						JUMP="1"
 						POSITION="1"
 						draw_position
@@ -10073,7 +10074,7 @@ print_queue() {
 			#stty echo
 			return 200
 		elif [ "$updown" == "" ]; then
-			killall mplayer >/dev/null 2>/dev/null
+			kill $MPLAYER_PID >/dev/null 2>/dev/null
 			JUMP="$current"
 			draw_position
 			return $RETURN_JUMP
@@ -10354,7 +10355,7 @@ master() {
 	#	CUSTOM_MPLAYER_PATH=""
 	#fi
 
-	#${CUSTOM_MPLAYER_PATH}mplayer -slave -osdlevel 0 -ao pulse -softvol -softvol-max 100 $flag -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe" -noconfig all $FLAGS "$FILENAME" >$ALETHEIA/mplayer_output 2>/dev/null &
+	#${CUSTOM_MPLAYER_PATH}mplayer -slave -osdlevel 0 -ao pulse -softvol -softvol-max 100 $flag -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$FILENAME" >$ALETHEIA/mplayer_output 2>/dev/null &
 	
 	if [ "$SELECT_REPEAT_FILE" == true ]; then
 		ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
@@ -10365,12 +10366,12 @@ master() {
 	else
 		var1="$FILENAME"
 	fi
-	mplayer -slave -osdlevel 0 -ao pulse -softvol -softvol-max 100 $flag -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe" -noconfig all $FLAGS "$var1" >$ALETHEIA/mplayer_output 2>/dev/null &
+	mplayer -slave -osdlevel 0 -ao pulse -softvol -softvol-max 100 $flag -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >$ALETHEIA/mplayer_output 2>/dev/null &
 
 	MPLAYER_PID="$!"
 
 	if [ "$SELECT_REPEAT_FILE" == true ]; then
-		#echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe" &
+		#echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
 		#LOOP=true
 		SELECT_REPEAT_FILE=false
 	fi
@@ -10470,7 +10471,7 @@ master() {
 			'o')
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -10479,7 +10480,7 @@ master() {
 			'm')
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -10499,8 +10500,8 @@ master() {
 				toggle_pause
 				;;
 			'n')
-				#echo "quit 0" >"$ALETHEIA/pipe" &
-				killall mplayer >/dev/null 2>/dev/null
+				#echo "quit 0" >"$ALETHEIA/pipe$$" &
+				kill $MPLAYER_PID >/dev/null 2>/dev/null
 				killall play >/dev/null 2>/dev/null
 				#ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 				#if [ "$?" != "1" ]; then
@@ -10528,7 +10529,7 @@ master() {
 				#ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 				#if [ "$?" != "1" ]; then
 				#	kill $MPLAYER_PID >/dev/null 2>/dev/null
-				killall mplayer >/dev/null 2>/dev/null
+				kill $MPLAYER_PID >/dev/null 2>/dev/null
 				killall play >/dev/null 2>/dev/null
 				if [ "$TRACK_RANDOM" == true ]; then
 					return $RETURN_TRACK_RANDOM_BACK
@@ -10550,7 +10551,7 @@ master() {
 			'y')
 				#PAUSE=false
 				#if [ "$MUTE" == true ]; then
-				#	echo "mute" >$ALETHEIA/pipe &
+				#	echo "mute" >$ALETHEIA/pipe$$ &
 				#	MUTE=false
 				#	draw_pitch
 				#fi
@@ -10567,7 +10568,7 @@ master() {
 				#INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 				#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
 				#espeak_say_natural " $INTERVAL of $EDO"
-				#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				#echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				#LOCKED=false
 				#draw_pitch
 				set_default_edo
@@ -10580,11 +10581,11 @@ master() {
 					draw_pitch
 				fi
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
-				echo "seek -5%" >"$ALETHEIA/pipe" &
+				echo "seek -5%" >"$ALETHEIA/pipe$$" &
 				;;
 			'l')
 				#espeak_say_natural "forward"
@@ -10593,7 +10594,7 @@ master() {
 					draw_pitch
 				fi
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -10605,7 +10606,7 @@ master() {
 					#done
 					#sleep 1
 					#kill $MPLAYER_PID >/dev/null 2>/dev/null
-					killall mplayer >/dev/null 2>/dev/null
+					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					if [ "$TRACK_RANDOM" == true ]; then
 						return $RETURN_TRACK_RANDOM
 					elif [ "$LOOP_ARTIST" == true ]; then
@@ -10621,7 +10622,7 @@ master() {
 					#kill $MPLAYER_PID >/dev/null 2>/dev/null
 					#return 0
 				fi
-				#echo "get_percent_pos" >"$ALETHEIA/pipe" &
+				#echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
 				#sleep 0.25
 				#if [ "$old_percent" == "" ]; then
 				#	old_percent=-1
@@ -10648,7 +10649,7 @@ master() {
 				#	fi
 				#fi
 
-				echo "seek +5%" >"$ALETHEIA/pipe" &
+				echo "seek +5%" >"$ALETHEIA/pipe$$" &
 				;;
 			';')
 				#print_queue_display
@@ -10732,7 +10733,7 @@ master() {
 				percentbreak=false
 				ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 				if [ "$?" != "1" ]; then
-					echo "get_percent_pos" >"$ALETHEIA/pipe" &
+					echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
 					sleep 0.15
 					percent="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 					if [ "`isnum \"$percent\"`" == "0" ]; then
@@ -10794,10 +10795,10 @@ master() {
 						fi
 						if [ "`jobs | grep \"sleeper\" | grep \"Running\"`" == "" ] && [ "$old_throwaway" != "l" ] && [ "$old_throwaway" != "h" ] && [ "$old_throwaway" != "j" ] && [ "$old_throwaway" != "k" ]; then
 							sleeper &
-							echo "get_percent_pos" >"$ALETHEIA/pipe" &
+							echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
 							sleep 0.15
 							percent="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
-							echo "get_time_pos" >"$ALETHEIA/pipe" &
+							echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 							sleep 0.15
 							tmpq="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2 | cut -d'.' -f1`"
 							tput cup $LINES 1
@@ -10909,7 +10910,7 @@ master() {
 								fi
 								#break
 							fi
-							echo "seek +5%" >"$ALETHEIA/pipe" &
+							echo "seek +5%" >"$ALETHEIA/pipe$$" &
 							old_throwaway="$throwaway"
 							throwaway=""
 						elif [ "$throwaway" == "h" ]; then
@@ -10922,7 +10923,7 @@ master() {
 								draw_position
 								draw_pitch
 							fi
-							echo "seek -5%" >"$ALETHEIA/pipe" &
+							echo "seek -5%" >"$ALETHEIA/pipe$$" &
 							old_throwaway="$throwaway"
 							throwaway=""
 						elif [ "$throwaway" == "j" ]; then
@@ -11350,7 +11351,7 @@ master() {
 				draw_banner "COMMAND"
 				command="`read_line`"
 				if [ "$command" != "" ]; then
-					echo -e "$command" >"$ALETHEIA/pipe" &
+					echo -e "$command" >"$ALETHEIA/pipe$$" &
 					sleep 0.7
 					empty_pane
 					tput cup $(($LINES-3))
@@ -11383,21 +11384,21 @@ master() {
 					fi
 					return $RETURN_JUMP
 				else
-					echo "seek 0 2" >"$ALETHEIA/pipe" &
+					echo "seek 0 2" >"$ALETHEIA/pipe$$" &
 					if [ "$PAUSE" == true ]; then
 						PAUSE=false
 						draw_pitch
 						draw_position
 					fi
 				fi
-				#echo "quit 0" >"$ALETHEIA/pipe" &
+				#echo "quit 0" >"$ALETHEIA/pipe$$" &
 				#kill $MPLAYER_PID >/dev/null 2>/dev/null
 				#return $RETURN_RESTART
 				;;
 			'5')
 				draw_banner "START"
 				espeak_say_natural "start"
-				echo "get_time_pos" >"$ALETHEIA/pipe" &
+				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.7
 				CURRENT_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 				draw_pitch
@@ -11406,7 +11407,7 @@ master() {
 			'%')
 				#if [ "$CURRENT_TIME" != "" ]; then
 				#	espeak_say_natural "Replay"
-				#	echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+				#	echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 				#fi
 				rm -f "$FILENAME.repeats" >/dev/null 2>/dev/null
 				espeak_say_natural "unlocked"
@@ -11436,7 +11437,7 @@ master() {
 			'7')
 				draw_banner "END"
 				espeak_say_natural "end"
-				echo "get_time_pos" >"$ALETHEIA/pipe" &
+				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.7
 				END_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 				etime=$END_TIME
@@ -11446,7 +11447,7 @@ master() {
 				#time="`calc \"$END_TIME-$CURRENT_TIME\" | sed -e \"s/\t//g\"`"
 				#read -n1 -t 0.5 throwaway
 				#until [ "$throwaway" == "q" ]; do
-				#	echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+				#	echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 				#	read -n1 -t $time throwaway
 				#	#sleep $time
 				#done
@@ -11624,11 +11625,11 @@ master() {
 				;;
 			'g')
 				if [ "$PAUSE" == true ]; then
-					echo -e "pause" >$ALETHEIA/pipe &
+					echo -e "pause" >$ALETHEIA/pipe$$ &
 					PAUSE=false
 				fi
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 				fi
 				draw_banner "INVERT" false true
@@ -11692,7 +11693,7 @@ master() {
 							INTERVAL="$(($old_int+1))"
 							old_int="$(($old_int+1))"
 						fi
-						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 						draw_pitch
 						x="$(($x+1))"
 					fi
@@ -11706,16 +11707,16 @@ master() {
 			'M')
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 				fi
 				INTERVAL="$((-($INTERVAL)))"
-				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				espeak_say " $INTERVAL $EDO"
 				#if [ "$INTERVAL" -lt "0" ]; then
 				#	if [ "$SCALETEMPO" == true ] && [ "$ONLY_PITCH" == false ]; then
 				#		SCALETEMPO=false
-				#		echo -e "af_del scaletempo" >"$ALETHEIA/pipe" &
+				#		echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 				#	fi
 				#fi
 				draw_pitch
@@ -11831,13 +11832,13 @@ master() {
 				;;
 			'>')
 				if [ "$FULLSCREEN" == false ]; then
-					echo "pausing_keep vo_fullscreen 1" >$ALETHEIA/pipe &
+					echo "pausing_keep vo_fullscreen 1" >$ALETHEIA/pipe$$ &
 					FULLSCREEN=true
 					espeak_say_natural "video fullscreen"
 					draw_banner "FULLSCREEN"
 				else
 					espeak_say_natural "video normal"
-					echo "pausing_keep vo_fullscreen 0" >$ALETHEIA/pipe &
+					echo "pausing_keep vo_fullscreen 0" >$ALETHEIA/pipe$$ &
 					FULLSCREEN=false
 					draw_banner "OFF"
 				fi
@@ -11877,7 +11878,7 @@ master() {
 #				QBUFFER="$QBUFFER\n$new_file"
 #
 #				JUMP="$(($TOTAL_QUEUE+1))"
-#				echo "quit 0" >"$ALETHEIA/pipe" &
+#				echo "quit 0" >"$ALETHEIA/pipe$$" &
 #				kill $MPLAYER_PID >/dev/null 2>/dev/null
 #				return $RETURN_JUMP
 #
@@ -11902,7 +11903,7 @@ master() {
 			'Y')
 				#PAUSE=false
 				#if [ "$MUTE" == true ]; then
-				#	echo "mute" >$ALETHEIA/pipe &
+				#	echo "mute" >$ALETHEIA/pipe$$ &
 				#	MUTE=false
 				#	draw_pitch
 				#fi
@@ -11913,13 +11914,13 @@ master() {
 				#	#FIXME
 				#	#EDO="$DEFAULT_EDO"
 				#	EDO="$SAVED_EDO"
-				#	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				#	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				#	espeak_say_natural " $INTERVAL of $EDO"
 				#else
 				#	if [ "$SAVED_INTERVAL" != "" ]; then
 				#		INTERVAL="$SAVED_INTERVAL"
 				#		EDO="$SAVED_EDO"
-				#		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+				#		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 				#		espeak_say_natural " $INTERVAL of $EDO"
 				#	else
 				#		continue
@@ -11973,7 +11974,7 @@ master() {
 				draw_pitch
 				;;
 			'')
-				echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe" &
+				echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
 				;;
 			#'')
 			#	if [ "$CENTER_BAR_POSITION" -gt "-7" ]; then
@@ -12018,7 +12019,7 @@ master() {
 				if [ "$DOWNLOAD_POSITION" != "" ]; then
 					#espeak_say_natural "Playing downloads"
 					JUMP="$DOWNLOAD_POSITION"
-					echo "quit 0" >"$ALETHEIA/pipe" &
+					echo "quit 0" >"$ALETHEIA/pipe$$" &
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				else
@@ -12035,14 +12036,14 @@ master() {
 						espeak_say_natural "always on top"
 						draw_banner "OFF"
 						ALWAYS_ON_TOP=false
-						#echo "set_property ontop 0" >"$ALETHEIA/pipe" &
-						echo "vo_ontop 0" >"$ALETHEIA/pipe" &
+						#echo "set_property ontop 0" >"$ALETHEIA/pipe$$" &
+						echo "vo_ontop 0" >"$ALETHEIA/pipe$$" &
 					else
 						espeak_say_natural "off"
 						draw_banner "ON TOP"
 						ALWAYS_ON_TOP=true
-						#echo "set_property ontop 1" >"$ALETHEIA/pipe" &
-						echo "vo_ontop 1" >"$ALETHEIA/pipe" &
+						#echo "set_property ontop 1" >"$ALETHEIA/pipe$$" &
+						echo "vo_ontop 1" >"$ALETHEIA/pipe$$" &
 					fi
 					sleep 0.25
 					draw_pitch
@@ -12054,7 +12055,7 @@ master() {
 				if [ "$DOWNLOAD_POSITION" != "" ]; then
 					#espeak_say_natural "Playing downloads"
 					JUMP="$DOWNLOAD_POSITION"
-					echo "quit 0" >"$ALETHEIA/pipe" &
+					echo "quit 0" >"$ALETHEIA/pipe$$" &
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				else
@@ -12083,7 +12084,7 @@ master() {
 			'4')
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -12091,7 +12092,7 @@ master() {
 				;;
 			'w')
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
@@ -12100,7 +12101,7 @@ master() {
 			#'T')
 			#	PAUSE=false
 			#	if [ "$MUTE" == true ]; then
-			#		echo "mute" >$ALETHEIA/pipe &
+			#		echo "mute" >$ALETHEIA/pipe$$ &
 			#		MUTE=false
 			#		draw_pitch
 			#	fi
@@ -12485,13 +12486,13 @@ master() {
 					draw_pitch
 				fi
 				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe &
+					echo "mute" >$ALETHEIA/pipe$$ &
 					MUTE=false
 					draw_pitch
 				fi
 				if [ "$VOLUME" -ge "1" ]; then
 					VOLUME="$(($VOLUME-1))"
-					echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+					echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 					espeak_say_natural "$VOLUME"
 					#LOCKED=false
 					draw_equalizer
@@ -12504,13 +12505,13 @@ master() {
 				#	draw_pitch
 				#fi
 				#if [ "$MUTE" == true ]; then
-				#	echo "mute" >$ALETHEIA/pipe &
+				#	echo "mute" >$ALETHEIA/pipe$$ &
 				#	MUTE=false
 				#	draw_pitch
 				#fi
 				#if [ "$VOLUME" -ge "5" ]; then
 				#	VOLUME="$(($VOLUME-5))"
-				#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+				#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 				#	espeak_say_natural " $VOLUME"
 				#	#LOCKED=false
 				#	draw_equalizer
@@ -12527,13 +12528,13 @@ master() {
 				#	draw_pitch
 				#fi
 				#if [ "$MUTE" == true ]; then
-				#	echo "mute" >$ALETHEIA/pipe &
+				#	echo "mute" >$ALETHEIA/pipe$$ &
 				#	MUTE=false
 				#	draw_pitch
 				#fi
 				#if [ "$VOLUME" -le "95" ]; then
 				#	VOLUME="$(($VOLUME+5))"
-				#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+				#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 				#	espeak_say_natural " $VOLUME"
 				#	#LOCKED=false
 				#	draw_equalizer
@@ -12547,13 +12548,13 @@ master() {
 				#	draw_pitch
 				#fi
 				#if [ "$MUTE" == true ]; then
-				#	echo "mute" >$ALETHEIA/pipe &
+				#	echo "mute" >$ALETHEIA/pipe$$ &
 				#	MUTE=false
 				#	draw_pitch
 				#fi
 				#if [ "$VOLUME" -le "99" ]; then
 				#	VOLUME="$(($VOLUME+1))"
-				#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+				#	echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 				#	espeak_say_natural " $VOLUME"
 				#	#LOCKED=false
 				#	draw_equalizer
@@ -12571,7 +12572,7 @@ master() {
 				track_toggle
 				if [ "$?" == 200 ]; then
 					JUMP=1
-					killall mplayer >/dev/null 2>/dev/null
+					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					killall play >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				fi
@@ -12773,7 +12774,7 @@ master() {
 					ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
 					filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | rev`"
 					if [ -e "$filename_without_ext.repeat.$ext" ]; then
-						echo "volume 0 1" >"$ALETHEIA/pipe" &
+						echo "volume 0 1" >"$ALETHEIA/pipe$$" &
 						draw_banner "LOOP ON"
 						espeak_say_natural "loading loop"
 						sleep 0.05
@@ -12798,13 +12799,13 @@ master() {
 							fi
 						fi
 						sleep 0.05
-						echo -e "loadfile '$filename_without_ext.repeat.$ext'" >"$ALETHEIA/pipe" &
+						echo -e "loadfile '$filename_without_ext.repeat.$ext'" >"$ALETHEIA/pipe$$" &
 						sleep 0.05
-						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 						sleep 0.05
-						echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						sleep 0.05
-						echo -e "loop 0 1" >"$ALETHEIA/pipe" &
+						echo -e "loop 0 1" >"$ALETHEIA/pipe$$" &
 						LOOP=true
 						draw_pitch
 						draw_position
@@ -12813,7 +12814,7 @@ master() {
 					ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
 					filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f3- | rev`"
 					if [ -e "$filename_without_ext.$ext" ]; then
-						echo "volume 0 1" >"$ALETHEIA/pipe" &
+						echo "volume 0 1" >"$ALETHEIA/pipe$$" &
 						draw_banner "LOOP OFF" 
 						espeak_say_natural "loop disabled"
 						if [ -e "$filename_without_ext.$ext.locked" ]; then
@@ -12838,13 +12839,13 @@ master() {
 						fi
 						sleep 0.05
 						#FIXME needs to read .repeat. .locked file for draw_pitch
-						echo -e "loadfile \"$filename_without_ext.repeat.$ext\"" >"$ALETHEIA/pipe" &
+						echo -e "loadfile \"$filename_without_ext.repeat.$ext\"" >"$ALETHEIA/pipe$$" &
 						sleep 0.05
-						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe &
+						echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 						sleep 0.05
-						echo "volume $VOLUME 1" >"$ALETHEIA/pipe" &
+						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						sleep 0.05
-						echo -e "loop 0 1" >"$ALETHEIA/pipe" &
+						echo -e "loop 0 1" >"$ALETHEIA/pipe$$" &
 						LOOP=true
 						draw_pitch
 						draw_position
@@ -13110,11 +13111,11 @@ master() {
 								draw_pitch
 							fi
 							if [ "$MUTE" == true ]; then
-								echo "mute" >$ALETHEIA/pipe &
+								echo "mute" >$ALETHEIA/pipe$$ &
 								MUTE=false
 								draw_pitch
 							fi
-							echo "seek -5%" >"$ALETHEIA/pipe" &
+							echo "seek -5%" >"$ALETHEIA/pipe$$" &
 							;;
 						'[C')
 							if [ "$PAUSE" == true ]; then
@@ -13122,13 +13123,13 @@ master() {
 								draw_pitch
 							fi
 							if [ "$MUTE" == true ]; then
-								echo "mute" >$ALETHEIA/pipe &
+								echo "mute" >$ALETHEIA/pipe$$ &
 								MUTE=false
 								draw_pitch
 							fi
 							ps -p $MPLAYER_PID >/dev/null
 							if [ "$?" == "1" ]; then
-								#echo -e "exit 0" >$ALETHEIA/pipe &
+								#echo -e "exit 0" >$ALETHEIA/pipe$$ &
 								#sleep 1
 								if [ "$TRACK_RANDOM" == true ]; then
 									return $RETURN_TRACK_RANDOM
@@ -13145,7 +13146,7 @@ master() {
 								#kill $MPLAYER_PID >/dev/null 2>/dev/null
 								#return 0
 							fi
-							echo "seek +5%" >"$ALETHEIA/pipe" &
+							echo "seek +5%" >"$ALETHEIA/pipe$$" &
 							;;
 						*)
 							continue
@@ -13175,8 +13176,8 @@ if [ ! -d "$ALETHEIA/playlists/" ]; then
 	mkdir "$ALETHEIA/playlists"
 fi
 
-if [ ! -p "$ALETHEIA/pipe" ]; then
-	mkfifo "$ALETHEIA/pipe"
+if [ ! -p "$ALETHEIA/pipe$$" ]; then
+	mkfifo "$ALETHEIA/pipe$$"
 fi
 
 if [ ! -p "$ALETHEIA/input_fifo" ]; then
