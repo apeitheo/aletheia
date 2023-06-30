@@ -67,6 +67,8 @@ OUTPUT=""
 #KEEP_LOOP=false
 SELECT_REPEAT_FILE=false
 LOOP_ON=false
+SAVED_POSITION=""
+CURRENT_POSITION=""
 
 TOP_BAR_MENU="\033(0lqqqqqqqk\033(B"
 BOTTOM_BAR_MENU="\033(0mqqqqqqqj\033(B"
@@ -10203,6 +10205,9 @@ master() {
 	END_TIME=""
 	space=0
 	SAVED_INTERVAL=""
+	SAVED_POSITION=""
+	CURRENT_POSITION=""
+	SAVED_TOTAL=""
 
 	if [ "$VOLUME" == "" ]; then
 		VOLUME="$DEFAULT_VOLUME"
@@ -11014,6 +11019,24 @@ master() {
 			#	draw_position
 			#	redraw_buffer
 			#	;;
+			'$')
+				espeak_say_natural "position saved"
+				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
+				sleep 0.05
+				draw_banner "POS SAVED"
+				sleep 0.25
+				if [ "$SAVED_POSITION" == "" ]; then
+					SAVED_TOTAL=1
+					SAVED_POSITION[1]="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
+					CURRENT_POSITION=1
+				else
+					SAVED_TOTAL=$(($SAVED_TOTAL+1))
+					SAVED_POSITION[$SAVED_TOTAL]="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
+				fi
+					
+				draw_pitch
+				draw_position
+				;;
 			'|')
 				vanish
 				;;
@@ -11413,6 +11436,8 @@ master() {
 			#	master_volume_change "+0% +1%"
 			#	;;
 			'\')
+				SAVED_POSITION=""
+				CURRENT_POSITION=""
 				if [ "$VIDEO" == true ] || [ "$VIDEO_FLAGGED" == true ]; then
 					JUMP="$POSITION"
 					kill $MPLAYER_PID 2>/dev/null >/dev/null
@@ -12011,7 +12036,13 @@ master() {
 				draw_pitch
 				;;
 			'')
-				echo "seek $CURRENT_TIME 2" >"$ALETHEIA/pipe$$" &
+				if [ "$CURRENT_POSITION" != "" ]; then
+					CURRENT_POSITION=$(($CURRENT_POSITION+1))
+					if [ "$CURRENT_POSITION" -gt "$SAVED_TOTAL" ]; then
+						CURRENT_POSITION=1
+					fi
+					echo "seek ${SAVED_POSITION[$CURRENT_POSITION]} 2" >"$ALETHEIA/pipe$$" &
+				fi
 				;;
 			#'')
 			#	if [ "$CENTER_BAR_POSITION" -gt "-7" ]; then
@@ -12031,6 +12062,7 @@ master() {
 				toggle_scale_tempo
 				;;
 			'')
+				old_blue=$BLUE
 				espeak_say_natural "color randomized"
 				BLUE=$(generate_random_color)
 				color="${BLUE#"#"}"
@@ -12047,9 +12079,9 @@ master() {
 				blue=$((16#${color:4:2}))
 				WHITE="\033[1;38;2;${red};${green};${blue}m"
 				WHITE_BLACK="\033[1;38;2;${red};${green};${blue}m"
-				render_help_screen
-				render_voice_settings_screen
-				render_repeat_help_screen
+				#render_help_screen
+				#render_voice_settings_screen
+				#render_repeat_help_screen
 				redraw_screen
 				;;
 			'')
@@ -12751,61 +12783,61 @@ master() {
 			#	draw_pitch
 			#	draw_position
 			#	;;
-			'$')
-				#HARD_REPEAT_ONLY=false
-				#if [ "$HARD_REPEAT_ONLY" == false ]; then
-					#loops_flagged=true
-					#REPEAT_ONLY=true
-					#HARD_REPEAT_ONLY=true
-					if [ "$ONLY_LOCKED" == true ]; then
-						espeak_say_natural "only locked loops"
-					else
-						espeak_say_natural "loops"  true
-					fi
-					artist="`echo -ne \"$TITLE\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
-					if [ "$LOOP_ARTIST" == true ]; then
-						if [ "`find \"$MUSICDIR\" | grep -e \"^$artist - \" | grep -e \"\.repeat\.*\"`" == "" ]; then
-							LOOP_ARTIST=false
-						fi
-					fi
-					if [ "$ONLY_LOCKED" == true ]; then
-						unset queue_array
-						IFS=$'\n'
-						index=0
-						for i in `find "$MUSICDIR" -iname "*\.repeat\.*" | shuf`; do
-							var2="`echo -ne \"$i\" | rev | cut -d'.' -f3- | rev`"
-							ext="`echo -ne \"$i\" | rev | cut -d'.' -f1 | rev`"
-							if [ -e "$var2.locked" ]; then
-								queue_array[$index]="$var2.$ext"
-								index=$(($index+1))
-							fi
-						done
-						unset IFS
-						new_QBUF=""
-					else
-						unset queue_array
-						IFS=$'\n'
-						index=0
-						for i in `find "$MUSICDIR" -iname "*\.repeat\.*" -and -not -iname "*.time" | shuf`; do
-							#queue_array[$index]="`echo -ne \"$i\" | rev | cut -d'.' -f2- | rev`"
-							queue_array[$index]="$i"
-							index=$(($index+1))
-						done
-						unset IFS
-					fi
-					SHUFFLED=true
-					TOTAL_QUEUE="$index"
-					tmp="`printf '%s\n' "${queue_array[@]}" | grep -n \"$FILENAME$\" | cut -d':' -f1`"
-					if [ "$tmp" != "" ]; then
-						POSITION="$tmp"
-					else
-						POSITION=1
-					fi
-					JUMP="$POSITION"
-					kill $MPLAYER_PID
-					return $RETURN_JUMP
-				#fi
-				;;	
+			#'$')
+			#	#HARD_REPEAT_ONLY=false
+			#	#if [ "$HARD_REPEAT_ONLY" == false ]; then
+			#		#loops_flagged=true
+			#		#REPEAT_ONLY=true
+			#		#HARD_REPEAT_ONLY=true
+			#		if [ "$ONLY_LOCKED" == true ]; then
+			#			espeak_say_natural "only locked loops"
+			#		else
+			#			espeak_say_natural "loops"  true
+			#		fi
+			#		artist="`echo -ne \"$TITLE\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
+			#		if [ "$LOOP_ARTIST" == true ]; then
+			#			if [ "`find \"$MUSICDIR\" | grep -e \"^$artist - \" | grep -e \"\.repeat\.*\"`" == "" ]; then
+			#				LOOP_ARTIST=false
+			#			fi
+			#		fi
+			#		if [ "$ONLY_LOCKED" == true ]; then
+			#			unset queue_array
+			#			IFS=$'\n'
+			#			index=0
+			#			for i in `find "$MUSICDIR" -iname "*\.repeat\.*" | shuf`; do
+			#				var2="`echo -ne \"$i\" | rev | cut -d'.' -f3- | rev`"
+			#				ext="`echo -ne \"$i\" | rev | cut -d'.' -f1 | rev`"
+			#				if [ -e "$var2.locked" ]; then
+			#					queue_array[$index]="$var2.$ext"
+			#					index=$(($index+1))
+			#				fi
+			#			done
+			#			unset IFS
+			#			new_QBUF=""
+			#		else
+			#			unset queue_array
+			#			IFS=$'\n'
+			#			index=0
+			#			for i in `find "$MUSICDIR" -iname "*\.repeat\.*" -and -not -iname "*.time" | shuf`; do
+			#				#queue_array[$index]="`echo -ne \"$i\" | rev | cut -d'.' -f2- | rev`"
+			#				queue_array[$index]="$i"
+			#				index=$(($index+1))
+			#			done
+			#			unset IFS
+			#		fi
+			#		SHUFFLED=true
+			#		TOTAL_QUEUE="$index"
+			#		tmp="`printf '%s\n' "${queue_array[@]}" | grep -n \"$FILENAME$\" | cut -d':' -f1`"
+			#		if [ "$tmp" != "" ]; then
+			#			POSITION="$tmp"
+			#		else
+			#			POSITION=1
+			#		fi
+			#		JUMP="$POSITION"
+			#		kill $MPLAYER_PID
+			#		return $RETURN_JUMP
+			#	#fi
+			#	;;	
 			'')
 				if [ "$LOOP_ON" == false ]; then
 					ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
