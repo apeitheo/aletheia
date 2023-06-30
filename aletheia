@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# aletheia: a media player with interval control and support for the blind
+# aletheia: a media player with pitch controls and voice feedback
 #
 # Copyright 2021-2023 Brad Hermanson <apeitheo@gmail.com>
 #
@@ -897,7 +897,8 @@ Advanced Controls
 a  Equalizer
 ^p  Toggle Panels
 ^o  Invert Color
-^y  Toggle Color
+^y  Color On/Off
+^a  Randomize Color
 z  Redraw Screen
 ~  Sleep mode
 |  About"
@@ -4243,7 +4244,6 @@ main_menu() {
 						continue
 						
 					fi
-					render_queue
 					JUMP="1"
 					echo -ne "$NOCOLOR"
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -4335,7 +4335,6 @@ main_menu() {
 						#QBUFFER="$new_QBUFFER"
 						TOTAL_QUEUE="$new_TOTAL_QUEUE"
 					fi
-					#render_queue
 					JUMP="1"
 					echo -ne "$NOCOLOR"
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -4372,7 +4371,6 @@ main_menu() {
 						continue
 						
 					fi					
-					#render_queue
 					JUMP="1"
 					echo -ne "$NOCOLOR"
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -6759,7 +6757,7 @@ reset_buffer() {
 	#		fi
 			#one="${one#"${one%%[!0]*}"}"
 			if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
-				BUFFER="$BUFFER$BLUE_BLACK$PADDING$FLAGGY $pos$pad $line`printf '%*s' $(($COLS - 3 - 1 - 1 - ${#line} - ${#pos} - ${#pad}))`$PADDING`tput sgr0`\n"
+				BUFFER="$BUFFER$BLUE_BLACK$PADDING$FLAGGY $display_pad$pos $line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-${#one}-3))`$one$WHITE_BLACK:$BLUE_BLACK$two$RIGHTPADDING`tput sgr0`\n"
 				
 			else
 				if [ "$PANELS_ENABLED" == false ]; then
@@ -6771,7 +6769,7 @@ reset_buffer() {
 						BUFFER="$BUFFER$PADDING$WHITE$FLAGGY $BLUE$display_pad$BLUE$pos $COLOR$line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-2-1-${#line}-${#one}-3))`$WHITE$one:$two$RIGHTPADDING\n"
 					fi
 				else
-					BUFFER="$BUFFER$PADDING$WHITE$COLOR2$FLAGGY$BLUE $pos$pad $COLOR$line`tput sgr0``tput el`\n"
+					BUFFER="$BUFFER$PADDING$WHITE$COLOR2$FLAGGY$BLUE $display_pad$pos $COLOR$line`tput sgr0``tput el`\n"
 				fi
 			fi
 		done
@@ -7569,6 +7567,31 @@ master_volume_secondary_func() {
 		master_volume_change "+0% +1%"
 		;;
 	esac
+}
+
+generate_random_color() {
+  printf "#%02x%02x%02x\n" $((RANDOM%256)) $((RANDOM%256)) $((RANDOM%256))
+}
+
+hex_to_decimal() {
+  local hex=$1
+  echo "ibase=16; $hex" | bc
+}
+
+generate_complementary_color() {
+  local color=$1
+  #local r=$(printf "%x" 0x${color:1:2})
+  #local g=$(printf "%x" 0x${color:3:2})
+  #local b=$(printf "%x" 0x${color:5:2})
+  local r=$(hex_to_decimal "${color:1:2}")
+  local g=$(hex_to_decimal "${color:3:2}")
+  local b=$(hex_to_decimal "${color:5:2}")
+
+  local comp_r=$((255 - $r))
+  local comp_g=$((255 - $g))
+  local comp_b=$((255 - $b))
+
+  printf "#%02x%02x%02x\n" $comp_r $comp_g $comp_b
 }
 
 draw_pitch() {
@@ -9552,39 +9575,7 @@ set_equalizer() {
 	#fi
 }
 
-#_render() {
-#	var="$1"
-
-render_queue() {
-	echo -ne ""
-}
-
-render_queue_disabled() {
-	if [ "$QUEUE_RENDERED" == false ]; then
-		IFS=
-		#while [ read -r line; do
-			# Process each line here
-		IFS=$'\n'
-		for i in `seq 1 $TOTAL_QUEUE`; do
-			read line
-			#line="`echo -ne \"$QBUFFER\" | sed -n ${i}p`"
-			line="`echo -ne \"$line\" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev | cut -c1-$(($COLS-(${#PADDING}*2)-3-${#i}))`"
-			#line="`echo -ne \"$line\" | cut -c1-$(($COLS-(${#PADDING}*2)-3-${#i}))`"
-			queue_array[$i]="$PADDING$BLUE$BAR $i <start>$line`tput el`"
-			tput cup $LINES
-			tput sc
-			echo -ne "${PADDING}${BLUE}Caching song $i/$TOTAL_QUEUE"
-			tput rc
-		#done
-		done <<< "$QBUFFER"
-		unset IFS
-		QUEUE_RENDERED=true
-	fi
-}
-
 print_queue() {
-	render_queue
-
 	espeak_say_natural "queue"
 	current=$POSITION
 	BUFFER_BACKUP="$BUFFER"
@@ -10117,89 +10108,36 @@ save_settings() {
 	done
 	if [ "$yesno" == "y" ]; then
 		_save_setting "VOICE_PITCH" "$VOICE_PITCH"
-		#if [ "`echo \"$CONFIG\" | grep -i VOICE_PITCH`" == "" ]; then
-		#	CONFIG="$CONFIG\nVOICE_PITCH=$VOICE_PITCH"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/VOICE_PITCH/s/.*/VOICE_PITCH=$VOICE_PITCH/g\"`"
-		#fi
-
 		_save_setting "VOICE_GENDER" "$VOICE_GENDER"
-		#if [ "`echo \"$CONFIG\" | grep -i VOICE_GENDER`" == "" ]; then
-		#	CONFIG="$CONFIG\nVOICE_GENDER=$VOICE_GENDER"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/VOICE_GENDER/s/.*/VOICE_GENDER=$VOICE_GENDER/g\"`"
-		#fi
-
 		_save_setting "DEFAULT_VOLUME" "$DEFAULT_VOLUME"
-		#if [ "`echo \"$CONFIG\" | grep -i DEFAULT_VOLUME`" == "" ]; then
-		#	CONFIG="$CONFIG\nDEFAULT_VOLUME=$VOLUME"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/DEFAULT_VOLUME/s/.*/DEFAULT_VOLUME=$DEFAULT_VOLUME/g\"`"
-		#fi
-
 		_save_setting "VOICE_VOLUME" "$VOICE_VOLUME"
-		#if [ "`echo \"$CONFIG\" | grep -i VOICE_VOLUME`" == "" ]; then
-		#	CONFIG="$CONFIG\nVOICE_VOLUME=$VOICE_VOLUME"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/VOICE_VOLUME/s/.*/VOICE_VOLUME=$VOICE_VOLUME/g\"`"
-		#fi
-
 		_save_setting "VOICE_SPEED" "$VOICE_SPEED"
-		#if [ "`echo \"$CONFIG\" | grep -i VOICE_SPEED`" == "" ]; then
-		#	CONFIG="$CONFIG\nVOICE_SPEED=$VOICE_SPEED"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/VOICE_SPEED/s/.*/VOICE_SPEED=$VOICE_SPEED/g\"`"
-		#fi
-
 		_save_setting "PANELS_ENABLED" "$PANELS_ENABLED"
-		#if [ "`echo \"$CONFIG\" | grep -i PANELS_ENABLED`" == "" ]; then
-		#	CONFIG="$CONFIG\nPANELS_ENABLED=$PANELS_ENABLED"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/PANELS_ENABLED/s/.*/PANELS_ENABLED=$PANELS_ENABLED/g\"`"
-		#fi
-
 		_save_setting "BLACK_BACKGROUND" "$BLACK_BACKGROUND"
-		#if [ "`echo \"$CONFIG\" | grep -i BLACK_BACKGROUND`" == "" ]; then
-		#	CONFIG="$CONFIG\nBLACK_BACKGROUND=$BLACK_BACKGROUND"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/BLACK_BACKGROUND/s/.*/BLACK_BACKGROUND=$BLACK_BACKGROUND/g\"`"
-		#fi
-
 		_save_setting "ONLY_VOICE_TITLES" "$ONLY_VOICE_TITLES"
-		#if [ "`echo \"$CONFIG\" | grep -i ONLY_VOICE_TITLES`" == "" ]; then
-		#	CONFIG="$CONFIG\nONLY_VOICE_TITLES=$ONLY_VOICE_TITLES"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/ONLY_VOICE_TITLES/s/.*/ONLY_VOICE_TITLES=$ONLY_VOICE_TITLES/g\"`"
-		#fi
-
 		_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
-		#if [ "`echo \"$CONFIG\" | grep -i COLORS_ENABLED`" == "" ]; then
-		#	CONFIG="$CONFIG\nCOLORS_ENABLED=$COLORS_ENABLED"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/COLORS_ENABLED/s/.*/COLORS_ENABLED=$COLORS_ENABLED/g\"`"
-		#fi
-
 		_save_setting "DEFAULT_EQUALIZER" "$DEFAULT_EQUALIZER"
-		#if [ "`echo \"$CONFIG\" | grep -i DEFAULT_EQUALIZER`" == "" ]; then
-		#	CONFIG="$CONFIG\nDEFAULT_EQUALIZER=$EQUALIZER"
-		#else
-		#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/DEFAULT_EQUALIZER/s/.*/DEFAULT_EQUALIZER=$EQUALIZER/g\"`"
-		#fi
+		clean_sequence=${BLUE#*\033}
+		clean_sequence=${clean_sequence%m}
+		IFS=';' read -ra color_values <<< "$clean_sequence"
+		r=$(printf "%02x" "${color_values[3]}")
+		g=$(printf "%02x" "${color_values[4]}")
+		b=$(printf "%02x" "${color_values[5]}")
+		hex_color="#$r$g$b"
+		_save_setting "COLOR_HIGHLIGHT" "$hex_color"
+		clean_sequence=${WHITE#*\033}
+		clean_sequence=${clean_sequence%m}
+		IFS=';' read -ra color_values <<< "$clean_sequence"
+		r=$(printf "%02x" "${color_values[3]}")
+		g=$(printf "%02x" "${color_values[4]}")
+		b=$(printf "%02x" "${color_values[5]}")
+		hex_color="#$r$g$b"
+		_save_setting "COLOR_UNSELECTED" "$hex_color"
 
 		if [ "$VOICE_ENABLED" == true ]; then
 			_save_setting "VOICE_ENABLED" "true"
-			#if [ "`echo \"$CONFIG\" | grep -i VOICE_ENABLED`" == "" ]; then
-			#	CONFIG="$CONFIG\nVOICE_ENABLED=true"
-			#else
-			#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/VOICE_ENABLED/s/.*/VOICE_ENABLED=true/g\"`"
-			#fi
 		else
 			_save_setting "VOICE_ENABLED" "false"
-			#if [ "`echo \"$CONFIG\" | grep -i VOICE_ENABLED`" == "" ]; then
-			#	CONFIG="$CONFIG\nVOICE_ENABLED=false"
-			#else
-			#	CONFIG="`echo -ne \"$CONFIG\" | sed -e \"/VOICE_ENABLED/s/.*/VOICE_ENABLED=false/g\"`"
-			#fi
 		fi
 		echo -e "$CONFIG" >"$ALETHEIA/config"
 		espeak_say_natural "saved" true
@@ -12054,6 +11992,28 @@ master() {
 			'v')
 				toggle_scale_tempo
 				;;
+			'')
+				espeak_say_natural "color randomized"
+				BLUE=$(generate_random_color)
+				color="${BLUE#"#"}"
+				red=$((16#${color:0:2}))
+				green=$((16#${color:2:2}))
+				blue=$((16#${color:4:2}))
+				BLUE="\033[1;38;2;${red};${green};${blue}m"
+				BLUE_BLACK="\033[1;38;2;${red};${green};${blue}m"
+
+				WHITE=$(generate_random_color)
+				color="${WHITE#"#"}"
+				red=$((16#${color:0:2}))
+				green=$((16#${color:2:2}))
+				blue=$((16#${color:4:2}))
+				WHITE="\033[1;38;2;${red};${green};${blue}m"
+				WHITE_BLACK="\033[1;38;2;${red};${green};${blue}m"
+				render_help_screen
+				render_voice_settings_screen
+				render_repeat_help_screen
+				redraw_screen
+				;;
 			'')
 				if [ "$DOWNLOAD_POSITION" != "" ]; then
 					#espeak_say_natural "Playing downloads"
@@ -13275,6 +13235,12 @@ if [ -e "$ALETHEIA/config" ]; then
 			DEFAULT_EQUALIZER="$value"
 		fi
 
+		value="`read_config \"COLOR_OVERRIDE\"`"
+		if [ "$value" != "" ]; then
+			COLOR_OVERRIDE="$value"
+		else
+			COLOR_OVERRIDE=true
+		fi
 		#result="`echo \"$CONFIG\" | grep -i DEFAULT_EQUALIZER | cut -d'=' -f2 | sed -e \"s/^ *//g\" | sed -e \"s/* $//g\" | tr '[:upper:]' '[:lower:]'`"
 		#if [ "$result" != "" ]; then
 		#	DEFAULT_EQUALIZER="$result"
@@ -13527,6 +13493,24 @@ if [ -e "$ALETHEIA/config" ]; then
 
 
 	fi
+fi
+
+if [ "$COLOR_OVERRIDE" == false ]; then
+	BLUE=$(generate_random_color)
+	color="${BLUE#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+	BLUE="\033[1;38;2;${red};${green};${blue}m"
+	BLUE_BLACK="\033[1;38;2;${red};${green};${blue}m"
+
+	WHITE=$(generate_random_color)
+	color="${WHITE#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+	WHITE="\033[1;38;2;${red};${green};${blue}m"
+	WHITE_BLACK="\033[1;38;2;${red};${green};${blue}m"
 fi
 
 tput cup $(($LINES-2)) $(( ($COLS/2) - 5 ))
