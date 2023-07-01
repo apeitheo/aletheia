@@ -1,0 +1,32 @@
+#!/bin/bash
+
+VERSION=${VERSION:-0.9.6}
+REVISION=1
+SRCDIR=${SRCDIR:-"."}
+TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
+
+if [ -e "$TMPDIR" ]; then
+	rm -rf "$TMPDIR"
+	mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/local/bin "$TMPDIR"/usr/local/share/man/man1/ "$TMPDIR"/usr/local/share/icons/
+else
+	mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/local/bin "$TMPDIR"/usr/local/share/man/man1/ "$TMPDIR"/usr/local/share/icons/
+fi
+
+cp "$SRCDIR/aletheia" "$TMPDIR"
+cp "$SRCDIR/aletheia.1" "$TMPDIR"
+cp "$SRCDIR/aletheia.png" "$TMPDIR"
+#cp "$SRCDIR/install" "$TMPDIR"
+#cp "$SRCDIR/uninstall" "$TMPDIR"
+
+echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pactl, calc, bc, gtts-cli, play, espeak-ng, sox, ffprobe, mplayer\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+
+cp "$SRCDIR/aletheia" "$TMPDIR/usr/local/bin/"
+cp "$SRCDIR/aletheia.1" "$TMPDIR/usr/local/share/man/man1/"
+cp "$SRCDIR/aletheia.png" "$TMPDIR/usr/local/share/icons/"
+
+chmod 755 "$TMPDIR/usr/local/bin/aletheia"
+chown -R root:root "$TMPDIR"
+
+cd "$TMPDIR"
+
+dpkg-deb --build "$TMPDIR"

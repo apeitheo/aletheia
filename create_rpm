@@ -1,0 +1,19 @@
+#!/bin/bash
+
+VERSION=${VERSION:-0.9.6}
+REVISION=1
+SRCDIR=${SRCDIR:-"."}
+TMPDIR="/tmp/fedora-package-aletheia/"
+
+if [ -e "$TMPDIR" ]; then
+	rm -rf "$TMPDIR"
+fi
+mkdir -p "$TMPDIR"/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SOURCES/man,SPECS,SRPMS}
+
+cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/"
+cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/man/"
+
+echo -e "Summary: A CLI media player with pitch controls and voice feedback\nName: aletheia\nVersion: ${VERSION}\nRelease: 1%{?dist}\nLicense: GPL3\nURL: http://www.patreon.com/aletheia_project\n\n%description\nA command-line media player with pitch and speed controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.\n\n%install\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/aletheia\" %{buildroot}/%{_bindir}/aletheia\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/man/aletheia.1\" %{buildroot}/%{_mandir}/man1/aletheia.1\n\n%files\n%{_bindir}/aletheia\n%{_mandir}/man1/aletheia.1.gz\n\n%changelog\n* `date +\"%a %b %e %Y\"` Brad Hermanson ${VERSION}-${REVISION}\n- Initial package release" >"$TMPDIR"/rpmbuild/SPECS/aletheia.spec
+
+cd "$TMPDIR"
+rpmbuild -bb rpmbuild/SPECS/aletheia.spec
