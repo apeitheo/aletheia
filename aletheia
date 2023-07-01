@@ -216,7 +216,7 @@ DOWNLOAD_POSITION=""
 VOICE_ENABLED=false
 VOICE_SPEED=160
 VOICE_PITCH=0
-VOICE_VOLUME=0.3
+VOICE_VOLUME=.85
 VOICE_GENDER="en-us+m1"
 
 ONLY_VOICE_TITLES=false
@@ -485,9 +485,9 @@ compute() {
 	gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
 	sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2-${VOICE_PITCH}int.mp3" speed `calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-` >/dev/null 2>/dev/null
 	rm -f "/tmp/_$2-tmp.mp3"
-	if [ "`echo -e \"$VOICE_VOLUME > 0.3\" | bc`" == "1" ]; then
-		VOICE_VOLUME=0.3
-	fi
+	#if [ "`echo -e \"$VOICE_VOLUME > 0.3\" | bc`" == "1" ]; then
+	#	VOICE_VOLUME=0.3
+	#fi
 	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2-${VOICE_PITCH}int.mp3" >/dev/null 2>/dev/null
 }
 
@@ -3892,22 +3892,24 @@ main_menu() {
 			moveleft=0
 			tput cup $first
 			#echo -ne "$PADDING`tput cuf $((($COLS/2)-5))`$BLUE`echo -ne \"\033(0\"`lqqqqqqqk`echo -ne \"\033(B\"`"
-			if [ "$even" == true ]; then
-				menu_buf="$PADDING`tput el`$BLUE$TOP_BAR_MENU"
-			else
-				menu_buf="$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$TOP_BAR_MENU"
-			fi
+			#if [ "$even" == true ]; then
+				menu_buf="$PADDING$BLUE$TOP_BAR_MENU"
+			#else
+			#	menu_buf="$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$TOP_BAR_MENU"
+			#fi
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-				menu_buf="$menu_buf\b\033(0wqqqqqqqk\033(B`tput el`"
+				menu_buf="$menu_buf\b\033(0wqqqqqqqk\033(B"
 			else
-				menu_buf="$menu_buf`tput el`"
+				menu_buf="$menu_buf"
 			fi
 			#tput cup $(($last+2)) $(($COLS-2))
 			#echo -ne "$RIGHTPADDING"
-			if [ "$initial_screen" == true ]; then
-				tput cup $(($LINES-2))
-				tput el
-			fi
+			#if [ "$initial_screen" == true ]; then
+			#	if [ "$(($LINES-${TOTAL_OPTS}-4))" -gt "1" ]; then
+			#		tput cup $(($LINES-2))
+			#		tput el
+			#	fi
+			#fi
 		#	if [ "$flag" == false ] || [ "$flag" == "" ]; then
 		#		for x in `seq 1 $(($first-1))`; do
 		#			tput cup $x
@@ -3953,11 +3955,11 @@ main_menu() {
 					else
 						arrow=" "
 					fi
-					if [ "$even" == true ]; then
-						menu_buf="$menu_buf\n$PADDING`tput el`$BLUE$BAR`tput rev` ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
-					else
-						menu_buf="$menu_buf\n$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$BAR`tput rev` ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
-					fi
+					#if [ "$even" == true ]; then
+						menu_buf="$menu_buf\n$PADDING$BLUE$BAR`tput rev` ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
+					#else
+					#	menu_buf="$menu_buf\n$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$BAR`tput rev` ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
+					#fi
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -3971,7 +3973,7 @@ main_menu() {
 					fi
 					if [ "$SOUND_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
-							menu_buf="$menu_buf\b\033(0wqqqqqqqk\033(B`tput el`"
+							menu_buf="$menu_buf\b\033(0wqqqqqqqk\033(B"
 						elif [ "$SELECTION" == "2" ]; then
 							if [ "$SOUND_SELECTION" == "1" ] && [ "$i" == "2" ]; then
 								menu_buf="${menu_buf}${BLUE}`tput rev` Loops $NOCOLOR$BLUE$BAR$NOCOLOR"
@@ -3982,7 +3984,7 @@ main_menu() {
 							fi
 						fi
 					fi
-					menu_buf="$menu_buf`tput el`"	
+					menu_buf="$menu_buf"	
 					if [ "$tagged" == false ] || [ "$tagged" == "" ]; then
 						if [ "$nospeak" == false ]; then
 							if [ "$tmp_flag" == true ]; then
@@ -4028,11 +4030,11 @@ main_menu() {
 						arrow=" "
 					fi
 					#menu_buf="$menu_buf\n$PADDING`tput cuf $((($COLS/2)-5))`$BLUE$BAR$WHITE ${OPT[$i]} $pad$NOCOLOR$BLUE$BAR"
-					if [ "$even" == true ]; then
+					#if [ "$even" == true ]; then
 						menu_buf="$menu_buf\n$PADDING$BLUE$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
-					else
-						menu_buf="$menu_buf\n$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
-					fi
+					#else
+					#	menu_buf="$menu_buf\n$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$BLUE$BAR"
+					#fi
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$i" -ge "2" ]; then
@@ -4053,7 +4055,7 @@ main_menu() {
 								menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-1))]} $BLUE$BAR$NOCOLOR"
 							fi
 						elif [ "$SOUND_RIGHT_WINDOW" == true ] && [ "$i" == "1" ]; then
-							menu_buf="$menu_buf\b\033(0tqqqqqqqk\033(B`tput el`"
+							menu_buf="$menu_buf\b\033(0tqqqqqqqk\033(B"
 						fi
 					fi
 
@@ -4063,30 +4065,31 @@ main_menu() {
 					if [ "$i" == "4" ] && [ "$SOUND_RIGHT_WINDOW" == true ]; then
 						menu_buf="$menu_buf\b\033(0tqqqqqqqj\033(B"
 					fi
-					menu_buf="$menu_buf`tput el`"	
+					menu_buf="$menu_buf"	
 				fi
 			done
 
 			#tput cup $(($last+2))
-			if [ "$even" == true ]; then
-				menu_buf="$menu_buf\n$PADDING`tput el`$BLUE$BOTTOM_BAR_MENU`tput el`"
-			else
-				menu_buf="$menu_buf\n$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$BOTTOM_BAR_MENU`tput el`"
-			fi
+			#if [ "$even" == true ]; then
+				menu_buf="$menu_buf\n$PADDING$BLUE$BOTTOM_BAR_MENU"
+			#else
+			#	menu_buf="$menu_buf\n$PADDING`tput el``tput cuf $((($COLS/2)-5-$moveleft))`$BLUE$BOTTOM_BAR_MENU`tput el`"
+			#fi
 
-			for i in `seq 1 $(($first-1))`; do
-				tput cup $i
-				tput el
-			done
+			#for i in `seq 1 $(($first-1))`; do
+			#	tput cup $i
+			#	tput el
+			#done
 
-			tput cup $first
+			#tput cup $first
+			tput cup $(($LINES-3-${TOTAL_OPTS}))
 
 			echo -ne "$menu_buf"
 
-			for i in `seq $(($first+$TOTAL_OPTS+2)) $(($LINES-2))`; do
-				tput cup $i
-				tput el
-			done
+			#for i in `seq $(($first+$TOTAL_OPTS+2)) $(($LINES-2))`; do
+			#	tput cup $i
+			#	tput el
+			#done
 
 			unset belowmenu
 
@@ -5894,6 +5897,8 @@ secondary_scale_func() {
 			draw_pitch
 		fi
 		half_precise				
+	elif [ "$1" == "M" ]; then
+		invert_int
 	elif [ "$1" == "a" ]; then
 		PAUSE=false
 		pause=false
@@ -7002,9 +7007,11 @@ reset_buffer() {
 		#for i in `seq $HALF $(($HALF + $(($number_per_page-1)) - $HALF_OFFSET))`; do
 		if [ "$TOTAL_QUEUE" -lt "$diff" ]; then
 			diff="$TOTAL_QUEUE"
+		#elif [ "$TOTAL_QUEUE" == "$diff" ]; then
+		#	diff=$(($diff+1))
 		fi
 
-		for i in `seq 1 $(($diff))`; do
+		for i in `seq 1 $diff`; do
 			#line="`echo -e \"$QBUFFER\" | sed -n ${i}p`"
 			#line="`echo -e \"$lines\" | sed -n ${i}p`"
 			line="`echo -ne \"${queue_array[$(($i+$HALF-2))]}\"`"
@@ -7236,10 +7243,10 @@ reset_buffer() {
 						BUFFER="$BUFFER$PADDING$BLUE$FLAGGY $BLUE$display_pad$BLUE$pos $line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-${#one}-3))`$BLUE$BLUE$one$WHITE:$BLUE$two$RIGHTPADDING\n"
 					else
 						#song_length="`echo -ne \"$song_length\" | sed \"s/:/$(echo -ne \"$BLUE\"):$(echo -ne \"$WHITE\")/g\"`"
-						BUFFER="$BUFFER$PADDING$WHITE$FLAGGY $BLUE$display_pad$BLUE$pos $COLOR_ACCENT$line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-2-1-${#line}-${#one}-3))`$COLOR_ACCENT$one:$two$RIGHTPADDING\n"
+						BUFFER="$BUFFER$PADDING$WHITE$FLAGGY $BLUE$display_pad$BLUE$pos $WHITE$line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-2-1-${#line}-${#one}-3))`$WHITE$one:$two$RIGHTPADDING\n"
 					fi
 				else
-					BUFFER="$BUFFER$PADDING$WHITE$COLOR2$FLAGGY$BLUE $display_pad$pos $COLOR_ACCENT$line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-2-1-${#line}-${#one}-3))`$COLOR_ACCENT$one:$two$RIGHTPADDING"
+					BUFFER="$BUFFER$PADDING$WHITE$COLOR2$FLAGGY$BLUE $display_pad$pos $WHITE$line`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-2-1-${#line}-${#one}-3))`$WHITE$one:$two$RIGHTPADDING"
 				fi
 			fi
 		done
@@ -7326,18 +7333,21 @@ redraw_buffer() {
 		number_per_page=$TOTAL_QUEUE
 	fi
 
-	if [ "$number_per_page" == "" ] || [ "$number_per_page" == "1" ]; then
-		empty_pane 3
+	if [ "$(($COLS-$TOTAL_QUEUE-4))" -gt "0" ]; then
+		empty_pane $((2+$TOTAL_QUEUE))
 	fi
+	#if [ "$number_per_page" == "" ] || [ "$number_per_page" == "1" ]; then
+	#	empty_pane 3
+	#fi
 
 	#if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 	#	empty_pane "$(($number_per_page + 2))"
 	#fi
-	empty_pane $(($number_per_page+2))
+	#empty_pane $(($number_per_page+2))
 
-	if [ "$TOTAL_QUEUE" -lt "$(($LINES-4))" ]; then
-		empty_pane $(($TOTAL_QUEUE+2))
-	fi
+	#if [ "$TOTAL_QUEUE" -lt "$(($LINES-4))" ]; then
+	#	empty_pane $(($TOTAL_QUEUE+2))
+	#fi
 
 	tput cup $(($LINES-2))
 	#echo -ne "$BLUE\033(0`printf '%*s' $(($COLS)) | tr ' ' 'q'`\033(B"
@@ -8178,6 +8188,25 @@ load_loop_file() {
 	fi
 }
 
+invert_int() {
+	PAUSE=false
+	if [ "$MUTE" == true ]; then
+		echo "mute" >$ALETHEIA/pipe$$ &
+		MUTE=false
+	fi
+	INTERVAL="$((-($INTERVAL)))"
+	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
+	espeak_say " $INTERVAL $EDO"
+	#if [ "$INTERVAL" -lt "0" ]; then
+	#	if [ "$SCALETEMPO" == true ] && [ "$ONLY_PITCH" == false ]; then
+	#		SCALETEMPO=false
+	#		echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+	#	fi
+	#fi
+	draw_pitch
+}
+
+
 draw_pitch() {
 	#if [ "$WEB_CLIENT" == "0" ]; then
 		if [ "$PAUSE" == true ]; then
@@ -8228,6 +8257,7 @@ draw_pitch() {
 		else
 			printf '%*s' $(($COLS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $POSITION_WIDTH))
 		fi
+		echo -ne "$NOCOLOR"
 	#fi
 	#if [ "$1" != "" ]; then
 	#	echo -ne "$BLUE_BLACK$PADDING$INTERVAL$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$EDO$WHITE_BLACK$CORNER_DIVIDER${BLUE_BLACK}$toggle"
@@ -8764,14 +8794,14 @@ voice_settings_screen() {
 		elif [ "$updown" == "8" ]; then
 			if [ "`echo -e \"$VOICE_VOLUME > 0.05\" | bc`" == "1" ]; then
 				#VOICE_VOLUME="$(($VOICE_VOLUME-10))"
-				VOICE_VOLUME="`calc \"$VOICE_VOLUME-0.05\"`"
+				VOICE_VOLUME="`echo \"$VOICE_VOLUME-0.05\" | bc`"
 			fi
 			espeak_say_natural "$VOICE_VOLUME" false false true
 			flagged=true
 		elif [ "$updown" == "9" ]; then
 			if [ "`echo -e \"$VOICE_VOLUME < 1.0\" | bc`" == "1" ]; then
 				#VOICE_VOLUME="$(($VOICE_VOLUME+10))"
-				VOICE_VOLUME="`calc \"$VOICE_VOLUME+0.05\"`"
+				VOICE_VOLUME="`echo \"$VOICE_VOLUME+0.05\" | bc`"
 			fi
 			espeak_say_natural "$VOICE_VOLUME" false false true
 			flagged=true
@@ -9407,7 +9437,7 @@ new_playlist() {
 		fi
 		VIDEO=false
 		#TOTAL_QUEUE="`echo -e \"$QBUFFER\" | wc -l`"
-		TOTAL_QUEUE="$(($index-1))"
+		TOTAL_QUEUE="$index"
 		echo -ne "$NOCOLOR"
 		#if [ "$2" == false ] || [ "$2" == "" ]; then
 		if [ "$2" == true ]; then
@@ -10224,7 +10254,8 @@ print_queue() {
 	while [ "$pos" -le "$TOTAL_QUEUE" ]; do
 		QUEUE_BUFFER=""
 		stty -echo
-		tput cup 2
+		echo -ne "$NOCOLOR"
+		#tput cup 2
 		if [ "$(($TOTAL_QUEUE-$pos))" -lt $number_per_page ] && [ "$pos" -lt "$number_per_page" ]; then
 			number_per_page="$TOTAL_QUEUE"
 			FLAGGED=true
@@ -10358,9 +10389,16 @@ print_queue() {
 					fi
 					display_pad="$pad"
 				fi
-				if [ "$current" == "$m" ] || [ "$position" == "$m" ]; then
+				if [ "$POSITION" == "$m" ]; then
+					rep=""
+				else
+					rep="$CYAN"
+				fi
+				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
 					#echo -e "$(echo -ne "${queue_array[$m]}" | sed "s/<start>/\\$GREEN/g")$(tput el)"
-					new_buf="$new_buf${PADDING}$BLUE$FLAGGY$BLUE $display_pad$BLUE$m `echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLS-(${#PADDING}*2)-3-${#m}))``tput el`\n"
+					nline="`echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLS-(${#PADDING}*2)-3-${#m}-${#display_pad}))`"
+					padd="`printf '%*s' $(($COLS-(${#PADDING}*2)-3-${#m}-${#nline}-${#display_pad}))`"
+					new_buf="$new_buf$BLUE_BLACK${PADDING}$FLAGGY$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$nline$padd$PADDING$NOCOLOR\n"
 				else
 					new_buf="$new_buf${PADDING}$BLUE$FLAGGY$BLUE $display_pad$BLUE$m $WHITE`echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLS-(${#PADDING}*2)-3-${#m}))``tput el`\n"
 					#echo -e "$(echo -ne "${queue_array[$m]}" | sed "s/<start>/\\$WHITE/g")$(tput el)"
@@ -10851,7 +10889,8 @@ master() {
 	#if [ "$KEEP_LOOP" == false ]; then
 		LOOP=false
 	#fi
-
+	
+	echo -ne "$NOCOLOR"
 	#if [ "$WEB_CLIENT" == "0" ]; then
 		reset_buffer
 
@@ -12336,21 +12375,7 @@ master() {
 				draw_position
 				;;
 			'M')
-				PAUSE=false
-				if [ "$MUTE" == true ]; then
-					echo "mute" >$ALETHEIA/pipe$$ &
-					MUTE=false
-				fi
-				INTERVAL="$((-($INTERVAL)))"
-				echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
-				espeak_say " $INTERVAL $EDO"
-				#if [ "$INTERVAL" -lt "0" ]; then
-				#	if [ "$SCALETEMPO" == true ] && [ "$ONLY_PITCH" == false ]; then
-				#		SCALETEMPO=false
-				#		echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
-				#	fi
-				#fi
-				draw_pitch
+				invert_int
 				;;
 			'f')
 				tmux_attach
@@ -14274,8 +14299,8 @@ RUNTHROUGH=false
 
 #html="`cat $HOME/index.html.spec`"
 
-tput cup $(($LINES-2))
-tput el
+#tput cup $(($LINES-2))
+#tput el
 
 while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 	#FILENAME="`echo -ne \"$QBUFFER\" | sed -n ${POSITION}p`"
