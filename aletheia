@@ -52,7 +52,6 @@ MUSICDIR=${MUSICDIR:-"$HOME/Music/"}
 SOUNDDIR=${SOUNDDIR:-"$HOME/Sounds/"}
 VIDEODIR=${VIDEODIR:-"$HOME/Videos/"}
 
-# Experimental
 WEB_CLIENT=${WEB_CLIENT:-0}
 
 HELP_BUFFER=()
@@ -134,7 +133,6 @@ else
 	fi
 fi
 
-
 RETURN_QUIT="1"
 RETURN_BACK="2"
 RETURN_RESTART="3"
@@ -190,40 +188,34 @@ VIDEO=false
 VIDEO_FLAGGED=false
 FULLSCREEN=true
 ALWAYS_ON_TOP=true
+NO_QUEUE_FLAG=false
 
 ARTIST=""
 SONG=""
 PICK=""
-NO_QUEUE_FLAG=false
-LOADING=true
 PLAY_PID=""
 DOWNLOAD_POSITION=""
-
-MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
-
-#MIXER_OUTPUT="`amixer sset Master unmute - | grep \"Front\" | grep \"\[\"`"
-#MASTER_VOLUME_LEFT="`echo \"$MIXER_OUTPUT\" | grep Left | cut -d'[' -f2 | cut -d']' -f1`"
-#MASTER_VOLUME_RIGHT="`echo \"$MIXER_OUTPUT\" | grep Right | cut -d'[' -f2 | cut -d']' -f1`"
+PADDING=" "
 
 VOICE_ENABLED=false
-VOICE_PITCH=0
+VOICE_PITCH=-4
 VOICE_VOLUME=.85
 ONLY_VOICE_TITLES=false
 
-PADDING=${PADDING:-" "}
-
 LINES=$(tput lines)
 COLS=$(tput cols)
-PANE_WIDTH="$(($COLS - 2))"
 POSITION_WIDTH=0
 
+get_master_volume() {
+	IFS='/' read _ MASTER_VOLUME_LEFT _ MASTER_VOLUME_RIGHT _ <<<"$(pactl get-sink-volume @DEFAULT_SINK@)"
+	MASTER_VOLUME_LEFT=${MASTER_VOLUME_LEFT// /}
+	MASTER_VOLUME_RIGHT=${MASTER_VOLUME_RIGHT// /}
+}
+
+get_master_volume
+
 read_config() {
-	result="`echo \"$CONFIG\" | grep -i "$1" | cut -d'=' -f2 | sed -e \"s/^ *//g\" | sed -e \"s/* $//g\" | tr '[:upper:]' '[:lower:]'`"
-	if [ "$result" != "" ]; then
-		echo -ne "$result"
-	fi
+	echo -ne "`echo \"$CONFIG\" | grep -i "$1" | cut -d'=' -f2 | sed -e \"s/^ *//g\" | sed -e \"s/* $//g\" | tr '[:upper:]' '[:lower:]'`"
 }
 
 if [ -e "$ALETHEIA/config" ]; then
@@ -294,7 +286,10 @@ if [ -e "$ALETHEIA/config" ]; then
 			WHITE_BLACK='\033[1;37m'
 		fi
 
-		DARK_BACKGROUND="`read_config \"DARK_BACKGROUND\"`"
+		value="`read_config \"DARK_BACKGROUND\"`"
+		if [ "$value" != "" ]; then
+			DARK_BACKGROUND="$value"
+		fi
 
 		value="`read_config \"COLORS_ENABLED\"`"
 		if [ "$value" != "" ]; then
@@ -435,9 +430,9 @@ fi
 
 compute() {
 	gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
-	sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2-${VOICE_PITCH}int.mp3" speed `calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-` >/dev/null 2>/dev/null
+	sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed `calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-` >/dev/null 2>/dev/null
 	rm -f "/tmp/_$2-tmp.mp3"
-	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2-${VOICE_PITCH}int.mp3" >/dev/null 2>/dev/null
+	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 }
 
 gtts_speak() {
@@ -449,17 +444,8 @@ gtts_speak() {
 			mkdir "$ALETHEIA/voices"
 		fi
 		if [ "$5" != true ]; then
-			killall gtts-cli >/dev/null 2>/dev/null
+			#killall gtts-cli >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
-		else
-			pid=$PLAY_PID
-			ps -p $PLAY_PID >/dev/null
-			if [ "$?" == "1" ]; then
-				while [ "$?" == "1" ]; do
-					sleep 0.6
-					ps -p $pid >/dev/null
-				done
-			fi
 		fi
 		line_count="`echo -ne \"$1\" | wc -l`"
 		if [ "$line_count" -gt 1 ]; then
@@ -474,7 +460,7 @@ gtts_speak() {
 				clip="\\$clip"
 			fi
 		fi
-		if [ -e "$ALETHEIA/voices/$clip-${VOICE_PITCH}int.mp3" ]; then
+		if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
 			if [ "`echo -ne \"$clip\" | rev | cut -c 1`" == "?" ]; then
 				clip="`echo -ne \"$clip\" | rev | cut -c 2- | rev`\\?"
 			fi
@@ -482,10 +468,10 @@ gtts_speak() {
 				VOICE_VOLUME=.85
 			fi
 			if [ "$2" == false ] || [ "$2" == "" ]; then
-				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip-${VOICE_PITCH}int.mp3" >/dev/null 2>/dev/null &
+				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 				PLAY_PID="$!"
 			else
-				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip-${VOICE_PITCH}int.mp3" >/dev/null 2>/dev/null
+				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 			fi
 		else
 			if [ "$line_count" -gt 1 ]; then
@@ -990,7 +976,7 @@ draw_banner() {
 			printf '%*s' $(($COLS - ${#1} - 7 - (${#PADDING}*2) - $length))
 		fi
 	else
-		tput cup $LINES $(($PANE_WIDTH - ${#1} - 6))
+		tput cup $LINES $(($COLS - ${#1} - 8))
 		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}$1$COLOR1 --$COLOR1 "
 		RIGHT_BANNER_WIDTH=$((${#1}+6))
 	fi
@@ -1304,7 +1290,7 @@ set_scale_speed() {
 		gtts_speak "scale speed set"
 	else
 		draw_pitch
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		return
 	fi
 
@@ -1548,7 +1534,7 @@ repeat() {
 								if [ "$WEB_CLIENT" == "0" ]; then
 									read -rsn1 -t "`echo \"$numberz/$num\" | bc`" input_char_
 								else
-									read -rsn1 -t "`echo \"$numberz/$num\" | bc`" input_char <$ALETHEIA/mplayer_fifo
+									read -rsn1 -t "`echo \"$numberz/$num\" | bc`" input_char <$ALETHEIA/web_client_pipe$$
 								fi
 								time_after=`date +%s.%N`
 							fi
@@ -1599,7 +1585,7 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 -t $time input_char
 					else
-						read -rsn1 -t $time input_char <$ALETHEIA/mplayer_fifo
+						read -rsn1 -t $time input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				fi
 				time_after=`date +%s.%N`
@@ -1646,14 +1632,14 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 -t $time input_char
 					else
-						read -rsn1 -t $time input_char <$ALETHEIA/mplayer_fifo
+						read -rsn1 -t $time input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				else
 					echo "seek `calc \"$END_MARKER-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char
 					else
-						read -rsn1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/mplayer_fifo
+						read -rsn1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				fi
 				flagged=false
@@ -1721,7 +1707,7 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 updown
 					else
-						read -rsn1 updown <$ALETHEIA/mplayer_fifo
+						read -rsn1 updown <$ALETHEIA/web_client_pipe$$
 					fi
 					if [ "$updown" == "j" ]; then
 						scale_down=true
@@ -1934,14 +1920,14 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t $time input_char
 					else
-						read -n1 -t $time input_char <$ALETHEIA/mplayer_fifo
+						read -n1 -t $time input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				else
 					echo "seek `calc \"$END_MARKER-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char
 					else
-						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/mplayer_fifo
+						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				fi
 				flagged=false
@@ -1956,14 +1942,14 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t $time input_char
 					else
-						read -n1 -t $time input_char <$ALETHEIA/mplayer_fifo
+						read -n1 -t $time input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				else
 					echo "seek `calc \"$END_MARKER-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char
 					else
-						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/mplayer_fifo
+						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				fi
 				flagged=false
@@ -2107,14 +2093,14 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t $time input_char
 					else
-						read -n1 -t $time input_char <$ALETHEIA/mplayer_fifo
+						read -n1 -t $time input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				else
 					echo "seek `calc \"$END_MARKER-1.5\"` 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char
 					else
-						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/mplayer_fifo
+						read -n1 -t `calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2` input_char <$ALETHEIA/web_client_pipe$$
 					fi
 				fi
 				flagged=false
@@ -2245,7 +2231,7 @@ repeat() {
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -n1 input_char
 				else
-					read -n1 input_char <$ALETHEIA/mplayer_fifo
+					read -n1 input_char <$ALETHEIA/web_client_pipe$$
 				fi
 				old_time_before=$time_before
 				time_before=`date +%s.%N`
@@ -2317,7 +2303,7 @@ repeat() {
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -n1 -t 0.25 t
 					else
-						read -n1 -t 0.25 t <$ALETHEIA/mplayer_fifo
+						read -n1 -t 0.25 t <$ALETHEIA/web_client_pipe$$
 					fi
 					input_char="$t"
 					if [ "$REPEAT_TOTAL" == "1" ]; then
@@ -2373,7 +2359,7 @@ repeat() {
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -n1 -t 0.25 input_char
 				else
-					read -n1 -t 0.25 input_char <$ALETHEIA/mplayer_fifo
+					read -n1 -t 0.25 input_char <$ALETHEIA/web_client_pipe$$
 				fi
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
@@ -2412,7 +2398,7 @@ repeat() {
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -n1 -t 0.25 t
 				else
-					read -n1 -t 0.25 t <$ALETHEIA/mplayer_fifo
+					read -n1 -t 0.25 t <$ALETHEIA/web_client_pipe$$
 				fi
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
@@ -2453,7 +2439,7 @@ repeat() {
 						if [ "$WEB_CLIENT" == "0" ]; then
 							read -n1 -t "$numberz" input_char
 						else
-							read -n1 -t "$numberz" input_char <$ALETHEIA/mplayer_fifo
+							read -n1 -t "$numberz" input_char <$ALETHEIA/web_client_pipe$$
 						fi
 						time_after=`date +%s.%N`
 					fi
@@ -2877,7 +2863,9 @@ scale_edo() {
 
 main_menu() {
 	z=""
-	read -rsn1 -t 0.1 _input <$ALETHEIA/mplayer_fifo
+	if [ "$WEB_CLIENT" == "1" ]; then
+		read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
+	fi
 	if [ "$_input" != "" ]; then
 		z="$_input"
 		nospeak=true
@@ -2893,7 +2881,7 @@ main_menu() {
 	else
 		even=false
 	fi
-
+	
 	OPT[1]="Music"
 	OPT[2]="Sound"
 	OPT[3]="Video"
@@ -2915,6 +2903,8 @@ main_menu() {
 	flag=false
 	menu_start_over=true
 
+	empty_pane
+
 	until [ "$z" = "," ]; do
 		if [ "$z" == "" ]; then
 			first=$((($LINES/2) - ($TOTAL_OPTS/2)-1))
@@ -2931,15 +2921,18 @@ main_menu() {
 				echo -ne "$NOCOLOR"
 			fi
 
-			moveleft=0
-			tput cup $first
+			if [ "$(($COLS%2))" == "0" ]; then
+				moveleft=1
+			else
+				moveleft=0
+			fi
+			tput cup $first $(($COLS/2-5-$moveleft))
 				menu_buf="$PADDING$COLOR_ACCENT$TOP_BAR_MENU`tput el`"
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk${LINE_CHAR_END}`tput el`"
 			else
 				menu_buf="$menu_buf"
 			fi
-			moveleft=0
 
 			for i in `seq 1 $TOTAL_OPTS`; do
 				pad="  "
@@ -2960,7 +2953,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -3028,7 +3021,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$i" -ge "2" ]; then
@@ -3076,21 +3069,31 @@ main_menu() {
 				fi
 			done
 
-			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
+			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
 
-			for i in `seq 1 $(($LINES-4-${TOTAL_OPTS}))`; do
-				tput cup $i
-				tput el
-			done
-			tput cup $(($LINES-3-${TOTAL_OPTS}))
 			echo -ne "$menu_buf"
+			#for i in `seq 1 $(($LINES-4-${TOTAL_OPTS}))`; do
+			#	tput cup $i
+			#	tput el
+			#done
+			#for i in `seq 0 $((($LINES-4-${TOTAL_OPTS})/2))`; do
+			#	tput cup $i
+			#	tput el
+			#done
+			#for i in `seq $(($LINES-4-${TOTAL_OPTS}))) $(($LINES-2))`; do
+			#	tput cup $i
+			#	tput el
+			#done
+			#tput cup $(($LINES-3-${TOTAL_OPTS}))
 
 			unset belowmenu
 		fi
 
 		if [ "$z" == "" ]; then
 			until [ "$z" != "" ]; do
-				read -rsn1 -t 0.01 tmp_z <$ALETHEIA/mplayer_fifo
+				if [ "$WEB_CLIENT" == "1" ]; then
+					read -rsn1 -t 0.01 tmp_z <$ALETHEIA/web_client_pipe$$
+				fi
 				if [ "$tmp_z" != "" ]; then
 					z=$tmp_z
 				else
@@ -3668,12 +3671,12 @@ main_menu() {
 						JUMP=1
 						return $RETURN_JUMP
 					fi
-					#if [ "$initial_screen" == true ]; then
-					#	empty_pane
-					#else
-					#	reset_buffer
-					#	redraw_buffer
-					#fi
+					if [ "$initial_screen" == true ]; then
+						empty_pane
+					else
+						reset_buffer
+						redraw_buffer
+					fi
 					menu_start_over=true
 					flag=false
 				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
@@ -3710,7 +3713,7 @@ main_menu() {
 				draw_pitch
 				draw_position
 			fi
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			z=","
 		fi
 	done
@@ -3718,14 +3721,14 @@ main_menu() {
 
 scale() {
 	if [ "$WEB_CLIENT" != 1 ]; then
-		gtts_speak "scale interval; press k or j to scale up or down"
+		gtts_speak "scale interval"
 	fi
 	draw_banner "SCALE"
 	stopat=""
 	if [ "$WEB_CLIENT" == "0" ]; then
 		read -rsn1 interval_change <&1
 	else
-		read -rsn1 interval_change <$ALETHEIA/mplayer_fifo
+		read -rsn1 interval_change <$ALETHEIA/web_client_pipe$$
 	fi
 
 	if [ "$interval_change" = "J" ]; then
@@ -3863,7 +3866,7 @@ scale() {
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -rsn1 -t $SCALE_SPEED c
 				else
-					read -rsn1 -t $SCALE_SPEED c <$ALETHEIA/mplayer_fifo
+					read -rsn1 -t $SCALE_SPEED c <$ALETHEIA/web_client_pipe$$
 				fi
 				ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 				if [ "$?" == "1" ]; then
@@ -3927,7 +3930,7 @@ scale() {
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -rsn1 -t $SCALE_SPEED c
 				else
-					read -rsn1 -t $SCALE_SPEED c <$ALETHEIA/mplayer_fifo
+					read -rsn1 -t $SCALE_SPEED c <$ALETHEIA/web_client_pipe$$
 				fi
 				ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 				if [ "$?" == "1" ]; then
@@ -4078,7 +4081,7 @@ set_custom_int() {
 	if [ "`isnum \"$interval_jump\"`" == "1" ] || [ "$interval_jump" == "-" ]; then
 		interval_jump="`read_line \"$interval_jump\"`"
 	else
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		redraw_buffer
 		return
@@ -4088,7 +4091,7 @@ set_custom_int() {
 		echo -e "speed_set `calc \"2^($interval_jump/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		INTERVAL="$interval_jump"
 	else
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_position
 	fi
 	draw_pitch
@@ -4218,7 +4221,7 @@ set_custom_edo() {
 	if [ "`isnum \"$new_edo\"`" == "1" ]; then
 		new_edo="`read_line \"$new_edo\"`"
 	else
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		redraw_buffer
 		return
@@ -4226,7 +4229,7 @@ set_custom_edo() {
 
 	reset_buffer
 	if [ "$new_edo" = "" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		redraw_buffer
 		return
@@ -4588,7 +4591,7 @@ secondary_scale_func() {
 		if [ "$WEB_CLIENT" == "0" ]; then
 			read -n1 input_char
 		else
-			read -n1 input_char <$ALETHEIA/mplayer_fifo
+			read -n1 input_char <$ALETHEIA/web_client_pipe$$
 		fi
 
 		toggle_pause
@@ -4611,7 +4614,7 @@ oscillate() {
 	tput rc
 	read -rsn1 result
 	if [ "$result" == "q" ] || [ "$result" == "G" ] || [ "$result" == "" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		draw_position
 		return
@@ -4633,7 +4636,7 @@ oscillate() {
 			elif [ "$abs_int" -lt "$abs_result" ]; then
 				result="`echo -e \"$abs_result - $abs_int\" | bc`"
 			else
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				draw_pitch
 				draw_position
 				return
@@ -4646,7 +4649,7 @@ oscillate() {
 				result="`echo -e \"$result - $INTERVAL\" | bc`"
 				NEGATIVE=true
 			else
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				draw_pitch
 				draw_position
 				return
@@ -4661,7 +4664,7 @@ oscillate() {
 			NEGATIVE=true
 		elif [ "$INTERVAL" == "0" ] || [ "$result" == "0" ]; then
 			if [ "$INTERVAL" == "0" ] && [ "$result" == "0" ]; then
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				draw_pitch
 				draw_position
 				return
@@ -4683,7 +4686,7 @@ oscillate() {
 		fi
 	fi
 	if [ "$result" == "0" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		draw_position
 		return
@@ -4936,61 +4939,34 @@ pcm_volume_change() {
 }
 
 master_volume_change() {
-	leftvolume="`echo -n \"$MASTER_VOLUME_LEFT\" | cut -d'%' -f1`"
+	#leftvolume="`echo -n \"$MASTER_VOLUME_LEFT\" | cut -d'%' -f1`"
+	#rightvolume="`echo -n \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`"
+	leftvolume=${MASTER_VOLUME_LEFT%\%}
+	rightvolume=${MASTER_VOLUME_RIGHT%\%}
 	if [ "$leftvolume" == "" ]; then
 		leftvolume=0
 	fi
 	pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
-	#if [ "$leftvolume" -lt "13" ]; then
-	#	if [ "$1" == "2%+ 2%+" ]; then
-	#		#MIXER_OUTPUT="`amixer set Master unmute -M 1%+,1%+ | grep \"Front\" | grep \"\[\"`" 2>>/dev/null
-	#		pactl set-sink-volume @DEFAULT_SINK@ +1% +1%
-	#	elif [ "$1" == "2%- 2%-" ]; then
-	#		#MIXER_OUTPUT="`amixer set Master unmute -M 1%-,1%- | grep \"Front\" | grep \"\[\"`" 2>>/dev/null
-	#		pactl set-sink-volume @DEFAULT_SINK@ -1% -1%
-#
-#		else
-#			#MIXER_OUTPUT="`amixer set Master unmute -M $1 | grep \"Front\" | grep \"\[\"`" 2>>/dev/null
-#			pactl set-sink-volume @DEFAULT_SINK@ $1
-#
-#		fi
-#	elif [ "$leftvolume" == "13" ]; then
-#		if [ "$1" == "2%- 2%-" ]; then
-#			#MIXER_OUTPUT="`amixer set Master unmute -M 1%-,1%- | grep \"Front\" | grep \"\[\"`" 2>>/dev/null
-#			pactl set-sink-volume @DEFAULT_SINK@ -1% -1%
-#
-#		else
-#			#MIXER_OUTPUT="`amixer set Master unmute -M $1 | grep \"Front\" | grep \"\[\"`" 2>>/dev/null
-#			pactl set-sink-volume @DEFAULT_SINK@ $1
-#
-#		fi
-#	else
-#		#MIXER_OUTPUT="`amixer set Master unmute -M $1 | grep \"Front\" | grep \"\[\"`" 2>>/dev/null
-		dir="`echo -ne \"$1\" | cut -b1`"
-		num="`echo -ne \"$1\" | cut -b2`"
-		if [ "$dir" == "+" ]; then
-			if [ "$(($leftvolume+$num))" -lt "99" ]; then
-				pactl set-sink-volume @DEFAULT_SINK@ $1
-			else
-				if [ "$num" == "1" ]; then
-					pactl set-sink-volume @DEFAULT_SINK@ 100%
-				else
-					pactl set-sink-volume @DEFAULT_SINK@ 99%
-				fi
-			fi
+	dir="`echo -ne \"$1\" | cut -b1`"
+	num="`echo -ne \"$1\" | cut -b2`"
+	if [ "$dir" == "+" ]; then
+		if [ "$(($leftvolume+$num))" -lt "99" ]; then
+			pactl set-sink-volume @DEFAULT_SINK@ $1
 		else
-			if [ "$(($leftvolume-$num))" -gt "1" ]; then
-				pactl set-sink-volume @DEFAULT_SINK@ $1
+			if [ "$num" == "1" ]; then
+				pactl set-sink-volume @DEFAULT_SINK@ 100%
 			else
-				pactl set-sink-volume @DEFAULT_SINK@ 1%
+				pactl set-sink-volume @DEFAULT_SINK@ 99%
 			fi
 		fi
-#	fi
-	#MASTER_VOLUME_LEFT="`echo \"$MIXER_OUTPUT\" | grep Left | cut -d'[' -f2 | cut -d']' -f1`"
-	#MASTER_VOLUME_RIGHT="`echo \"$MIXER_OUTPUT\" | grep Right | cut -d'[' -f2 | cut -d']' -f1`"
-	MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-	MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-	MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
+	else
+		if [ "$(($leftvolume-$num))" -gt "1" ]; then
+			pactl set-sink-volume @DEFAULT_SINK@ $1
+		else
+			pactl set-sink-volume @DEFAULT_SINK@ 1%
+		fi
+	fi
+	get_master_volume
 	if [ "`echo -ne \"$MASTER_VOLUME_LEFT\" | cut -d'%' -f1`" -gt "100" ]; then
 		MASTER_VOLUME_LEFT="100%"
 		if [ "`echo -ne \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
@@ -5014,12 +4990,12 @@ master_volume_change() {
 
 fade_volume() {
 	updown=""
-	read -rsn1 -t 0.1 _input <$ALETHEIA/mplayer_fifo
+	read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
 	if [ "$_input" != "" ]; then
 		updown="$_input"
 	fi
 	draw_banner "FADE"
-	gtts_speak "fade"
+	gtts_speak "select direction to fade"
 	PAUSE=false
 	MUTE=false
 	x=0
@@ -5035,18 +5011,18 @@ fade_volume() {
 		up=true
 		gtts_speak "up"
 	else
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		return
 	fi
 
 	if [ "$down" == true ] && [ "$VOLUME" == "0" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		return
 	fi
 	if [ "$up" == true ] && [ "$VOLUME" == "100" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		return
 	fi
@@ -5075,7 +5051,7 @@ fade_volume() {
 			return
 		fi
 		if [ "$c" == "q" ] || [ "$c" == "" ] || [ "$c" == "3" ]; then
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			draw_pitch
 			break
 		elif [ "$c" == "d" ]; then
@@ -5107,7 +5083,7 @@ sleep_countdown() {
 	if [ "$WEB_CLIENT" == "0" ]; then
 		read -rsn1 -t `calc "$1 * 60"` tmp
 	else
-		read -rsn1 -t `calc "$1 * 60"` tmp <$ALETHEIA/mplayer_fifo
+		read -rsn1 -t `calc "$1 * 60"` tmp <$ALETHEIA/web_client_pipe$$
 	fi
 	if [ "$tmp" != "" ]; then
 		gtts_speak "sleep canceled"
@@ -5131,7 +5107,7 @@ sleep_countdown() {
 			if [ "$SLEEP_MODE" == "0" ]; then
 				read -rsn1 -t 0.7 tmp
 			else
-				read -rsn1 -t 0.7 tmp <$ALETHEIA/mplayer_fifo
+				read -rsn1 -t 0.7 tmp <$ALETHEIA/web_client_pipe$$
 			fi
 			if [ "$tmp" != "" ]; then
 				echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
@@ -5207,12 +5183,12 @@ set_sleep() {
 			sleep 1
 			redraw_buffer
 		else
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			draw_pitch
 			redraw_buffer
 		fi
 	else
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		redraw_buffer
 	fi
@@ -5379,7 +5355,6 @@ reset_dimensions() {
 		DIMENSIONS_RESET=true
 		COLS=$new_COLS
 		LINES=$new_LINES
-		PANE_WIDTH="$(($COLS - 1 - 1))"
 	fi
 	LINES=$new_LINES
 	COLS=$new_COLS
@@ -5664,13 +5639,17 @@ empty_pane() {
 		tput el
 		lineno="$(($lineno+1))"
 	done
+	tput cup 1
+	tput el
+	tput cup $(($LINES-2))
+	tput el
 }
 
 draw_volume() {
 	tput cup 0
 
-	tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
-	tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
+	tmp_volume_left=${MASTER_VOLUME_LEFT%\%}
+	tmp_volume_right=${MASTER_VOLUME_RIGHT%\%}
 	if [ "$tmp_volume_left" == "" ]; then
 		tmp_volume_left="0"
 		tmp_volume_right="0"
@@ -5712,7 +5691,7 @@ yt_artist() {
 			tmux new-session -s "artist" yt_artist "`echo \"$TITLE\" | sed -e \"s/ - //g\" | cut -d'' -f1`" 0
 		fi
 		tput civis
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		redraw_screen true
 	else
 		gtts_speak "feature not installed"
@@ -5727,7 +5706,7 @@ yt_search() {
 		else
 			tmux new-session -s "search" yt_search 0 "`echo \"$TITLE\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
 		fi
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		tput civis
 		redraw_screen true
 	else
@@ -5742,7 +5721,7 @@ tmux_attach() {
 		gtts_speak "attached"
 		tmux attach >/dev/null 2>/dev/null
 		tput civis
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		draw_pitch
 		draw_position
 		redraw_screen true
@@ -6359,7 +6338,11 @@ toggle_voice() {
 		fi
 	else
 		if [ "$2" == false ] || [ "$2" == "" ]; then
-			gtts_speak "off" false true
+			if [ "$ONLY_VOICE_TITLES" == true ]; then
+				gtts_speak "voice only titles, off" false true
+			else
+				gtts_speak "off" false true
+			fi
 		fi
 		VOICE_ENABLED=false
 		ONLY_VOICE_TITLES=false
@@ -6439,7 +6422,7 @@ queue_help_screen() {
 			echo -e "$QUEUE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		else
 			killall espeak-ng >/dev/null 2>/dev/null
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			draw_volume
 			draw_equalizer
@@ -6497,19 +6480,7 @@ scale_screen() {
 		fi
 
 		read -rsn1 updown
-		if [ "$updown" == "J" ]; then
-			if [ "$VOICE_PITCH" -gt "0" ]; then
-				VOICE_PITCH="$(($VOICE_PITCH-10))"
-			fi
-			gtts_speak "$VOICE_PITCH"
-			flagged=true
-		elif [ "$updown" == "K" ]; then
-			if [ "$VOICE_PITCH" -lt "100" ]; then
-				VOICE_PITCH="$(($VOICE_PITCH+10))"
-			fi
-			gtts_speak "$VOICE_PITCH"
-			flagged=true
-		elif [ "$updown" = "j" ]; then
+		if [ "$updown" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -6536,7 +6507,7 @@ scale_screen() {
 			echo -e "$SCALE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		else
 			killall espeak-ng >/dev/null 2>/dev/null
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			draw_volume
 			draw_equalizer
@@ -6637,7 +6608,7 @@ say_status() {
 		fi
 			
 	elif [ "$x" == "I" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 	fi
 	draw_pitch
 }
@@ -6682,7 +6653,7 @@ render_voice_settings_screen() {
 }
 
 voice_settings_screen() {
-	gtts_speak "voice settings. press d to read controls"
+	gtts_speak "voice settings"
 	flagged=false
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#VOICE_HELP_BUFFER[@]}" ]; do
@@ -6730,24 +6701,24 @@ voice_settings_screen() {
 			if [ "$VOICE_PITCH" -gt "-30" ]; then
 				VOICE_PITCH="$(($VOICE_PITCH-1))"
 			fi
-			if [ ! -e "$ALETHEIA/voices/x${VOICE_PITCH}-pitch.mp3" ]; then
-				gtts-cli " $VOICE_PITCH" -o /tmp/x${VOICE_PITCH}-pitch.mp3
-				sox "/tmp/x${VOICE_PITCH}-pitch.mp3" "$ALETHEIA/voices/x${VOICE_PITCH}-pitch.mp3" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)
-				rm -f "/tmp/x${VOICE_PITCH}-pitch.mp3"
+			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
+				gtts-cli " $VOICE_PITCH" -o /tmp/voice-pitch${VOICE_PITCH}.mp3
+				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)
+				rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
 			fi
-			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/x${VOICE_PITCH}-pitch.mp3" >/dev/null 2>/dev/null &
+			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 			flagged=true
 		elif [ "$updown" == "K" ]; then
 			if [ "$VOICE_PITCH" -lt "30" ]; then
 				VOICE_PITCH="$(($VOICE_PITCH+1))"
 			fi
-			if [ ! -e "$ALETHEIA/voices/x${VOICE_PITCH}-pitch.mp3" ]; then
-				gtts-cli " $VOICE_PITCH" -o /tmp/x${VOICE_PITCH}-pitch.mp3
-				sox "/tmp/x${VOICE_PITCH}-pitch.mp3" "$ALETHEIA/voices/x${VOICE_PITCH}-pitch.mp3" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)
-				rm -f "/tmp/x${VOICE_PITCH}-pitch.mp3"
+			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
+				gtts-cli " $VOICE_PITCH" -o /tmp/voice-pitch${VOICE_PITCH}.mp3
+				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)
+				rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
 
 			fi
-			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/x${VOICE_PITCH}-pitch.mp3" >/dev/null 2>/dev/null &
+			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 			flagged=true
 		elif [ "$updown" == "8" ]; then
 			if [ "`echo -e \"$VOICE_VOLUME > 0.05\" | bc`" == "1" ]; then
@@ -7012,7 +6983,7 @@ loop_help_screen() {
 				;;
 			*)
 				if [ "$switchback" == false ]; then
-					gtts_speak "closed"
+					gtts_speak "closed" true
 				fi
 				if [ "$switchback" == true ]; then
 					VOICE_ENABLED=false
@@ -7026,7 +6997,7 @@ loop_help_screen() {
 			esac
 		else
 			if [ "$switchback" == false ]; then
-				gtts_speak "closed"
+				gtts_speak "closed" true
 			fi
 			if [ "$switchback" == true ]; then
 				VOICE_ENABLED=false
@@ -7043,7 +7014,6 @@ loop_help_screen() {
 render_help_screen() {
 	render $(($HELP_LENGTH+1)) "`echo -ne \"$HELP\" | wc -L`" "$HELP"
 	tput rc
-	LOADING=false
 	HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
@@ -7144,7 +7114,7 @@ help_screen() {
 				;;
 			*)
 				killall espeak-ng >/dev/null 2>/dev/null
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				number_per_page="$original_number_per_page"
 				if [ "$initial_screen" == false ]; then
 					draw_volume
@@ -7156,7 +7126,7 @@ help_screen() {
 				;;
 			esac
 		else
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			return
 		fi
@@ -7174,7 +7144,7 @@ start_search() {
 	if [ "$WEB_CLIENT" == "0" ]; then
 		local jump="`read_line`"
 	else
-		read -t 0.1 jump <$ALETHEIA/mplayer_fifo
+		read -t 0.1 jump <$ALETHEIA/web_client_pipe$$
 		if [ "$jump" == "" ]; then
 			local jump="`read_line`"
 		fi
@@ -7366,7 +7336,7 @@ search_queue() {
 		if [ "$WEB_CLIENT" == "0" ]; then
 			read -rsn1 updown <&1
 		else
-			read -rsn1 -t 0.1 updown <$ALETHEIA/mplayer_fifo
+			read -rsn1 -t 0.1 updown <$ALETHEIA/web_client_pipe$$
 			if [ "$updown" == "" ]; then
 				read -rsn1 updown <&1
 			fi
@@ -7420,7 +7390,7 @@ search_queue() {
 				return $RETURN_JUMP
 			else
 				BUFFER="$BUFFER_BACKUP"
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				draw_volume
 				draw_equalizer
 				draw_pitch
@@ -7447,7 +7417,7 @@ search_queue() {
 				BUFFER="$BUFFER_BACKUP"
 			fi
 			number_per_page="$original_number_per_page"
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				draw_volume
 				draw_equalizer
 				draw_pitch
@@ -7496,7 +7466,7 @@ search_queue() {
 				;;
 			*)
 				killall espeak-ng >/dev/null 2>/dev/null
-				gtts_speak "closed"
+				gtts_speak "closed" true
 				if [ "$REDRAWN" == false ]; then
 					BUFFER="$BUFFER_BACKUP"
 				fi
@@ -7514,7 +7484,7 @@ search_queue() {
 }
 
 queue_controls() {
-	gtts_speak "queue"
+	gtts_speak "select queue"
 	SEARCHBUFFER="`ls -1 \"$ALETHEIA/playlists/\"`"
 	local total="`echo -e \"$SEARCHBUFFER\"| wc -l`"
 	local number_per_page="$(($LINES-4))"
@@ -7784,7 +7754,7 @@ set_equalizer() {
 	gtts_speak "bass"
 	bass="`read_number`"
 	if [ "$bass" == "" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		if [ "$2" == false ] || [ "$2" == "" ]; then
 			redraw_buffer
 		fi
@@ -7795,7 +7765,7 @@ set_equalizer() {
 	gtts_speak "mid"
 	mid="`read_number`"
 	if [ "$mid" == "" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		if [ "$2" == false ] || [ "$2" == "" ]; then
 			redraw_buffer
 		fi
@@ -7806,7 +7776,7 @@ set_equalizer() {
 	gtts_speak "treble"
 	treble="`read_number`"
 	if [ "$treble" == "" ]; then
-		gtts_speak "closed"
+		gtts_speak "closed" true
 		if [ "$2" == false ] || [ "$2" == "" ]; then
 			draw_pitch
 			redraw_buffer
@@ -8220,7 +8190,7 @@ print_queue() {
 			redraw_buffer
 			draw_pitch
 			draw_position
-			gtts_speak "closed"
+			gtts_speak "closed" true
 			return 200
 		elif [ "$updown" == "" ]; then
 			kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -8470,18 +8440,10 @@ master() {
 		else
 			read -rsn1 -t 0.1 input
 			if [ "$input" == "" ]; then
-				read -rsn1 -t 0.3 input <$ALETHEIA/mplayer_fifo
+				read -rsn1 -t 0.3 input <$ALETHEIA/web_client_pipe$$
 			fi
 		fi
 
-		#orig_left=$MASTER_VOLUME_LEFT
-		#orig_right=$MASTER_VOLUME_RIGHT
-		#MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-		#MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-		#MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
-		#if [ "$MASTER_VOLUME_LEFT" != "$orig_left" ] || [ "$MASTER_VOLUME_RIGHT" != "$orig_right" ]; then
-		#	draw_volume
-		#fi
 		ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 		if [ "$?" == "1" ]; then
 			if [ "$TRACK_RANDOM" == true ]; then
@@ -8637,7 +8599,6 @@ master() {
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					return $RETURN_JUMP
 				fi
-				gtts_speak "closed"
 				;;
 			'?')
 				help_screen
@@ -8648,7 +8609,9 @@ master() {
 				draw_position
 				;;
 			'q')
-				read -rsn1 -t 0.1 _input <$ALETHEIA/mplayer_fifo
+				if [ "$WEB_CLIENT" == "1" ]; then
+					read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
+				fi
 				if [ "$_input" != "" ]; then
 					if [ "$_input" == "y" ]; then
 						echo -ne "$NOCOLOR"
@@ -8660,7 +8623,7 @@ master() {
 				fi
 				draw_banner "QUIT" true
 				if [ "$VOICE_ENABLED" == true ]; then
-					gtts_speak "quit? press y to continue"
+					gtts_speak "quit?"
 				fi
 				input_char=""
 				until [ "$input_char" == "n" ] || [ "$input_char" == "q" ]; do
@@ -8871,7 +8834,7 @@ master() {
 						draw_pitch
 					fi
 					draw_position
-					gtts_speak "closed"
+					gtts_speak "closed" true
 				fi
 				;;
 			'$')
@@ -8991,13 +8954,7 @@ master() {
 				fi
 				;;
 			'0')
-				MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-				MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-				MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
-				#MIXER_OUTPUT="`amixer sset Master - | grep \"Front\" | grep \"\[\"`"
-				#MASTER_VOLUME_LEFT="`echo \"$MIXER_OUTPUT\" | grep Left | cut -d'[' -f2 | cut -d']' -f1`"
-				#MASTER_VOLUME_RIGHT="`echo \"$MIXER_OUTPUT\" | grep Right | cut -d'[' -f2 | cut -d']' -f1`"
-
+				get_master_volume
 				tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
 				tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
 				if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
@@ -9028,9 +8985,7 @@ master() {
 						tmp_volume_right=$(($tmp_volume_right-1))
 					fi
 
-					MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-					MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-					MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
+					get_master_volume
 					pactl set-sink-volume @DEFAULT_SINK@ ${tmp_volume_left}% ${tmp_volume_right}%
 					#MIXER_OUTPUT="`amixer sset Master ${tmp_volume_left}%,${tmp_volume_right}% | grep \"Front\" | grep \"\[\"`"
 					#MASTER_VOLUME_LEFT="`echo \"$MIXER_OUTPUT\" | grep Left | cut -d'[' -f2 | cut -d']' -f1`"
@@ -9056,19 +9011,12 @@ master() {
 				done
 				draw_pitch
 				if [ "$flaggy" == true ]; then
-					MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-					MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-					MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
-					#MASTER_VOLUME_LEFT="`amixer sset Master - | grep \"Front Left\" | tail -1 | cut -d'[' -f2 | cut -d']' -f1`"
-					#MASTER_VOLUME_RIGHT="`amixer sset Master - | grep \"Front Right\" | tail -1 | cut -d'[' -f2 | cut -d']' -f1`"
-					#espeak_say " $MASTER_VOLUME_LEFT $MASTER_VOLUME_RIGHT"
+					get_master_volume
 					continue
 				fi
 				;;
 			')')
-				MIXER_OUTPUT="`pactl get-sink-volume @DEFAULT_SINK@ | sed -e \"s/ /\n/g\" | sed -e \"/^$/d\" | grep \"%\"`"
-				MASTER_VOLUME_LEFT="`echo -ne \"$MIXER_OUTPUT\" | head -1`"
-				MASTER_VOLUME_RIGHT="`echo -ne \"$MIXER_OUTPUT\" | tail -1`"
+				get_master_volume
 				tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
 				tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
 				if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
@@ -9548,10 +9496,10 @@ master() {
 					VOICE_ENABLED=true
 					if [ "$prev_true" == true ]; then
 						gtts_speak "voice on"
-						draw_banner "VOICE ALL"
+						draw_banner "voice on"
 					else
 						gtts_speak "off"
-						draw_banner "VOICE OFF"
+						draw_banner "off"
 						VOICE_ENABLED=false
 					fi
 					sleep 0.75
@@ -9568,9 +9516,9 @@ master() {
 					if [ "$prev_true" == true ]; then
 						VOICE_ENABLED=true
 						gtts_speak "voice on"
-						draw_banner "VOICE ALL"
+						draw_banner "VOICE ON"
 					else
-						gtts_speak "$TITLE"
+						gtts_speak "voice only titles, on"
 						VOICE_ENABLED=false
 						draw_banner "ONLY TITLES"
 					fi
@@ -9624,7 +9572,7 @@ master() {
 					fi
 					reset_buffer
 				else
-					gtts_speak "closed"
+					gtts_speak "closed" true
 				fi
 				tput civis
 				redraw_buffer
@@ -9638,7 +9586,7 @@ master() {
 				;;
 			'D')
 				yesno=""
-				read -rsn1 -t 0.1 _input <$ALETHEIA/mplayer_fifo
+				read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
 				if [ "$_input" != "" ]; then
 					yesno="$_input"
 				else
@@ -9771,7 +9719,7 @@ master() {
 				;;
 			'r')
 				draw_banner "RENAME" true
-				gtts_speak "rename file? press y to continue or n to cancel"
+				gtts_speak "rename file?"
 				read -rsn1 yesno
 				if [ "$yesno" == "y" ]; then
 					ext="`echo "$FILENAME" | rev | cut -d'.' -f1 | rev`"
@@ -9782,7 +9730,7 @@ master() {
 					gtts_speak "enter the new title"
 					tput rc
 					echo -ne "$WHITE_BLACK"
-					printf '%*s' $(($PANE_WIDTH - 12))
+					printf '%*s' $(($COLS - 14))
 					tput rc
 					echo -ne "$WHITE_BLACK"
 					newname="`read_line`"
@@ -10033,27 +9981,19 @@ if [ ! -d "$ALETHEIA/playlists/" ]; then
 	mkdir "$ALETHEIA/playlists"
 fi
 
-if [ ! -p "$ALETHEIA/pipe$$" ]; then
-	mkfifo "$ALETHEIA/pipe$$"
-fi
+rm -f "$ALETHEIA/pipe*" >/dev/null 2>/dev/null
 
-if [ ! -p "$ALETHEIA/mplayer_fifo" ]; then
-	mkfifo "$ALETHEIA/mplayer_fifo"
-fi
-exec 3<> "$ALETHEIA/mplayer_fifo"
+mkfifo "$ALETHEIA/pipe$$"
 
-about
+
+exec 3<> "$ALETHEIA/pipe$$"
 
 if [ "$1" == "--server" ]; then
 	WEB_CLIENT=1
+	mkfifo "$ALETHEIA/web_client_pipe$$"
 fi
 
 tput sc
-#if [ "$ONLY_VOICE_TITLES" == true ]; then
-#	gtts_speak "..." true
-#else
-#	gtts_speak "..." true
-#fi
 
 if [ "$2" != "" ]; then
 	KEYWORDS="`echo \"$@\" | cut -d' ' -f2-`"
@@ -10284,19 +10224,16 @@ else
 		node $HOME/webserver.js >/dev/null 2>/dev/null &
 	fi
 
-	LOADING=true
 	render_help_screen
 	render_voice_settings_screen
 	render_repeat_help_screen
 	rendered=true
-	kill %% >/dev/null 2>/dev/null
 	empty_pane
 
 	if [ -e "$ALETHEIA/config" ]; then
 		EQUALIZER="`cat $ALETHEIA/config | grep DEFAULT_EQUALIZER | cut -d'=' -f2`"
 	fi
 	draw_equalizer
-
 
 	main_menu true
 	if [ "$?" == "$RETURN_JUMP" ]; then
@@ -10307,11 +10244,9 @@ else
 fi
 
 if [ "$rendered" == false ]; then
-	LOADING=true
 	render_help_screen
 	render_voice_settings_screen
 	render_repeat_help_screen
-	kill %% >/dev/null 2>/dev/null
 	empty_pane
 fi
 
