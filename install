@@ -76,6 +76,15 @@ else
 	echo -e "${GREEN}yes"
 fi
 
+echo -ne "${NOCOLOR}checking for ffmpeg... "
+if [ "`which ffmpeg 2>/dev/null`" == "" ]; then
+	echo -e "${RED}no"
+	quit=true
+	#exit 0
+else
+	echo -e "${GREEN}yes"
+fi
+
 echo -ne "${NOCOLOR}checking for ffprobe... "
 if [ "`which ffprobe 2>/dev/null`" == "" ]; then
 	echo -e "${RED}no"

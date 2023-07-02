@@ -18,7 +18,7 @@ cp "$SRCDIR/aletheia.png" "$TMPDIR"
 #cp "$SRCDIR/install" "$TMPDIR"
 #cp "$SRCDIR/uninstall" "$TMPDIR"
 
-echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pactl, calc, bc, gtts-cli, play, espeak-ng, sox, ffprobe, mplayer\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pactl, calc, bc, gtts-cli, play, espeak-ng, sox, ffmpeg, ffprobe, mplayer\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
 
 cp "$SRCDIR/aletheia" "$TMPDIR/usr/local/bin/"
 cp "$SRCDIR/aletheia.1" "$TMPDIR/usr/local/share/man/man1/"
