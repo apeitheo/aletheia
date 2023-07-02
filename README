@@ -1,0 +1,33 @@
+Welcome to Aletheia 0.9.6!
+
+The dependencies needed to run Aletheia are:
+
+bash, pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, and mplayer
+
+To learn the basics of Aletheia, read the manpage and check out the controls
+by clicking the "Help" option in the menu, or by pressing the '?' key at any
+time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit.
+If you need voice feedback, hit 'd' followed by '#' and confirm to save.
+
+Installation: ./install
+Uninstallation: ./uninstall
+
+These install to /usr/local by default. Use the DESTDIR environment variable to
+install elsewhere.
+
+Debian Package: ./create_deb
+Fedora Package: ./create_rpm
+
+List of installed files:
+
+/usr/local/bin/aletheia
+/usr/local/share/man/man1/aletheia.1
+
+There are xfce4-terminal and gnome-terminal.desktop files, as well as an icon,
+included to dedicate a terminal to Aletheia and give it a launchable icon. To
+install one or the other, place in ~/.local/share/applications/ or
+/usr/local/share/applications/, and the icon in ~/.icons/ or
+/usr/local/share/icons/
+
+Send bug reports to apeitheo@gmail.com
+Support the project on Patreon: https://www.patreon.com/aletheia_project

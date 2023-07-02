@@ -1,32 +1,27 @@
 #!/bin/bash
 
 VERSION=${VERSION:-0.9.6}
-REVISION=1
+REVISION=2
 SRCDIR=${SRCDIR:-"."}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
 if [ -e "$TMPDIR" ]; then
-	rm -rf "$TMPDIR"
-	mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/local/bin "$TMPDIR"/usr/local/share/man/man1/ "$TMPDIR"/usr/local/share/icons/
-else
-	mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/local/bin "$TMPDIR"/usr/local/share/man/man1/ "$TMPDIR"/usr/local/share/icons/
+	sudo rm -rf "$TMPDIR"
 fi
 
-cp "$SRCDIR/aletheia" "$TMPDIR"
-cp "$SRCDIR/aletheia.1" "$TMPDIR"
-cp "$SRCDIR/aletheia.png" "$TMPDIR"
-#cp "$SRCDIR/install" "$TMPDIR"
-#cp "$SRCDIR/uninstall" "$TMPDIR"
+mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/
 
-echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pactl, calc, bc, gtts-cli, play, espeak-ng, sox, ffmpeg, ffprobe, mplayer\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+#cp "$SRCDIR/aletheia" "$TMPDIR"
+#cp "$SRCDIR/aletheia.1" "$TMPDIR"
 
-cp "$SRCDIR/aletheia" "$TMPDIR/usr/local/bin/"
-cp "$SRCDIR/aletheia.1" "$TMPDIR/usr/local/share/man/man1/"
-cp "$SRCDIR/aletheia.png" "$TMPDIR/usr/local/share/icons/"
+echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
 
-chmod 755 "$TMPDIR/usr/local/bin/aletheia"
-chown -R root:root "$TMPDIR"
+cp "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
+cp "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
+cp "$SRCDIR/aletheia.png" "$TMPDIR/usr/share/icons/"
 
+chmod 755 "$TMPDIR/usr/bin/aletheia"
+chmod 644 "$TMPDIR/usr/share/man/man1/aletheia.1"
 cd "$TMPDIR"
-
-dpkg-deb --build "$TMPDIR"
+sudo chown -R root:root "$TMPDIR"
+sudo dpkg-deb --build "$TMPDIR"

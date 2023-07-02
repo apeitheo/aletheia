@@ -315,7 +315,7 @@ Restart playback from beginning.
 
 .TP
 .B ^H
-Jump to custom positon set by the '5' key. This position is also currently used as the starting position for the looping function that's accessible via the '6' key and \fILOOP EDITOR\fR ('^E').
+Jump to custom positon set by the '5' key. This position is also currently used as the starting position for the looping function that's accessible via the '6' key and \fILOOP EDITOR MODE\fR ('^E').
 
 .TP
 .B c
@@ -323,11 +323,11 @@ Mute playback.
 
 .TP
 .B 6, ^E
-\'6\' enters the loop editor for the current media file, whereas '^E' enters \fILOOP EDITOR\fR, keeping the editor open until disabled with the 'q' key. See \fILOOP EDITOR\fR for more information.
+\'6\' enters the loop editor for the current media file, whereas '^E' enters \fILOOP EDITOR MODE\fR, keeping the editor open until disabled with the 'q' key. See \fILOOP EDITOR MODE\fR for more information.
 
 .TP
 .B ^L
-Enters loop mode if loop markers have been set and a loop exported. In the loop editor ('6') or \fILOOP EDITOR\fR ('^E'), once the loop markers are set and the loop is seamless, export using 'Z', quit the loop editor with 'q' and enter this mode to allow for seamless scaling.
+Enters loop mode if loop markers have been set and a loop exported. In the loop editor ('6') or \fILOOP EDITOR MODE\fR ('^E'), once the loop markers are set and the loop is seamless, export using 'Z', and hit ^L to enter loop mode.
 
 .TP
 .B P
@@ -428,13 +428,13 @@ Oscillate between the current interval and another at current scaling speed (set
 Set or reset the scaling speed. Default is 0.2 seconds. Input should be a number above 0.
 
 .RE
-.SS LOOP EDITOR
+.SS LOOP EDITOR MODE
 
 This mode allows for editing loop markers to create seamless loops over a section of a song. Instead of the normal queue information in the lower right of the screen, a set of three numbers are displayed that indicate the starting position (in seconds), the ending position (in seconds), and the pause/gap between loop iterations (in 1/12th of a second).
 
-To enable, wait until the desired section begins to play and press '5' to select to the start position, and then '7' to set the end position. '6' enters the editor for the current song, while '^E' enables the LOOP EDITOR until exit with the 'q' key. Only works if there is a set loop (using both '5' and '7' keys) or a saved loop. Otherwise, loop mode will skip over tracks that do not have anything saved.
+To enable, wait until the desired section begins to play and press '5' to select to the start position, and then '7' to set the end position. '6' enters the editor for the current song, while '^E' enables the LOOP EDITOR MODE until exit with the 'q' key. Only works if there is a set loop (using both '5' and '7' keys) or a saved loop. Otherwise, loop mode will skip over tracks that do not have anything saved.
 
-Once the loop markers have been set and the loop is seamless, export using 'Z', exit the loop editor with 'q', and load the finished loop with ^L to enable seamless playback while scaling and adjusting intervals.
+Once the loop markers have been set and the loop is seamless, export using 'Z', and load the finished loop with ^L to enable seamless playback while scaling and adjusting intervals.
 
 .RS 7
 .TP
