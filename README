@@ -15,8 +15,9 @@ Uninstallation: ./uninstall
 These install to /usr/local by default. Use the DESTDIR environment variable to
 install elsewhere.
 
-Debian Package: ./create_deb
-Fedora Package: ./create_rpm
+Debian Package:	./create_deb
+Fedora Package:	./create_rpm
+Slackware Package: ./aletheia.SlackBuild
 
 List of installed files:
 
