@@ -1,0 +1,20 @@
+# HOW TO EDIT THIS FILE:
+# The "handy ruler" below makes it easier to edit a package description.
+# Line up the first '|' above the ':' following the base package name, and
+# the '|' on the right side marks the last column you can put a character in.
+# You must make exactly 11 lines for the formatting to be correct.  It's also
+# customary to leave one space after the ':' except on otherwise blank lines.
+
+        |-----handy-ruler------------------------------------------------------|
+aletheia: aletheia (CLI media player with easy-to-use pitch controls)
+aletheia:
+aletheia: A command-line media player with a wide range of features designed to
+aletheia: make it easy to adjust pitch and tempo in real-time using custom-
+aletheia: -izable intervals, allowing precise control over the playback speed
+aletheia: and tonality of media files. It also supports loop creation with
+aletheia: customizable start and end points for seamless looping. Aletheia has
+aletheia: optional voice feedback and the ability to play videos, import down-
+aletheia: -loads, and export playlists and loops. In addition, it offers
+aletheia: various scaling features to smoothly transition between separate
+aletheia: intervals.
+
