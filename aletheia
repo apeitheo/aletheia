@@ -89,6 +89,8 @@ else
 	WHITE_BLACK='\033[1;30;1;40m'
 fi
 
+COLOR_PANEL="#162934"
+
 if [ "$COLORS_ENABLED" == false ]; then
 	GREEN_BLACK='\033[1;37;1;40m'
 	BLUE_BLACK='\033[1;37;1;40m'
@@ -156,13 +158,15 @@ ONLY_PITCH=false
 LOCKING_POS=0
 EDO_LIMIT="1000000"
 INTERVAL_LIMIT=`calc "$DEFAULT_EDO * 2.6"`
-INTERVAL_UPPER_LIMIT=`calc "$DEFAULT_EDO * 2.0"`
+INTERVAL_UPPER_LIMIT=`calc "$DEFAULT_EDO * 2.1"`
 SAVED_INTERVAL=""
 SAVED_EDO=""
 
 SEARCH=false
 KEYWORD=""
 FILENAME=""
+ARTIST=""
+SONG=""
 
 SLEEPING=false
 SUSPEND=false
@@ -1007,7 +1011,7 @@ set_loop() {
 		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "RESET"
 	fi
-	sleep 0.25
+	sleep 0.6
 	draw_pitch
 	draw_position
 }
@@ -1029,7 +1033,7 @@ set_loop_artist() {
 		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "RESET"
 	fi
-	sleep 0.25
+	sleep 0.6
 	draw_pitch
 	draw_position
 }
@@ -1049,7 +1053,7 @@ set_random() {
 		TRACK_RANDOM=false
 		draw_banner "RANDOM OFF"
 	fi
-	sleep 0.25
+	sleep 0.6
 	draw_pitch
 	draw_position
 }
@@ -1063,7 +1067,9 @@ set_only_locked() {
 		LOOP=false
 		LOOP_ARTIST=false
 		TRACK_RANDOM=false
-		ONLY_LOCKED=true
+		if [ "$5" != true ]; then
+			ONLY_LOCKED=true
+		fi
 		if [ "$4" != true ]; then
 			if [ "$PICK" == "" ]; then
 				old_queue_array=("${queue_array[@]}")
@@ -1078,9 +1084,11 @@ set_only_locked() {
 				done
 				unset IFS
 				if [ "$index" == "0" ]; then
-					queue_array=("${old_queue_array[@]}")
-					# FIXME
-					return
+					#if [ "$5" == true ]; then
+						queue_array=("${old_queue_array[@]}")
+						unset old_queue_array
+						return 50 
+					#fi
 				else
 					TOTAL_QUEUE=$index
 				fi
@@ -1137,7 +1145,9 @@ set_only_locked() {
 				fi
 			fi
 			echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
-			draw_banner "ONLY LOCKED"
+			if [ "$5" != true ]; then
+				draw_banner "ONLY LOCKED"
+			fi
 			reset_buffer
 			redraw_buffer
 			if [ "$ret" == true ]; then
@@ -1184,7 +1194,7 @@ set_only_locked() {
 		reset_buffer
 		redraw_screen
 	fi
-	sleep 0.25
+	sleep 0.6
 	draw_pitch
 	draw_position
 }
@@ -1271,7 +1281,7 @@ set_scale_speed() {
 		reset=true
 		draw_banner "RESET"
 		stty -echo
-		sleep 0.25
+		sleep 0.6
 		stty echo
 		draw_pitch
 		draw_position		
@@ -1316,7 +1326,7 @@ less_precise() {
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	draw_pitch
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	gtts_speak "less precise"
 }
 
@@ -1340,7 +1350,7 @@ more_precise() {
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	draw_pitch
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	gtts_speak "precise"
 }
 
@@ -1367,7 +1377,7 @@ zero_interval_jump() {
 		fi
 	fi
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	draw_pitch
 }
 
@@ -1397,7 +1407,7 @@ repeat() {
 			if [ "`isnum \"$START_MARKER\"`" == "0" ] || [ "`echo -e \"$START_MARKER < 0\" | bc`" == "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
-				sleep 0.25
+				sleep 0.6
 				draw_pitch
 				draw_position
 				return 200
@@ -1410,7 +1420,7 @@ repeat() {
 			if [ "`isnum \"$END_TIME\"`" == "0" ] || [ "`echo -e \"$END_TIME < 0\" | bc`" == "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
-				sleep 0.25
+				sleep 0.6
 				draw_pitch
 				draw_position
 				return 200
@@ -1423,7 +1433,7 @@ repeat() {
 			if [ "`isnum \"$space\"`" != "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
-				sleep 0.25
+				sleep 0.6
 				draw_pitch
 				draw_position
 				return 200
@@ -1435,7 +1445,7 @@ repeat() {
 		else
 			draw_banner "NONE"
 			gtts_speak "no loops"
-			sleep 0.25
+			sleep 0.6
 			draw_pitch
 			draw_position
 			if [ "$LOOP" == false ]; then
@@ -1472,7 +1482,7 @@ repeat() {
 				if [ "$input_char" == "" ]; then
 					if [ "$space" -gt "0" ]; then
 						echo -e "pause" >"$ALETHEIA/pipe$$" &
-						read -rsn1 -t `calc "$space/12" | sed -e "s/\t//g" | cut -d'~' -f2` input_char
+						read -rsn1 -t `calc "$space/20" | sed -e "s/\t//g" | cut -d'~' -f2` input_char
 						echo -e "pause" >"$ALETHEIA/pipe$$" &
 					fi
 				fi
@@ -1762,10 +1772,13 @@ repeat() {
 						filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | rev`"
 						rm -f "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
 						rm -f "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
-						ffmpeg -i "$FILENAME" -ss $START_MARKER -t $(calc "$END_MARKER-$START_MARKER+0.265+0.00000") -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
+						ffmpeg -i "$FILENAME" -ss $START_MARKER -t $(calc "$END_MARKER-$START_MARKER+0.265") -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
 						len="`ffprobe -i \"$filename_without_ext.repeat0.$ext\" -show_entries format=duration -v quiet -of csv='p=0'`"
-						sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat.$ext" trim 0 -0.180 >/dev/null 2>/dev/null
+						sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat1.$ext" trim 0 -0.180 >/dev/null 2>/dev/null
+						delay="$(echo "($space/20)" | bc)"
+						ffmpeg -i "$filename_without_ext.repeat1.$ext" -af "apad=pad_dur=$delay" "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
 						rm -f "$filename_without_ext.repeat0.$ext"
+						rm -f "$filename_without_ext.repeat1.$ext"
 						cp "$FILENAME.locked" "$filename_without_ext.repeat.$ext.locked" >/dev/null 2>/dev/null
 						RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
@@ -2611,7 +2624,7 @@ zero_interval() {
 		fi
 	fi
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	LOCKED=false
 	RIGHT_BANNER_WIDTH=0
 	draw_pitch
@@ -2771,7 +2784,7 @@ scale_edo() {
 					EDO="$(($EDO-1))"
 					edo_change="$(($edo_change-1))"
 					INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-					INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+					INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 					if [ "$flaggy" == false ]; then
 						temp="`calc \"$orig_edo/$EDO\" | cut -d'~' -f2`"
 						INTERVAL="`echo \"$orig_interval/$temp\" | bc | cut -d'~' -f2 | cut -d'.' -f1`"
@@ -2832,7 +2845,7 @@ scale_edo() {
 					edo_change=$(($edo_change+1))
 
 					INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-					INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+					INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 
 					if [ "$flaggy" == false ]; then
 						temp="`calc \"$EDO/$orig_edo\" | cut -d'~' -f2`"
@@ -2903,12 +2916,22 @@ main_menu() {
 	flag=false
 	menu_start_over=true
 
-	empty_pane
+	#empty_pane
+	first=$((($LINES/2) - ($TOTAL_OPTS/2)-1))
+	last=$(($first + $TOTAL_OPTS - 1))
+	
+	for i in `seq 1 $first`; do
+		tput cup $i
+		tput el
+	done
+
+	for i in `seq $last $(($LINES-2))`; do
+		tput cup $i
+		tput el
+	done
 
 	until [ "$z" = "," ]; do
 		if [ "$z" == "" ]; then
-			first=$((($LINES/2) - ($TOTAL_OPTS/2)-1))
-			last=$(($first + $TOTAL_OPTS - 1))
 			x=1
 			if [ "$initial_screen" == true ]; then
 				echo -ne "$NOCOLOR"
@@ -2953,7 +2976,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`printf '%*s' $(($COLS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -3021,7 +3044,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING`printf '%*s' $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$i" -ge "2" ]; then
@@ -3069,7 +3092,7 @@ main_menu() {
 				fi
 			done
 
-			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
+			menu_buf="$menu_buf\n$PADDING`printf '%*s' $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
 
 			echo -ne "$menu_buf"
 			#for i in `seq 1 $(($LINES-4-${TOTAL_OPTS}))`; do
@@ -3443,6 +3466,7 @@ main_menu() {
 				if [ "$TOTAL_QUEUE" == "0" ]; then
 					draw_banner "NO MUSIC"
 					gtts_speak "no music"
+					sleep 0.6
 					NO_QUEUE_FLAG=true
 					menu_start_over=true
 					tput cup $LINES
@@ -3516,13 +3540,13 @@ main_menu() {
 					VIDEO=false
 					load_only_loops true
 					if [ "$TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NO MUSIC"
-						gtts_speak "no music"
-						sleep 0.25
-						tput cup $LINES
-						echo -ne "$WHITE_BLACK"
-						printf '%*s' $COLS
-						echo -ne "$NOCOLOR"
+						draw_banner "NONE"
+						gtts_speak "no music loops"
+						sleep 0.6
+						#tput cup $LINES
+						#echo -ne "$WHITE_BLACK"
+						#printf '%*s' $COLS
+						#echo -ne "$NOCOLOR"
 						continue
 						
 					fi
@@ -3532,17 +3556,18 @@ main_menu() {
 					return $RETURN_JUMP
 				elif [ "$MUSIC_SELECTION" == "2" ]; then
 					VIDEO=false
-					set_only_locked
-					if [ "$TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NO MUSIC"
-						gtts_speak "no music"
-						sleep 0.25
-						tput cup $LINES
-						echo -ne "$WHITE_BLACK"
-						printf '%*s' $COLS
-						echo -ne "$NOCOLOR"
+					set_only_locked false false false false true
+					if [ "$?" == "50" ]; then
+						draw_banner "NONE"
+						gtts_speak "no locked music" true
+						sleep 0.6
+						#tput cup $LINES
+						#echo -ne "$WHITE_BLACK"
+						#printf '%*s' $COLS
+						#echo -ne "$NOCOLOR"
 						continue
-						
+					else
+						draw_banner "WAIT"
 					fi
 					JUMP="1"
 					echo -ne "$NOCOLOR"
@@ -3576,12 +3601,13 @@ main_menu() {
 					SHUFFLED=true
 					TOTAL_QUEUE=$index
 					if [ "$TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NO MUSIC"
-						gtts_speak "no music"
-						tput cup $LINES
-						echo -ne "$WHITE_BLACK"
-						printf '%*s' $COLS
-						echo -ne "$NOCOLOR"
+						draw_banner "NONE"
+						sleep 0.618
+						gtts_speak "no music" true
+						#tput cup $LINES
+						#echo -ne "$WHITE_BLACK"
+						#printf '%*s' $COLS
+						#echo -ne "$NOCOLOR"
 						continue
 						
 					fi
@@ -3612,12 +3638,13 @@ main_menu() {
 					if [ "$new_TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO SOUNDS"
 						gtts_speak "no sounds" true
+						sleep 0.6
 						menu_start_over=true
 						NO_QUEUE_FLAG=true
-						tput cup $LINES
-						echo -ne "$WHITE_BLACK"
-						printf '%*s' $COLS
-						echo -ne "$NOCOLOR"
+						#tput cup $LINES
+						#echo -ne "$WHITE_BLACK"
+						#printf '%*s' $COLS
+						#echo -ne "$NOCOLOR"
 						draw_position
 						continue
 						
@@ -3647,13 +3674,14 @@ main_menu() {
 					fi
 					if [ "$TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO VIDEOS"
-						gtts_speak "no videos"
+						gtts_speak "no videos" true
+						sleep 0.6
 						NO_QUEUE_FLAG=true
 						menu_start_over=true
-						tput cup $LINES
-						echo -ne "$WHITE_BLACK"
-						printf '%*s' $COLS
-						echo -ne "$NOCOLOR"
+						#tput cup $LINES
+						#echo -ne "$WHITE_BLACK"
+						#printf '%*s' $COLS
+						#echo -ne "$NOCOLOR"
 						continue
 						
 					fi					
@@ -3709,6 +3737,7 @@ main_menu() {
 		fi
 		if [ "$z" = "," ]; then
 			if [ "$1" == false ] || [ "$1" == "" ]; then
+				reset_buffer
 				redraw_buffer
 				draw_pitch
 				draw_position
@@ -4144,7 +4173,7 @@ reset_all_tuning() {
 	INTERVAL="$DEFAULT_INTERVAL"
 	EDO="$DEFAULT_EDO"
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 	sleep 0.1
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
@@ -4154,15 +4183,32 @@ reset_all_tuning() {
 	draw_pitch
 }
 
+read_locked_file() {
+	CONTENTS="$1"
+	IFS='/' read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
+	if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
+		# backwards compatible with old style locked file
+		_scaletempo_flag=$oldstyle2
+	fi
+	INTERVAL=$_int
+	EDO=$_edo
+	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
+}
+
 reset_to_locked() {
 	if [ -e "$FILENAME.locked" ]; then
-		BOTH="`cat \"$FILENAME\".locked`"
-		INTERVAL="`echo \"$BOTH\" | cut -d'/' -f1`"
-		EDO="`echo \"$BOTH\" | cut -d'/' -f2`"
-		INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
-		EQUALIZER="`echo \"$BOTH\" | cut -d'/' -f4`"
-		SCALETEMPO_FLAG="`echo \"$BOTH\" | cut -d'/' -f5`"
+		#CONTENTS="$(cat "$FILENAME.locked")"
+		#IFS='/' read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
+		#if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
+		#	# backwards compatible with old style locked file
+		#	_scaletempo_flag=$oldstyle2
+		#fi
+		#INTERVAL=$_int
+		#EDO=$_edo
+		#INTERVAL_LIMIT=`calc "$EDO * 2.6"`
+		#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
+		read_locked_file "$(cat "$FILENAME.locked")"
 		LOCKED=true
 
 		if [ "$VOLUME" == "" ]; then
@@ -4185,15 +4231,26 @@ reset_to_locked() {
 			fi
 		fi
 
-		if [ "$SCALETEMPO_FLAG" == "" ]; then
+		if [ "$_scaletempo_flag" == "" ]; then
 			SCALETEMPO=false
+			ONLY_PITCH=false
 			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
-		elif [ "$SCALETEMPO_FLAG" == "0" ]; then
+		elif [ "$_scaletempo_flag" == "0" ]; then
 			SCALETEMPO=false
+			ONLY_PITCH=false
 			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
-		else
+		elif [ "$_scaletempo_flag" == "1" ]; then
 			SCALETEMPO=true
-			echo -e "af_add scaletempo" >"$ALETHEIA/pipe$$" &
+			ONLY_PITCH=false
+			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+			sleep 0.05
+			echo -e "af_add scaletempo=speed=tempo" >"$ALETHEIA/pipe$$" &
+		elif [ "$_scaletempo_flag" == "2" ]; then
+			SCALETEMPO=true
+			ONLY_PITCH=true
+			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
+			sleep 0.05
+			echo -e "af_add scaletempo=speed=pitch" >"$ALETHEIA/pipe$$" &
 		fi
 		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		sleep 0.1
@@ -4202,7 +4259,7 @@ reset_to_locked() {
 		INTERVAL="$DEFAULT_INTERVAL"
 		EDO="$DEFAULT_EDO"
 		INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 		echo "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		VOLUME="$DEFAULT_VOLUME"
 		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
@@ -4256,7 +4313,7 @@ set_custom_edo() {
 		EDO="$new_edo"
 		LOCKED_EDO="$EDO"
 		INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		LOCKED=false
 		draw_volume
@@ -4277,7 +4334,7 @@ double_precise() {
 		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		draw_pitch
 		INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+		INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 		gtts_speak "$EDO"
 	else
 		gtts_speak "limit"
@@ -4298,7 +4355,7 @@ half_precise() {
 			new="`calc \"($INTERVAL/$EDO)\"`"
 			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-			INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+			INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 			gtts_speak "$EDO"
 		else
 			gtts_speak "limit"
@@ -4455,7 +4512,7 @@ set_default_edo() {
 	fi
 	EDO="$new_edo"
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	LOCKED=false
 	draw_pitch 1
@@ -4990,7 +5047,9 @@ master_volume_change() {
 
 fade_volume() {
 	updown=""
-	read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
+	if [ "$WEB_CLIENT" == "1" ]; then
+		read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
+	fi
 	if [ "$_input" != "" ]; then
 		updown="$_input"
 	fi
@@ -5104,7 +5163,7 @@ sleep_countdown() {
 			VOLUME="$(($VOLUME-1))"
 			echo "volume $x 1" >"$ALETHEIA/pipe$$" &
 			draw_volume
-			if [ "$SLEEP_MODE" == "0" ]; then
+			if [ "$WEB_CLIENT" == "0" ]; then
 				read -rsn1 -t 0.7 tmp
 			else
 				read -rsn1 -t 0.7 tmp <$ALETHEIA/web_client_pipe$$
@@ -5548,11 +5607,13 @@ reset_buffer() {
 		buf_space="`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-${#one}-3))`"
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
 			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$one$WHITE_BLACK:$BLUE_BLACK$two$PADDING`tput sgr0`\n"
+			LOCKING_POS="$(($i-1))"
 			
 		else
 			if [ "$PANELS_ENABLED" == false ]; then
 				if [ "$pos" == "$POSITION" ]; then
 					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$BLUE$BLUE$one$WHITE:$BLUE$two$PADDING\n"
+					LOCKING_POS="$(($i-1))"
 				else
 					BUFFER="$BUFFER$PADDING$WHITE$INDICATOR $BLUE$display_pad$BLUE$pos $WHITE$line$buf_space$WHITE$one:$two$PADDING\n"
 				fi
@@ -6087,8 +6148,10 @@ load_only_loops() {
 			IFS=$'\n'
 			index=0
 			for i in `find "$MUSICDIR" -iname "*\.repeats" | shuf | sed -e "s/\.repeats$//g"`; do
-				queue_array[$index]="$i"
-				index=$(($index+1))
+				if [ -e "$i" ]; then
+					queue_array[$index]="$i"
+					index=$(($index+1))
+				fi
 			done
 			unset IFS
 		fi
@@ -6100,10 +6163,10 @@ load_only_loops() {
 		else
 			POSITION=1
 		fi
-		reset_buffer
-		redraw_buffer
-		draw_pitch
-		draw_position
+		#reset_buffer
+		#redraw_buffer
+		#draw_pitch
+		#draw_position
 	else
 		draw_banner "WAIT"
 		unset queue_array
@@ -6198,17 +6261,22 @@ load_loop_file() {
 			gtts_speak "loading loop"
 			sleep 0.05
 			if [ -e "$filename_without_ext.repeat.$ext.locked" ]; then
-				CONTENTS="`cat \"$filename_without_ext.repeat.$ext\".locked`"
-				IFS='/'
-				read _int _edo _volume_offset _equal_offset SCALETEMPO_FLAG <<< "$CONTENTS"
-				unset IFS
-				INTERVAL=$_int
-				EDO=$_edo
-				if [ "$SCALETEMPO_FLAG" != "0" ]; then
-					if [ "$SCALETEMPO_FLAG" == "1" ]; then
+				#CONTENTS="`cat \"$filename_without_ext.repeat.$ext\".locked`"
+				#IFS='/'
+				#read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
+				#if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
+				#	# backwards compatible with old style locked file
+				#	_scaletempo_flag=$oldstyle2
+				#fi
+				#unset IFS
+				#INTERVAL=$_int
+				#EDO=$_edo
+				read_locked_file "$(cat "$filename_without_ext.repeat.$ext.locked")"
+				if [ "$_scaletempo_flag" != "0" ]; then
+					if [ "$_scaletempo_flag" == "1" ]; then
 						SCALETEMPO=true
 						ONLY_PITCH=false
-					elif [ "$SCALETEMPO_FLAG" == "2" ]; then
+					elif [ "$_scaletempo_flag" == "2" ]; then
 						SCALETEMPO=true
 						ONLY_PITCH=true
 					fi
@@ -6237,17 +6305,22 @@ load_loop_file() {
 			draw_banner "LOOP OFF" 
 			gtts_speak "loop disabled"
 			if [ -e "$filename_without_ext.$ext.locked" ]; then
-				CONTENTS="`cat \"$filename_without_ext.$ext\".locked`"
-				IFS='/'
-				read _int _edo _volume_offset _equal_offset SCALETEMPO_FLAG <<< "$CONTENTS"
-				unset IFS
-				INTERVAL=$_int
-				EDO=$_edo
-				if [ "$SCALETEMPO_FLAG" != "0" ]; then
-					if [ "$SCALETEMPO_FLAG" == "1" ]; then
+				#CONTENTS="`cat \"$filename_without_ext.$ext\".locked`"
+				#IFS='/'
+				#read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
+				#if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
+				#	# backwards compatible with old style locked file
+				#	_scaletempo_flag=$oldstyle2
+				#fi
+				#unset IFS
+				#INTERVAL=$_int
+				#EDO=$_edo
+				read_locked_file "$(cat "$filename_without_ext.$ext.locked")"
+				if [ "$_scaletempo_flag" != "0" ]; then
+					if [ "$_scaletempo_flag" == "1" ]; then
 						SCALETEMPO=true
 						ONLY_PITCH=false
-					elif [ "$SCALETEMPO_FLAG" == "2" ]; then
+					elif [ "$_scaletempo_flag" == "2" ]; then
 						SCALETEMPO=true
 						ONLY_PITCH=true
 					fi
@@ -6283,7 +6356,7 @@ invert_int() {
 	espeak_say " $INTERVAL $EDO"
 	VOICE_ENABLED=false
 	ONLY_VOICE_TITLES=false
-	draw_banner "$3"
+	draw_pitch
 }
 
 draw_pitch() {
@@ -6546,7 +6619,7 @@ add_downloaded() {
 			gtts_speak "nothing downloaded"
 			draw_banner "NONE"
 		fi
-		sleep 0.25
+		sleep 0.6
 		draw_pitch
 		draw_position
 	fi
@@ -8294,30 +8367,29 @@ master() {
 	fi
 	INTERVAL="$DEFAULT_INTERVAL"
 	EDO="$DEFAULT_EDO"
-	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+	INTERVAL_LIMIT=$(calc "$EDO * 2.6")
+	INTERVAL_UPPER_LIMIT=$(calc "$EDO * 2.1")
 
 	if [ -e "$FILENAME.locked" ]; then
 		LOCKED=true
 
-		CONTENTS="`cat \"$FILENAME\".locked`"
-		IFS='/'
-		read _int _edo _volume_offset _equal_offset SCALETEMPO_FLAG <<< "$CONTENTS"
-		unset IFS
+		#CONTENTS="$(cat "$FILENAME".locked)"
+		#IFS='/' read _int _edo _scaletempo_flag <<< "$CONTENTS"
 
 		if [ "$LOCKED_OFF" == false ]; then
-			INTERVAL="$_int"
-			EDO="$_edo"
-			INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-			INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.0"`
+			read_locked_file "$(cat "$FILENAME.locked")"
+			#INTERVAL="$_int"
+			#EDO="$_edo"
+			#INTERVAL_LIMIT=`calc "$EDO * 2.6"`
+			#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 		fi
 
-		if [ "$EDO" != "$DEFAULT_EDO" ]; then
-			tmp=$EDO
-			until [ "$(($tmp % 2))" != "0" ]; do
-				tmp=$(($tmp/2))
-			done
-		fi
+		#if [ "$EDO" != "$DEFAULT_EDO" ]; then
+		#	tmp=$EDO
+		#	until [ "$(($tmp % 2))" != "0" ]; do
+		#		tmp=$(($tmp/2))
+		#	done
+		#fi
 
 		if [ "$VOLUME" == "" ]; then
 			VOLUME="$DEFAULT_VOLUME"
@@ -8325,10 +8397,10 @@ master() {
 
 		FLAGS="-speed `calc \"2^($INTERVAL/$EDO)\"` -volume $VOLUME -af equalizer=$EQUALIZER,volnorm"
 
-		if [ "$SCALETEMPO_FLAG" == "1" ]; then
+		if [ "$_scaletempo_flag" == "1" ]; then
 			FLAGS="$FLAGS,scaletempo=speed=tempo"
 			SCALETEMPO=true
-		elif [ "$SCALETEMPO_FLAG" == "2" ]; then
+		elif [ "$_scaletempo_flag" == "2" ]; then
 			FLAGS="$FLAGS,scaletempo=speed=pitch"
 			SCALETEMPO=true
 			ONLY_PITCH=true
@@ -8340,9 +8412,9 @@ master() {
 	fi
 
 	if [ -e "$FILENAME.repeats" ]; then
-		REPEATS="`cat \"$FILENAME.repeats\"`"
+		REPEATS="$(cat "$FILENAME.repeats")"
 		REPEAT_CURRENT=1
-		REPEAT_TOTAL="`echo \"$REPEATS\" | wc -l`"
+		REPEAT_TOTAL="$(echo "$REPEATS" | wc -l)"
 	else
 		REPEATS=""
 		REPEAT_CURRENT=0
@@ -8356,11 +8428,10 @@ master() {
 	draw_equalizer
 	draw_volume
 
-	if [ "`echo -ne \"$TITLE\" | grep \" - \"`" != "" ]; then
-		artist="`echo -ne \"$TITLE\" | sed -e \"s/ - //\" | cut -d'' -f1`"
-		ARTISTSONG="`echo -ne \"$TITLE\" | sed -e \"s/ - //g\" | cut -d'' -f1` - `echo -ne \"$TITLE\" | sed -e \"s/ - //g\" | rev | cut -d'' -f1 | rev`"
+	if [ "`echo -ne \"$TITLE\" | grep \" - \" 2>/dev/null`" != "" ]; then
+		ARTISTSONG="$ARTIST - $SONG"
 	else
-		ARTISTSONG=$TITLE
+		ARTISTSONG="$TITLE"
 	fi
 	if [ "$ONLY_VOICE_TITLES" == true ]; then
 		gtts_speak "$ARTISTSONG" false false true
@@ -8438,8 +8509,8 @@ master() {
 		if [ "$WEB_CLIENT" == "0" ]; then
 				read -rsn1 -t 0.2 input
 		else
-			read -rsn1 -t 0.1 input
-			if [ "$input" == "" ]; then
+			read -rsn1 -t 0.4 input
+			if [ "$input" == "" ] && [ "$WEB_CLIENT" == "1" ]; then
 				read -rsn1 -t 0.3 input <$ALETHEIA/web_client_pipe$$
 			fi
 		fi
@@ -8842,7 +8913,7 @@ master() {
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.05
 				draw_banner "POS SAVED"
-				sleep 0.25
+				sleep 0.6
 				if [ "$SAVED_POSITION" == "" ]; then
 					SAVED_TOTAL=1
 					SAVED_POSITION[1]="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
@@ -8941,7 +9012,7 @@ master() {
 				else
 					gtts_speak "none"
 					draw_banner "NONE"
-					sleep 0.25
+					sleep 0.6
 					draw_pitch
 					draw_position
 				fi
@@ -9167,7 +9238,7 @@ master() {
 					draw_banner "OFF"
 				fi
 				stty -echo
-				sleep 0.25
+				sleep 0.6
 				stty echo
 				RIGHT_BANNER_WIDTH=0
 				draw_pitch
@@ -9224,12 +9295,12 @@ master() {
 				else
 					if [ "$SCALETEMPO" == true ]; then
 						if [ "$ONLY_PITCH" == true ]; then
-							echo "$INTERVAL/$EDO/0/0:0:0:0:0:0:0:0:0:0/2" >"$FILENAME".locked
+							echo "$INTERVAL/$EDO/2" >"$FILENAME".locked
 						else
-							echo "$INTERVAL/$EDO/0/0:0:0:0:0:0:0:0:0:0/1" >"$FILENAME".locked
+							echo "$INTERVAL/$EDO/1" >"$FILENAME".locked
 						fi
 					else
-						echo "$INTERVAL/$EDO/0/0:0:0:0:0:0:0:0:0:0/0" >"$FILENAME".locked
+						echo "$INTERVAL/$EDO/0" >"$FILENAME".locked
 					fi
 					LOCKED=true
 					gtts_speak "locked"
@@ -9357,7 +9428,7 @@ master() {
 						tput el
 						
 						gtts_speak "color saved"
-						sleep 0.25
+						sleep 0.6
 						break
 					elif [ "$char" == "v" ]; then
 						tmpBLUE=$BLUE
@@ -9417,7 +9488,7 @@ master() {
 				else
 					gtts_speak "nothing downloaded"
 					draw_banner "NONE"
-					sleep 0.25
+					sleep 0.6
 					draw_pitch
 					draw_position
 				fi
@@ -9434,7 +9505,7 @@ master() {
 					ALWAYS_ON_TOP=true
 					echo "vo_ontop 1" >"$ALETHEIA/pipe$$" &
 				fi
-				sleep 0.25
+				sleep 0.6
 				draw_pitch
 				draw_position
 				;;
@@ -9448,7 +9519,7 @@ master() {
 				else
 					gtts_speak "nothing downloaded"
 					draw_banner "NONE"
-					sleep 0.25
+					sleep 0.6
 					draw_pitch
 					draw_position
 				fi
@@ -9586,7 +9657,9 @@ master() {
 				;;
 			'D')
 				yesno=""
-				read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
+				if [ "$WEB_CLIENT" == "1" ]; then
+					read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
+				fi
 				if [ "$_input" != "" ]; then
 					yesno="$_input"
 				else
@@ -9845,7 +9918,7 @@ master() {
 					gtts_speak "locked off"
 					draw_banner "LOCK OFF"
 				fi
-				sleep 0.25
+				sleep 0.6
 				draw_pitch
 				draw_position
 				;;
@@ -10259,26 +10332,11 @@ RUNTHROUGH=false
 
 while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 	FILENAME="${queue_array[$(($POSITION-1))]}"
-	TITLE="`echo \"$FILENAME\" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev`"
-	line="`echo \"$FILENAME\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev`"
+	TITLE="`echo -ne \"$FILENAME\" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev`"
+	line="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev`"
 
-	if [ "$USE_ID_TAGS" == "1" ]; then
-		op="`exiftool -Artist -Title \"$FILENAME\"`"
-		if [ "$op" == "" ]; then
-			ARTIST="`echo -ne \"$line\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
-			SONG="`echo -ne \"$line\" | rev | sed -e \"s/ - //g\" | cut -d'' -f1 | rev`"
-		else
-			ARTIST="`echo -ne \"$op\" | head -1 | cut -d':' -f2- | sed -e \"s/^ //g\"`"
-			SONG="`echo -ne \"$op\" | tail -1 | cut -d':' -f2- | sed -e \"s/^ //g\"`"
-			if [ "$ARTIST" == "" ] || [ "$SONG" == "" ]; then
-				ARTIST="`echo -ne \"$line\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
-				SONG="`echo -ne \"$line\" | rev | sed -e \"s/ - //g\" | cut -d'' -f1 | rev`"
-			fi
-		fi
-	else
-		ARTIST="`echo -ne \"$line\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
-		SONG="`echo -ne \"$line\" | rev | sed -e \"s/ - //g\" | cut -d'' -f1 | rev`"
-	fi
+	ARTIST="`echo -ne \"$line\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
+	SONG="`echo -ne \"$line\" | rev | sed -e \"s/ - //g\" | cut -d'' -f1 | rev`"
 
 	if [ "$POSITION" == "$TOTAL_QUEUE" ]; then
 		RUNTHROUGH=true
