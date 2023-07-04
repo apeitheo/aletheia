@@ -6798,7 +6798,7 @@ sort_queue() {
 	queue_array=($(sort <<<"${queue_array[*]}"))	
 	
 	unset IFS
-	escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd '[:alnum:]._\-,()[]\!\/ ')
+	escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
 	tmp=$(printf '%s\n' "${queue_array[@]}" | grep -n "$escaped_filename" | cut -d':' -f1 | head -1)
 
 	POSITION="$tmp"
@@ -6812,7 +6812,7 @@ shuffle_queue() {
 	gtts_speak "shuffled"
 
 	IFS=$'\n'
-	escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd '[:alnum:]._\-,()[]\!\/ ')
+	escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
 	queue_array=("$FILENAME" $(shuf <<<"${queue_array[*]}" | grep -v "$escaped_filename"))	
 	unset IFS
 
@@ -10437,7 +10437,6 @@ RUNTHROUGH=false
 
 while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 	FILENAME="${queue_array[$(($POSITION-1))]}"
-	FILENAME=$(printf '%s\n' "$FILENAME" | tr -cd '[:alnum:]._\-,()[]\!\/ ')
 	TITLE="`echo -ne \"$FILENAME\" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev`"
 	line="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev`"
 
