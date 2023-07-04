@@ -1294,7 +1294,6 @@ about() {
 	else
 		tput cup $(($lines_divided-2)) $(( ($COLS/2) - 3))
 	fi
-	#echo -ne "${WHITE}ἀ${BLUE}λ${WHITE}ή${BLUE}θ${WHITE}ε${BLUE}ι${WHITE}α${BLUE}$pad"
 	echo -ne "${WHITE}ἀ${BLUE}λ${WHITE}ήθεια${BLUE}_"
 	tput sc
 
@@ -1309,11 +1308,7 @@ about() {
 	if [ "$even" == true ]; then
 		echo -ne "${BLUE}v"
 	fi
-	echo -ne "`echo -ne \"$WHITE$VERSION\" | cut -d'.' -f1`"
-	echo -ne "$BLUE.$WHITE"
-	echo -ne "`echo -ne \"$VERSION\" | cut -d'.' -f2`"
-	echo -ne "$BLUE.$WHITE"
-	echo -ne "`echo -ne \"$VERSION\" | cut -d'.' -f3`"
+	echo -ne "$(echo -ne "$WHITE$VERSION" | sed "s/\./$(echo -ne "$BLUE").$(echo -ne "$WHITE")/g")"
 	tput cup $(($lines_divided-2)) $(( $cols_divided - 4))
 	#if [ "$VOICE_ENABLED" == true ]; then
 	#	killall espeak-ng >/dev/null 2>/dev/null
@@ -3633,6 +3628,13 @@ main_menu() {
 					fi
 					flag=true
 				elif [ "${OPT[$SELECTION]}" == "Music" ]; then
+					if [ ! -e "$MUSICDIR" ]; then
+						mkdir "$MUSICDIR"
+						draw_banner "NONE"
+						sleep 0.618
+						gtts_speak "no music" true
+						continue
+					fi
 					QUEUE_RENDERED=false
 					PICK=""
 					if [ "$initial_screen" == false ]; then
@@ -3653,10 +3655,6 @@ main_menu() {
 						draw_banner "NONE"
 						sleep 0.618
 						gtts_speak "no music" true
-						#tput cup $LINES
-						#echo -ne "$WHITE_BLACK"
-						#printf '%*s' $COLS
-						#echo -ne "$NOCOLOR"
 						continue
 						
 					fi
@@ -3665,6 +3663,13 @@ main_menu() {
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				elif [ "${OPT[$SELECTION]}" == "Sound" ]; then
+					if [ ! -e "$SOUNDDIR" ]; then
+						mkdir "$SOUNDDIR"
+						draw_banner "NO SOUNDS"
+						sleep 0.618
+						gtts_speak "no sounds" true
+						continue
+					fi
 					QUEUE_RENDERED=false
 					PICK=""
 					REPEAT_ONLY=false
@@ -3705,6 +3710,13 @@ main_menu() {
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				elif [ "${OPT[$SELECTION]}" == "Video" ]; then
+					if [ ! -e "$VIDEODIR" ]; then
+						mkdir "$VIDEODIR"
+						draw_banner "NO SOUNDS"
+						sleep 0.618
+						gtts_speak "no sounds" true
+						continue
+					fi
 					QUEUE_RENDERED=false
 					REPEAT_ONLY=false
 					if [ -e "$VIDEODIR" ]; then
