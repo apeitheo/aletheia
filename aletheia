@@ -474,71 +474,73 @@ compute() {
 	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 }
 
+gtts_speak() {
+	if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
+		if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
+			return
+		fi
+		if [ ! -e "$ALETHEIA/voices/" ]; then
+			mkdir "$ALETHEIA/voices"
+		fi
+		if [ "$5" != true ]; then
+			#killall gtts-cli >/dev/null 2>/dev/null
+			killall play >/dev/null 2>/dev/null
+		fi
+		line_count="`echo -ne \"$1\" | wc -l`"
+		if [ "$line_count" -gt 1 ]; then
+			clip="`echo -ne \"$1\" | head -1` - $line_count"
+		else
+			if [ "`echo -ne \"$1\" | cut -c 1`" == " " ]; then
+				clip="`echo -ne \"$1\" | cut -c 2-`"
+			else
+				clip="$1"
+			fi
+			if [ "`echo -ne \"$1\" | cut -c 1`" == "\-" ]; then
+				clip="\\$clip"
+			fi
+		fi
+		if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
+			if [ "`echo -ne \"$clip\" | rev | cut -c 1`" == "?" ]; then
+				clip="`echo -ne \"$clip\" | rev | cut -c 2- | rev`\\?"
+			fi
+			if [ "`echo -e \"$VOICE_VOLUME > 1.0\" | bc`" == "1" ]; then
+				VOICE_VOLUME=.85
+			fi
+			if [ "$2" == false ] || [ "$2" == "" ]; then
+				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
+				PLAY_PID="$!"
+			else
+				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+			fi
+		else
+			if [ "$line_count" -gt 1 ]; then
+				if [ "$2" == false ] || [ "$2" == "" ]; then
+					compute "$1" "$clip" >/dev/null 2>/dev/null &
+				else
+					compute "$1" "$clip" >/dev/null 2>/dev/null
+				fi
+			else
+				if [ "$2" == false ] || [ "$2" == "" ]; then
+					compute "$clip" "$clip" >/dev/null 2>/dev/null &
+				else
+					compute "$clip" "$clip" >/dev/null 2>/dev/null
+				fi
+			fi
+		fi
+	fi
+}
+
 if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
 	gtts_speak() {
 		# think this should work for now until I have time to take a deeper look,
 		# but it's important to be available in case people want to run this on
 		# older machines. sox is nearly instant on my machine, but aletheia
-		# ideally should run on older hardware as well; at least the final release
+		# ideally should run on older hardware as well; at least the final release.
+		# I initially removed the support in lieu of the natural voice, but some
+		# will find this useful.
 		espeak_say "$1" "$2" "$3" &
 	}
-else
-	gtts_speak() {
-		if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
-			if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
-				return
-			fi
-			if [ ! -e "$ALETHEIA/voices/" ]; then
-				mkdir "$ALETHEIA/voices"
-			fi
-			if [ "$5" != true ]; then
-				#killall gtts-cli >/dev/null 2>/dev/null
-				killall play >/dev/null 2>/dev/null
-			fi
-			line_count="`echo -ne \"$1\" | wc -l`"
-			if [ "$line_count" -gt 1 ]; then
-				clip="`echo -ne \"$1\" | head -1` - $line_count"
-			else
-				if [ "`echo -ne \"$1\" | cut -c 1`" == " " ]; then
-					clip="`echo -ne \"$1\" | cut -c 2-`"
-				else
-					clip="$1"
-				fi
-				if [ "`echo -ne \"$1\" | cut -c 1`" == "\-" ]; then
-					clip="\\$clip"
-				fi
-			fi
-			if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
-				if [ "`echo -ne \"$clip\" | rev | cut -c 1`" == "?" ]; then
-					clip="`echo -ne \"$clip\" | rev | cut -c 2- | rev`\\?"
-				fi
-				if [ "`echo -e \"$VOICE_VOLUME > 1.0\" | bc`" == "1" ]; then
-					VOICE_VOLUME=.85
-				fi
-				if [ "$2" == false ] || [ "$2" == "" ]; then
-					play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
-					PLAY_PID="$!"
-				else
-					play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
-				fi
-			else
-				if [ "$line_count" -gt 1 ]; then
-					if [ "$2" == false ] || [ "$2" == "" ]; then
-						compute "$1" "$clip" >/dev/null 2>/dev/null &
-					else
-						compute "$1" "$clip" >/dev/null 2>/dev/null
-					fi
-				else
-					if [ "$2" == false ] || [ "$2" == "" ]; then
-						compute "$clip" "$clip" >/dev/null 2>/dev/null &
-					else
-						compute "$clip" "$clip" >/dev/null 2>/dev/null
-					fi
-				fi
-			fi
-		fi
-	}
-}
+fi
 
 vanish() {
 	feedback_enabled=$VOICE_ENABLED
