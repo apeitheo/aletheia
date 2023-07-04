@@ -1,0 +1,8 @@
+# Useful to dedicate a terminal to Aletheia if you use another terminal for daily
+# use. I use GNOME-Terminal normally, but like being able to have it on the dock
+[Desktop Entry]
+Type=Application
+Terminal=false
+Name=Aletheia
+Exec=xfce4-terminal --command="aletheia"
+Icon=aletheia.png
