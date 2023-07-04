@@ -5633,7 +5633,7 @@ reset_buffer() {
 		USE_ID_TAGS=0
 		line="`echo \"$line\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev`"
 
-		if [ "`echo -ne \"$line\" | grep \" - \"`" != "" ]; then
+		if [ "`echo -ne \"$line\" | grep --text \" - \"`" != "" ]; then
 			artist="`echo -ne \"$line\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
 			song="`echo -ne \"$line\" | rev | sed -e \"s/ - //g\" | cut -d'' -f1 | rev`"
 			line="$artist - $song"
@@ -5683,7 +5683,7 @@ reset_buffer() {
 		if [ "${#line}" -gt "$offset" ]; then
 			line="$(echo -ne "$line" | sed -e 's/^ .*//g' | cut -b 1-$(($offset-1)))…"
 		fi
-		if [ "`echo -ne \"$line\" | grep \" - \"`" != "" ]; then
+		if [ "`echo -ne \"$line\" | grep --text \" - \"`" != "" ]; then
 			first_part="`echo -ne \"$line\" | sed \"s/ - //\" | cut -d'' -f1`"
 			second_part="`echo -ne \"$line\" | sed \"s/ - //\" | cut -d'' -f2`"
 			combined=false
@@ -6800,8 +6800,8 @@ sort_queue() {
 	queue_array=($(sort <<<"${queue_array[*]}"))	
 	
 	unset IFS
-	escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
-	tmp=$(printf '%s\n' "${queue_array[@]}" | grep -n "$escaped_filename" | cut -d':' -f1 | head -1)
+	#escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
+	tmp=$(printf '%s\n' "${queue_array[@]}" | grep --text -n "$FILENAME" | cut -d':' -f1 | head -1)
 
 	POSITION="$tmp"
 	web_client_func
@@ -6814,8 +6814,8 @@ shuffle_queue() {
 	gtts_speak "shuffled"
 
 	IFS=$'\n'
-	escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
-	queue_array=("$FILENAME" $(shuf <<<"${queue_array[*]}" | grep -v "$escaped_filename"))	
+	#escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
+	queue_array=("$FILENAME" $(shuf <<<"${queue_array[*]}" | grep --text -v "$FILENAME"))	
 	unset IFS
 
 	POSITION=1
