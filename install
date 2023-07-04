@@ -115,5 +115,9 @@ echo ""
 echo "${DESTDIR}/bin/aletheia"
 echo "${DESTDIR}/share/man/man1/aletheia.1"
 echo ""
-echo -e "${GREEN}Use ./uninstall to remove$NOCOLOR"
+if [ "$DESTDIR" != "/usr/local" ] || [ "$DESTDIR" != "/usr/local/" ]; then
+	echo -e "${GREEN}Use DESTDIR=${DESTDIR} ./uninstall to remove$NOCOLOR"
+else
+	echo -e "${GREEN}Use ./uninstall to remove$NOCOLOR"
+fi
 echo ""

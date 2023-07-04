@@ -1,8 +1,9 @@
 #!/bin/bash
+DESTDIR=${DESTDIR:-/usr/local}
 
-sudo rm -f /usr/local/bin/aletheia
-sudo rm -f /usr/local/share/man/man1/aletheia.1
-if [ -e "/usr/local/bin/aletheia" ] || [ -e "/usr/local/share/man/man1/aletheia.1" ]; then
+sudo rm -f "${DESTDIR}/bin/aletheia"
+sudo rm -f "${DESTDIR}/share/man/man1/aletheia.1"
+if [ -e "${DESTDIR}/bin/aletheia" ] || [ -e "${DESTDIR}/share/man/man1/aletheia.1" ]; then
 	echo -e "\033[1;31mUninstall not successful\033[0m"
 else
 	echo -e "\033[1;36mAletheia successfully uninstalled\033[0m"
