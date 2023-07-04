@@ -15,6 +15,7 @@
 #
 # Support: https://www.patreon.com/aletheia_project
 
+os=$(uname -s)
 PROGRAM_NAME="aletheia"
 SCRIPT_NAME=$(echo "$0" | rev | cut -d'/' -f1 | rev)
 SCRIPT_PATH=$(realpath "$0")
@@ -70,6 +71,8 @@ LOOP_ON=false
 SAVED_POSITION=""
 CURRENT_POSITION=""
 PANELS_ENABLED=true
+VOLUME_CONTROL_DISABLED=false
+mentioned=false
 
 LINE_CHAR="\033(0"
 LINE_CHAR_END="\033(B"
@@ -211,9 +214,34 @@ COLS=$(tput cols)
 POSITION_WIDTH=0
 
 get_master_volume() {
-	IFS='/' read _ MASTER_VOLUME_LEFT _ MASTER_VOLUME_RIGHT _ <<<"$(pactl get-sink-volume @DEFAULT_SINK@)"
-	MASTER_VOLUME_LEFT=${MASTER_VOLUME_LEFT// /}
-	MASTER_VOLUME_RIGHT=${MASTER_VOLUME_RIGHT// /}
+	if [ "$mentioned" == true ] || [ "$(echo -ne "$os" | grep -i linux)" != "" ]; then
+		IFS='/' read _ MASTER_VOLUME_LEFT _ MASTER_VOLUME_RIGHT _ <<<"$(pactl get-sink-volume @DEFAULT_SINK@)"
+		MASTER_VOLUME_LEFT=${MASTER_VOLUME_LEFT// /}
+		MASTER_VOLUME_RIGHT=${MASTER_VOLUME_RIGHT// /}
+	elif [ "$(uname -s)" == "Darwin" ]; then
+		volume_text=$(osascript -e 'output volume of (get volume settings) as text')
+		# not sure it supports changing left and right channel separately;
+		# at least with osascript?
+		MASTER_VOLUME_LEFT=$volume_text
+		MASTER_VOLUME_RIGHT=$volume_text
+	else
+		clear
+		tput cup $(($(tput lines)-3))
+		echo "NOTE"
+		echo "Aletheia does not currently support audio control using the '8' and '9' keys for adjusting system volume on your OS. Contact the developer for information on how to port to your OS of choice."
+		echo "Do you want to continue [Y/n]? "
+		read -rsn1 yn
+		if [ "$yn" == "Y" ] || [ "$yn" == "y" ]; then
+			MASTER_VOLUME_LEFT=100
+			MASTER_VOLUME_RIGHT=100
+			VOLUME_CONTROL_DISABLED=true
+		else
+			exit 0
+		fi
+	fi
+	if [ "$mentioned" == false ]; then
+		mentioned=true
+	fi
 }
 
 get_master_volume
@@ -4130,11 +4158,19 @@ toggle_mute() {
 	echo "pausing_keep mute" >$ALETHEIA/pipe$$ &
 	if [ $MUTE = false ]; then
 		gtts_speak "muted" true
-		pactl set-sink-mute @DEFAULT_SINK@ 1 >/dev/null 2>/dev/null
+		if [ "$os" == "Linux" ]; then
+			osascript -e 'set volume with output muted'
+		elif [ "$os" == "Darwin" ]; then
+			pactl set-sink-mute @DEFAULT_SINK@ 1 >/dev/null 2>/dev/null
+		fi
 		MUTE=true
 		draw_banner "MUTE"
 	else
-		pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
+		if [ "$os" == "Linux" ]; then
+			pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
+		elif [ "$os" == "Darwin" ]; then
+			osascript -e 'set volume without output muted'
+		fi
 		gtts_speak "unmuted"
 		MUTE=false
 		draw_pitch
@@ -4995,6 +5031,14 @@ pcm_volume_change() {
 	return 200
 }
 
+set_master_volume() {
+	if [ "$os" == "Linux" ]; then
+		pactl set-sink-volume @DEFAULT_SINK@ $1
+	elif [ "$os" == "Darwin" ]; then
+		osascript -e "set volume output volume $1" 
+	fi
+}
+
 master_volume_change() {
 	#leftvolume="`echo -n \"$MASTER_VOLUME_LEFT\" | cut -d'%' -f1`"
 	#rightvolume="`echo -n \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`"
@@ -5003,24 +5047,54 @@ master_volume_change() {
 	if [ "$leftvolume" == "" ]; then
 		leftvolume=0
 	fi
-	pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
+	if [ "$os" == "Linux" ]; then
+		pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
+	elif [ "$os" == "Darwin" ]; then
+		osascript -e 'set volume with output muted'
+	else
+		return
+	fi
 	dir="`echo -ne \"$1\" | cut -b1`"
 	num="`echo -ne \"$1\" | cut -b2`"
 	if [ "$dir" == "+" ]; then
 		if [ "$(($leftvolume+$num))" -lt "99" ]; then
-			pactl set-sink-volume @DEFAULT_SINK@ $1
+			set_master_volume "$1"
 		else
 			if [ "$num" == "1" ]; then
-				pactl set-sink-volume @DEFAULT_SINK@ 100%
+				if [ "$os" == "Linux" ]; then
+					pactl set-sink-volume @DEFAULT_SINK@ $1
+				elif [ "$os" == "Darwin" ]; then
+					#osascript -e 'set volume with output muted'
+					osascript -e "set volume output volume 100"
+				fi
+				#pactl set-sink-volume @DEFAULT_SINK@ 100%
 			else
-				pactl set-sink-volume @DEFAULT_SINK@ 99%
+				if [ "$os" == "Linux" ]; then
+					pactl set-sink-volume @DEFAULT_SINK@ $1
+				elif [ "$os" == "Darwin" ]; then
+					#osascript -e 'set volume with output muted'
+					osascript -e "set volume output volume 99" 
+				fi
+				#pactl set-sink-volume @DEFAULT_SINK@ 99%
 			fi
 		fi
 	else
 		if [ "$(($leftvolume-$num))" -gt "1" ]; then
+				if [ "$os" == "Linux" ]; then
+					pactl set-sink-volume @DEFAULT_SINK@ $1
+				elif [ "$os" == "Darwin" ]; then
+					#osascript -e 'set volume with output muted'
+					osascript -e "set volume output volume 99" 
+				fi
 			pactl set-sink-volume @DEFAULT_SINK@ $1
 		else
-			pactl set-sink-volume @DEFAULT_SINK@ 1%
+			if [ "$os" == "Linux" ]; then
+				pactl set-sink-volume @DEFAULT_SINK@ 1
+			elif [ "$os" == "Darwin" ]; then
+				#osascript -e 'set volume with output muted'
+				osascript -e "set volume output volume 1" 
+			fi
+			#pactl set-sink-volume @DEFAULT_SINK@ 1%
 		fi
 	fi
 	get_master_volume
@@ -5029,11 +5103,23 @@ master_volume_change() {
 		if [ "`echo -ne \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
 			MASTER_VOLUME_RIGHT="100%"
 		fi
-		pactl set-sink-volume @DEFAULT_SINK@ 100% $MASTER_VOLUME_RIGHT
+		if [ "$os" == "Linux" ]; then
+			pactl set-sink-volume @DEFAULT_SINK@ 100
+		elif [ "$os" == "Darwin" ]; then
+			#osascript -e 'set volume with output muted'
+			osascript -e "set volume output volume 1" 
+		fi
+		#pactl set-sink-volume @DEFAULT_SINK@ 100% $MASTER_VOLUME_RIGHT
 	fi
 	if [ "`echo -ne \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
 		MASTER_VOLUME_RIGHT="100%"
-		pactl set-sink-volume @DEFAULT_SINK@ $MASTER_VOLUME_LEFT 100%
+		if [ "$os" == "Linux" ]; then
+			pactl set-sink-volume @DEFAULT_SINK@ 100%
+		elif [ "$os" == "Darwin" ]; then
+			#osascript -e 'set volume with output muted'
+			osascript -e "set volume output volume 1" 
+		fi
+		#pactl set-sink-volume @DEFAULT_SINK@ $MASTER_VOLUME_LEFT 100%
 	fi
 
 	draw_volume 2 3
