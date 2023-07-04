@@ -3141,6 +3141,8 @@ main_menu() {
 
 			menu_buf="$menu_buf\n$PADDING`printf '%*s' $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
 
+			tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLS/2-5-$moveleft))
+
 			echo -ne "$menu_buf"
 			#for i in `seq 1 $(($LINES-4-${TOTAL_OPTS}))`; do
 			#	tput cup $i
@@ -7224,18 +7226,18 @@ help_screen() {
 
 		if [ "$TWO_COLUMN" == true ]; then
 			if [ "$page" == "0" ]; then
-				first=1
+				_first=1
 				last=$((($page*$number_per_page*2)+($number_per_page*2)))
 			else
-				first=$((($page*$number_per_page*2)+1))
+				_first=$((($page*$number_per_page*2)+1))
 				last=$((($page*$number_per_page*2)+($number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
-				first=1
+				_first=1
 				last=$((($page*$number_per_page)+$number_per_page))
 			else
-				first=$((($page*$number_per_page)+1))
+				_first=$((($page*$number_per_page)+1))
 				last=$((($page*$number_per_page)+$number_per_page))
 			fi
 		fi
@@ -7257,7 +7259,7 @@ help_screen() {
 			fi
 		elif [ "$updown" == "d" ]; then
 			killall espeak-ng play >/dev/null 2>/dev/null
-			echo "$HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/^\^/control /g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/^\^/control /g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		elif [ "$updown" == "z" ]; then
 			draw_wait
 			page=0
@@ -7273,6 +7275,8 @@ help_screen() {
 				draw_equalizer
 				draw_banner "MENU"
 				draw_position
+			else
+				empty_pane
 			fi
 			return
 		elif [ "$updown" == "m" ]; then
