@@ -20,6 +20,7 @@ PROGRAM_NAME="aletheia"
 SCRIPT_NAME=$(echo "$0" | rev | cut -d'/' -f1 | rev)
 SCRIPT_PATH=$(realpath "$0")
 VERSION="0.9.6"
+ESPEAK_DIGITAL_VOICE=${ESPEAK_DIGITAL_VOICE:-false}
 
 if [ "$1" == "--version" ]; then
 	echo "$VERSION"
@@ -205,7 +206,7 @@ DOWNLOAD_POSITION=""
 PADDING=" "
 
 VOICE_ENABLED=false
-VOICE_PITCH=-4
+VOICE_PITCH=0
 VOICE_VOLUME=.85
 ONLY_VOICE_TITLES=false
 
@@ -461,66 +462,82 @@ if [ -e "$ALETHEIA/config" ]; then
 fi
 
 compute() {
-	gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
-	sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed `calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-` >/dev/null 2>/dev/null
-	rm -f "/tmp/_$2-tmp.mp3"
+	# if no pitch change requested, eliminate the overhead of calling sox to
+	# change the default pitch of Google's digital voice
+	if [ "$VOICE_PITCH" == "0" ]; then
+		gtts-cli " $1" -o "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+	else
+		gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
+		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed `calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-` >/dev/null 2>/dev/null
+		rm -f "/tmp/_$2-tmp.mp3"
+	fi
 	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 }
 
-gtts_speak() {
-	if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
-		if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
-			return
-		fi
-		if [ ! -e "$ALETHEIA/voices/" ]; then
-			mkdir "$ALETHEIA/voices"
-		fi
-		if [ "$5" != true ]; then
-			#killall gtts-cli >/dev/null 2>/dev/null
-			killall play >/dev/null 2>/dev/null
-		fi
-		line_count="`echo -ne \"$1\" | wc -l`"
-		if [ "$line_count" -gt 1 ]; then
-			clip="`echo -ne \"$1\" | head -1` - $line_count"
-		else
-			if [ "`echo -ne \"$1\" | cut -c 1`" == " " ]; then
-				clip="`echo -ne \"$1\" | cut -c 2-`"
-			else
-				clip="$1"
+if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+	gtts_speak() {
+		# think this should work for now until I have time to take a deeper look,
+		# but it's important to be available in case people want to run this on
+		# older machines. sox is nearly instant on my machine, but aletheia
+		# ideally should run on older hardware as well; at least the final release
+		espeak_say "$1" "$2" "$3" &
+	}
+else
+	gtts_speak() {
+		if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
+			if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
+				return
 			fi
-			if [ "`echo -ne \"$1\" | cut -c 1`" == "\-" ]; then
-				clip="\\$clip"
+			if [ ! -e "$ALETHEIA/voices/" ]; then
+				mkdir "$ALETHEIA/voices"
 			fi
-		fi
-		if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
-			if [ "`echo -ne \"$clip\" | rev | cut -c 1`" == "?" ]; then
-				clip="`echo -ne \"$clip\" | rev | cut -c 2- | rev`\\?"
+			if [ "$5" != true ]; then
+				#killall gtts-cli >/dev/null 2>/dev/null
+				killall play >/dev/null 2>/dev/null
 			fi
-			if [ "`echo -e \"$VOICE_VOLUME > 1.0\" | bc`" == "1" ]; then
-				VOICE_VOLUME=.85
-			fi
-			if [ "$2" == false ] || [ "$2" == "" ]; then
-				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
-				PLAY_PID="$!"
-			else
-				play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
-			fi
-		else
+			line_count="`echo -ne \"$1\" | wc -l`"
 			if [ "$line_count" -gt 1 ]; then
-				if [ "$2" == false ] || [ "$2" == "" ]; then
-					compute "$1" "$clip" >/dev/null 2>/dev/null &
+				clip="`echo -ne \"$1\" | head -1` - $line_count"
+			else
+				if [ "`echo -ne \"$1\" | cut -c 1`" == " " ]; then
+					clip="`echo -ne \"$1\" | cut -c 2-`"
 				else
-					compute "$1" "$clip" >/dev/null 2>/dev/null
+					clip="$1"
+				fi
+				if [ "`echo -ne \"$1\" | cut -c 1`" == "\-" ]; then
+					clip="\\$clip"
+				fi
+			fi
+			if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
+				if [ "`echo -ne \"$clip\" | rev | cut -c 1`" == "?" ]; then
+					clip="`echo -ne \"$clip\" | rev | cut -c 2- | rev`\\?"
+				fi
+				if [ "`echo -e \"$VOICE_VOLUME > 1.0\" | bc`" == "1" ]; then
+					VOICE_VOLUME=.85
+				fi
+				if [ "$2" == false ] || [ "$2" == "" ]; then
+					play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
+					PLAY_PID="$!"
+				else
+					play -v $VOICE_VOLUME "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 				fi
 			else
-				if [ "$2" == false ] || [ "$2" == "" ]; then
-					compute "$clip" "$clip" >/dev/null 2>/dev/null &
+				if [ "$line_count" -gt 1 ]; then
+					if [ "$2" == false ] || [ "$2" == "" ]; then
+						compute "$1" "$clip" >/dev/null 2>/dev/null &
+					else
+						compute "$1" "$clip" >/dev/null 2>/dev/null
+					fi
 				else
-					compute "$clip" "$clip" >/dev/null 2>/dev/null
+					if [ "$2" == false ] || [ "$2" == "" ]; then
+						compute "$clip" "$clip" >/dev/null 2>/dev/null &
+					else
+						compute "$clip" "$clip" >/dev/null 2>/dev/null
+					fi
 				fi
 			fi
 		fi
-	fi
+	}
 }
 
 vanish() {
@@ -970,9 +987,9 @@ espeak_say() {
 	if [ "$voice_enabled" == true ] || [ "$2" == true ]; then
 		killall espeak-ng >/dev/null 2>/dev/null
 		if [ "$3" == true ] && [ "$1" != " " ]; then
-			espeak-ng -s$voice_speed -v$voice_gender -a$voice_volume -p$voice_pitch " $1" >/dev/null 2>/dev/null
+			espeak-ng " $1" #-s$voice_speed -v$voice_gender -a$voice_volume -p$voice_pitch " $1" >/dev/null 2>/dev/null
 		elif [ "$1" != " " ]; then
-			espeak-ng -s$voice_speed -v$voice_gender -a$voice_volume -p$voice_pitch " $1" >/dev/null 2>/dev/null &
+			espeak-ng " $1" & #-s$voice_speed -v$voice_gender -a$voice_volume -p$voice_pitch " $1" >/dev/null 2>/dev/null &
 		fi
 	fi
 }
