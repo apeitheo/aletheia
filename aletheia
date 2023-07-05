@@ -15,12 +15,13 @@
 #
 # Support: https://www.patreon.com/aletheia_project
 
-os=$(uname -s)
+OS=$(uname -s)
 PROGRAM_NAME="aletheia"
 SCRIPT_NAME=$(echo "$0" | rev | cut -d'/' -f1 | rev)
 SCRIPT_PATH=$(realpath "$0")
 VERSION="0.9.6"
 ESPEAK_DIGITAL_VOICE=${ESPEAK_DIGITAL_VOICE:-false}
+MAIN_REFRESH_TIME=${REFRESH_TIME:-0.2}
 
 if [ "$1" == "--version" ]; then
 	echo "$VERSION"
@@ -73,7 +74,9 @@ SAVED_POSITION=""
 CURRENT_POSITION=""
 PANELS_ENABLED=true
 VOLUME_CONTROL_DISABLED=false
-mentioned=false
+MENTIONED=false
+BANNER_WAIT_TIME=0.6
+MPLAYER_WAIT_TIME=0.01
 
 LINE_CHAR="\033(0"
 LINE_CHAR_END="\033(B"
@@ -214,17 +217,17 @@ LINES=$(tput lines)
 COLS=$(tput cols)
 POSITION_WIDTH=0
 
-get_master_volume() {
-	if [ "$mentioned" == true ] || [ "$(echo -ne "$os" | grep -i linux)" != "" ]; then
-		IFS='/' read _ MASTER_VOLUME_LEFT _ MASTER_VOLUME_RIGHT _ <<<"$(pactl get-sink-volume @DEFAULT_SINK@)"
-		MASTER_VOLUME_LEFT=${MASTER_VOLUME_LEFT// /}
-		MASTER_VOLUME_RIGHT=${MASTER_VOLUME_RIGHT// /}
+get_system_volume() {
+	if [ "$MENTIONED" == true ] || [ "$(echo -ne "$OS" | grep -i linux)" != "" ]; then
+		IFS='/' read _ SYSTEM_VOLUME_LEFT _ SYSTEM_VOLUME_RIGHT _ <<<"$(pactl get-sink-volume @DEFAULT_SINK@)"
+		SYSTEM_VOLUME_LEFT=${SYSTEM_VOLUME_LEFT// /}
+		SYSTEM_VOLUME_RIGHT=${SYSTEM_VOLUME_RIGHT// /}
 	elif [ "$(uname -s)" == "Darwin" ]; then
 		volume_text=$(osascript -e 'output volume of (get volume settings) as text')
 		# not sure it supports changing left and right channel separately;
 		# at least with osascript?
-		MASTER_VOLUME_LEFT=$volume_text
-		MASTER_VOLUME_RIGHT=$volume_text
+		SYSTEM_VOLUME_LEFT=$volume_text
+		SYSTEM_VOLUME_RIGHT=$volume_text
 	else
 		clear
 		tput cup $(($(tput lines)-3))
@@ -233,19 +236,19 @@ get_master_volume() {
 		echo "Do you want to continue [Y/n]? "
 		read -rsn1 yn
 		if [ "$yn" == "Y" ] || [ "$yn" == "y" ]; then
-			MASTER_VOLUME_LEFT=100
-			MASTER_VOLUME_RIGHT=100
+			SYSTEM_VOLUME_LEFT=100
+			SYSTEM_VOLUME_RIGHT=100
 			VOLUME_CONTROL_DISABLED=true
 		else
 			exit 0
 		fi
 	fi
-	if [ "$mentioned" == false ]; then
-		mentioned=true
+	if [ "$MENTIONED" == false ]; then
+		MENTIONED=true
 	fi
 }
 
-get_master_volume
+get_system_volume
 
 read_config() {
 	echo -ne "`echo \"$CONFIG\" | grep -i "$1" | cut -d'=' -f2 | sed -e \"s/^ *//g\" | sed -e \"s/* $//g\" | tr '[:upper:]' '[:lower:]'`"
@@ -579,7 +582,7 @@ vanish() {
 			IFS=$'\n'
 			char=""
 			until [ "$char" != "" ]; do
-				read -rsn1 -t 0.618 char
+				read -rsn1 -t 0.6 char
 				if [ "$char" == "" ]; then
 						tput cup $LINES $(($saved_spot+${#newdisplay}))
 					if [ "$visible" == true ]; then
@@ -674,7 +677,7 @@ vanish() {
 					fi
 					tput cup $LINES
 					echo -ne "$PADDING$WHITE-- ${BLUE}SAVED$WHITE --"
-					sleep 1.6
+					sleep $BANNER_WAIT_TIME
 				elif [ "$newchar" == "n" ]; then
 					gtts_speak "new entry"
 					inputnew=""
@@ -1058,7 +1061,7 @@ set_loop() {
 		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "RESET"
 	fi
-	sleep 0.6
+	sleep $BANNER_WAIT_TIME
 	draw_pitch
 	draw_position
 }
@@ -1080,7 +1083,7 @@ set_loop_artist() {
 		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 		draw_banner "RESET"
 	fi
-	sleep 0.6
+	sleep $BANNER_WAIT_TIME
 	draw_pitch
 	draw_position
 }
@@ -1100,7 +1103,7 @@ set_random() {
 		TRACK_RANDOM=false
 		draw_banner "RANDOM OFF"
 	fi
-	sleep 0.6
+	sleep $BANNER_WAIT_TIME
 	draw_pitch
 	draw_position
 }
@@ -1241,7 +1244,7 @@ set_only_locked() {
 		reset_buffer
 		redraw_screen
 	fi
-	sleep 0.6
+	sleep $BANNER_WAIT_TIME
 	draw_pitch
 	draw_position
 }
@@ -1257,14 +1260,7 @@ track_toggle() {
 		LOOP=false
 		LOOP_ARTIST=false
 		draw_banner "RESET"
-		read -n1 -t 0.25 c
-		if [ "$c" == "e" ]; then
-			track_toggle
-			if [ "$?" == "200" ]; then
-				return 200
-			fi
-			return
-		fi
+		sleep $BANNER_WAIT_TIME
 		draw_pitch
 		draw_position
 	fi
@@ -1323,7 +1319,7 @@ set_scale_speed() {
 		reset=true
 		draw_banner "RESET"
 		stty -echo
-		sleep 0.6
+		sleep $BANNER_WAIT_TIME
 		stty echo
 		draw_pitch
 		draw_position		
@@ -1363,7 +1359,7 @@ less_precise() {
 		EDO="$(($EDO/2))"
 		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		draw_pitch
-		sleep 0.01
+		sleep $MPLAYER_WAIT_TIME
 	done
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	draw_pitch
@@ -1384,7 +1380,7 @@ more_precise() {
 			EDO="$(($EDO*2))"
 			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			draw_pitch
-			sleep 0.01
+			sleep $MPLAYER_WAIT_TIME
 		else
 			break
 		fi
@@ -1431,7 +1427,7 @@ draw_loop() {
 repeat() {
 	echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
 	echo "get_time_length" >"$ALETHEIA/pipe$$" &
-	sleep 0.2
+	sleep $MPLAYER_WAIT_TIME
 	TOTAL_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 	if [ "`isnum \"$TOTAL_TIME\"`" == "0" ] || [ "`echo -e \"$TOTAL_TIME < 0.1\" | bc`" == "1" ]; then
 		TOTAL_TIME=0.1
@@ -1449,7 +1445,7 @@ repeat() {
 			if [ "`isnum \"$START_MARKER\"`" == "0" ] || [ "`echo -e \"$START_MARKER < 0\" | bc`" == "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
 				return 200
@@ -1462,7 +1458,7 @@ repeat() {
 			if [ "`isnum \"$END_TIME\"`" == "0" ] || [ "`echo -e \"$END_TIME < 0\" | bc`" == "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
 				return 200
@@ -1475,7 +1471,7 @@ repeat() {
 			if [ "`isnum \"$space\"`" != "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
 				return 200
@@ -1487,7 +1483,7 @@ repeat() {
 		else
 			draw_banner "NONE"
 			gtts_speak "no loops"
-			sleep 0.6
+			sleep $BANNER_WAIT_TIME
 			draw_pitch
 			draw_position
 			if [ "$LOOP" == false ]; then
@@ -1614,16 +1610,16 @@ repeat() {
 								double_precise
 								skip=true
 							elif [ "$input_char" == "8" ]; then
-								master_volume_change "-3% -3%"
+								system_volume_change "-3% -3%"
 								skip=true
 							elif [ "$input_char" == "9" ]; then
-								master_volume_change "+3% +3%"
+								system_volume_change "+3% +3%"
 								skip=true
 							elif [ "$input_char" == "*" ]; then
-								master_volume_change "-1% -1%"
+								system_volume_change "-1% -1%"
 								skip=true
 							elif [ "$input_char" == "(" ]; then
-								master_volume_change "+1% +1%"
+								system_volume_change "+1% +1%"
 								skip=true
 							fi
 						fi
@@ -2059,7 +2055,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					master_volume_change "-3% -3%"
+					system_volume_change "-3% -3%"
 				elif [ "$input_char" == "9" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
@@ -2067,7 +2063,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					master_volume_change "+3% +3%"
+					system_volume_change "+3% +3%"
 				elif [ "$input_char" == "*" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
@@ -2075,7 +2071,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					master_volume_change "-1% -1%"
+					system_volume_change "-1% -1%"
 				elif [ "$input_char" == "(" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
@@ -2083,7 +2079,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					master_volume_change "+1% +1%"
+					system_volume_change "+1% +1%"
 				fi
 				flagged=true
 			elif [ "$input_char" == "6" ]; then
@@ -2169,7 +2165,7 @@ repeat() {
 				break
 			elif [ "$input_char" == "5" ]; then
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
-				sleep 0.7
+				sleep $MPLAYER_WAIT_TIME
 				START_MARKER="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -2178,7 +2174,7 @@ repeat() {
 				flagged=false
 			elif [ "$input_char" == "7" ]; then
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
-				sleep 0.7
+				sleep $MPLAYER_WAIT_TIME
 				END_MARKER="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -2356,9 +2352,9 @@ repeat() {
 					draw_banner "UNLOCKED $REPEAT_CURRENT"
 					draw_loop
 					if [ "$WEB_CLIENT" == "0" ]; then
-						read -n1 -t 0.25 t
+						read -n1 -t $BANNER_WAIT_TIME t
 					else
-						read -n1 -t 0.25 t <$ALETHEIA/web_client_pipe$$
+						read -n1 -t $BANNER_WAIT_TIME t <$ALETHEIA/web_client_pipe$$
 					fi
 					input_char="$t"
 					if [ "$REPEAT_TOTAL" == "1" ]; then
@@ -2412,9 +2408,9 @@ repeat() {
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "SAVED" false false true
 				if [ "$WEB_CLIENT" == "0" ]; then
-					read -n1 -t 0.25 input_char
+					read -n1 -t $BANNER_WAIT_TIME input_char
 				else
-					read -n1 -t 0.25 input_char <$ALETHEIA/web_client_pipe$$
+					read -n1 -t $BANNER_WAIT_TIME input_char <$ALETHEIA/web_client_pipe$$
 				fi
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
@@ -2451,9 +2447,9 @@ repeat() {
 				draw_banner "LOCKED $REPEAT_TOTAL"
 				draw_loop
 				if [ "$WEB_CLIENT" == "0" ]; then
-					read -n1 -t 0.25 t
+					read -n1 -t $BANNER_WAIT_TIME t
 				else
-					read -n1 -t 0.25 t <$ALETHEIA/web_client_pipe$$
+					read -n1 -t $BANNER_WAIT_TIME t <$ALETHEIA/web_client_pipe$$
 				fi
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
@@ -2462,7 +2458,7 @@ repeat() {
 			else
 				old_time_before=$time_before
 				time_before=`date +%s.%N`
-				master_volume_secondary_func "$input_char"
+				process_key "$input_char"
 				flagged=true
 			fi
 			if [ "$flagged" == true ]; then
@@ -3180,7 +3176,7 @@ main_menu() {
 					else
 						screen_redrawn=false
 					fi
-					read -rsn1 -t 0.25 z
+					read -rsn1 -t $BANNER_WAIT_TIME z
 					if [ "$?" == "0" ]; then
 						break
 					fi
@@ -3336,25 +3332,25 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "8" ]; then
-			master_volume_change "-3% -3%"
+			system_volume_change "-3% -3%"
 			tagged=true
 			flag=true
 			z=""
 			continue
 		elif [ "$z" == "9" ]; then
-			master_volume_change "+3% +3%"
+			system_volume_change "+3% +3%"
 			tagged=true
 			flag=true
 			z=""
 			continue
 		elif [ "$z" == "*" ]; then
-			master_volume_change "-1% -1%"
+			system_volume_change "-1% -1%"
 			tagged=true
 			flag=true
 			z=""
 			continue
 		elif [ "$z" == "(" ]; then
-			master_volume_change "+1% +1%"
+			system_volume_change "+1% +1%"
 			tagged=true
 			flag=true
 			z=""
@@ -3510,7 +3506,7 @@ main_menu() {
 				if [ "$TOTAL_QUEUE" == "0" ]; then
 					draw_banner "NO MUSIC"
 					gtts_speak "no music"
-					sleep 0.6
+					sleep $BANNER_WAIT_TIME
 					NO_QUEUE_FLAG=true
 					menu_start_over=true
 					tput cup $LINES
@@ -3586,7 +3582,7 @@ main_menu() {
 					if [ "$TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NONE"
 						gtts_speak "no music loops"
-						sleep 0.6
+						sleep $BANNER_WAIT_TIME
 						#tput cup $LINES
 						#echo -ne "$WHITE_BLACK"
 						#printf '%*s' $COLS
@@ -3604,7 +3600,7 @@ main_menu() {
 					if [ "$?" == "50" ]; then
 						draw_banner "NONE"
 						gtts_speak "no locked music" true
-						sleep 0.6
+						sleep $BANNER_WAIT_TIME
 						#tput cup $LINES
 						#echo -ne "$WHITE_BLACK"
 						#printf '%*s' $COLS
@@ -3628,13 +3624,6 @@ main_menu() {
 					fi
 					flag=true
 				elif [ "${OPT[$SELECTION]}" == "Music" ]; then
-					if [ ! -e "$MUSICDIR" ]; then
-						mkdir "$MUSICDIR"
-						draw_banner "NONE"
-						sleep 0.618
-						gtts_speak "no music" true
-						continue
-					fi
 					QUEUE_RENDERED=false
 					PICK=""
 					if [ "$initial_screen" == false ]; then
@@ -3653,52 +3642,38 @@ main_menu() {
 					TOTAL_QUEUE=$index
 					if [ "$TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NONE"
-						sleep 0.618
+						sleep $BANNER_WAIT_TIME
 						gtts_speak "no music" true
+						menu_start_over=true
+						NO_QUEUE_FLAG=true
 						continue
-						
 					fi
 					JUMP="1"
 					echo -ne "$NOCOLOR"
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				elif [ "${OPT[$SELECTION]}" == "Sound" ]; then
-					if [ ! -e "$SOUNDDIR" ]; then
-						mkdir "$SOUNDDIR"
-						draw_banner "NO SOUNDS"
-						sleep 0.618
-						gtts_speak "no sounds" true
-						continue
-					fi
 					QUEUE_RENDERED=false
 					PICK=""
 					REPEAT_ONLY=false
 					VIDEO=false
-					if [ -e "$SOUNDDIR" ]; then
-						unset queue_array
+					unset queue_array
 
-						IFS=$'\n'
-						index=0
-						for i in `find "$SOUNDDIR" -iname "*.mp3" -o -iname "*.flac" | shuf`; do
-							queue_array[$index]="$i"
-							index=$(($index+1))
-						done
-						unset IFS
-						SHUFFLED=true
-						new_TOTAL_QUEUE=$index
-					else
-						new_TOTAL_QUEUE=0
-					fi
+					IFS=$'\n'
+					index=0
+					for i in `find "$SOUNDDIR" -iname "*.mp3" -o -iname "*.flac" | shuf`; do
+						queue_array[$index]="$i"
+						index=$(($index+1))
+					done
+					unset IFS
+					SHUFFLED=true
+					new_TOTAL_QUEUE=$index
 					if [ "$new_TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO SOUNDS"
 						gtts_speak "no sounds" true
-						sleep 0.6
+						sleep $BANNER_WAIT_TIME
 						menu_start_over=true
 						NO_QUEUE_FLAG=true
-						#tput cup $LINES
-						#echo -ne "$WHITE_BLACK"
-						#printf '%*s' $COLS
-						#echo -ne "$NOCOLOR"
 						draw_position
 						continue
 						
@@ -3710,39 +3685,24 @@ main_menu() {
 					kill $MPLAYER_PID >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				elif [ "${OPT[$SELECTION]}" == "Video" ]; then
-					if [ ! -e "$VIDEODIR" ]; then
-						mkdir "$VIDEODIR"
-						draw_banner "NO SOUNDS"
-						sleep 0.618
-						gtts_speak "no sounds" true
-						continue
-					fi
 					QUEUE_RENDERED=false
 					REPEAT_ONLY=false
-					if [ -e "$VIDEODIR" ]; then
-						unset queue_array
+					unset queue_array
 
-						IFS=$'\n'
-						index=0
-						for i in `find "$VIDEODIR" -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.webm" | shuf`; do
-							queue_array[$index]="$i"
-							index=$(($index+1))
-						done
-						unset IFS
-						TOTAL_QUEUE=$(($index))
-					else
-						TOTAL_QUEUE=0
-					fi
+					IFS=$'\n'
+					index=0
+					for i in `find "$VIDEODIR" -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.webm" | shuf`; do
+						queue_array[$index]="$i"
+						index=$(($index+1))
+					done
+					unset IFS
+					TOTAL_QUEUE=$(($index))
 					if [ "$TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO VIDEOS"
 						gtts_speak "no videos" true
-						sleep 0.6
+						sleep $BANNER_WAIT_TIME
 						NO_QUEUE_FLAG=true
 						menu_start_over=true
-						#tput cup $LINES
-						#echo -ne "$WHITE_BLACK"
-						#printf '%*s' $COLS
-						#echo -ne "$NOCOLOR"
 						continue
 						
 					fi					
@@ -4191,17 +4151,17 @@ toggle_mute() {
 	echo "pausing_keep mute" >$ALETHEIA/pipe$$ &
 	if [ $MUTE = false ]; then
 		gtts_speak "muted" true
-		if [ "$os" == "Linux" ]; then
+		if [ "$OS" == "Linux" ]; then
 			osascript -e 'set volume with output muted'
-		elif [ "$os" == "Darwin" ]; then
+		elif [ "$OS" == "Darwin" ]; then
 			pactl set-sink-mute @DEFAULT_SINK@ 1 >/dev/null 2>/dev/null
 		fi
 		MUTE=true
 		draw_banner "MUTE"
 	else
-		if [ "$os" == "Linux" ]; then
+		if [ "$OS" == "Linux" ]; then
 			pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
-		elif [ "$os" == "Darwin" ]; then
+		elif [ "$OS" == "Darwin" ]; then
 			osascript -e 'set volume without output muted'
 		fi
 		gtts_speak "unmuted"
@@ -4244,7 +4204,7 @@ reset_all_tuning() {
 	INTERVAL_LIMIT=`calc "$EDO * 2.6"`
 	INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
-	sleep 0.1
+	sleep $MPLAYER_WAIT_TIME
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	gtts_speak "reset"
 	draw_volume
@@ -4322,7 +4282,7 @@ reset_to_locked() {
 			echo -e "af_add scaletempo=speed=pitch" >"$ALETHEIA/pipe$$" &
 		fi
 		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
-		sleep 0.1
+		sleep $MPLAYER_WAIT_TIME
 		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 	else
 		INTERVAL="$DEFAULT_INTERVAL"
@@ -4637,7 +4597,7 @@ toggle_scale_tempo() {
 			ONLY_PITCH=true
 			gtts_speak "pitch"
 			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
-			sleep 0.1
+			sleep $MPLAYER_WAIT_TIME
 			echo -e "af_add scaletempo=speed=pitch" >"$ALETHEIA/pipe$$" &
 		else
 			echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
@@ -4666,13 +4626,13 @@ secondary_scale_func() {
 		gtts_speak "backward"
 		echo "seek -5%" >"$ALETHEIA/pipe$$" &
 	elif [ "$1" == "8" ]; then
-		master_volume_change "-3% -3%"
+		system_volume_change "-3% -3%"
 	elif [ "$1" == "9" ]; then
-		master_volume_change "+3% +3%"
+		system_volume_change "+3% +3%"
 	elif [ "$1" == "*" ]; then
-		master_volume_change "-1% -1%"
+		system_volume_change "-1% -1%"
 	elif [ "$1" == "(" ]; then
-		master_volume_change "+1% +1%"
+		system_volume_change "+1% +1%"
 	elif [ "$1" == "H" ]; then
 		less_precise
 	elif [ "$1" == "L" ]; then
@@ -4728,7 +4688,7 @@ secondary_scale_func() {
 	elif [ "$1" == "\\" ]; then
 		echo "seek 0 2" >"$ALETHEIA/pipe$$" &
 	else
-		master_volume_secondary_func "$1"
+		process_key "$1"
 		return
 	fi
 }
@@ -5064,25 +5024,25 @@ pcm_volume_change() {
 	return 200
 }
 
-set_master_volume() {
-	if [ "$os" == "Linux" ]; then
+set_system_volume() {
+	if [ "$OS" == "Linux" ]; then
 		pactl set-sink-volume @DEFAULT_SINK@ $1
-	elif [ "$os" == "Darwin" ]; then
+	elif [ "$OS" == "Darwin" ]; then
 		osascript -e "set volume output volume $1" 
 	fi
 }
 
-master_volume_change() {
-	#leftvolume="`echo -n \"$MASTER_VOLUME_LEFT\" | cut -d'%' -f1`"
-	#rightvolume="`echo -n \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`"
-	leftvolume=${MASTER_VOLUME_LEFT%\%}
-	rightvolume=${MASTER_VOLUME_RIGHT%\%}
+system_volume_change() {
+	#leftvolume="`echo -n \"$SYSTEM_VOLUME_LEFT\" | cut -d'%' -f1`"
+	#rightvolume="`echo -n \"$SYSTEM_VOLUME_RIGHT\" | cut -d'%' -f1`"
+	leftvolume=${SYSTEM_VOLUME_LEFT%\%}
+	rightvolume=${SYSTEM_VOLUME_RIGHT%\%}
 	if [ "$leftvolume" == "" ]; then
 		leftvolume=0
 	fi
-	if [ "$os" == "Linux" ]; then
+	if [ "$OS" == "Linux" ]; then
 		pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
-	elif [ "$os" == "Darwin" ]; then
+	elif [ "$OS" == "Darwin" ]; then
 		osascript -e 'set volume with output muted'
 	else
 		return
@@ -5091,20 +5051,20 @@ master_volume_change() {
 	num="`echo -ne \"$1\" | cut -b2`"
 	if [ "$dir" == "+" ]; then
 		if [ "$(($leftvolume+$num))" -lt "99" ]; then
-			set_master_volume "$1"
+			set_system_volume "$1"
 		else
 			if [ "$num" == "1" ]; then
-				if [ "$os" == "Linux" ]; then
+				if [ "$OS" == "Linux" ]; then
 					pactl set-sink-volume @DEFAULT_SINK@ $1
-				elif [ "$os" == "Darwin" ]; then
+				elif [ "$OS" == "Darwin" ]; then
 					#osascript -e 'set volume with output muted'
 					osascript -e "set volume output volume 100"
 				fi
 				#pactl set-sink-volume @DEFAULT_SINK@ 100%
 			else
-				if [ "$os" == "Linux" ]; then
+				if [ "$OS" == "Linux" ]; then
 					pactl set-sink-volume @DEFAULT_SINK@ $1
-				elif [ "$os" == "Darwin" ]; then
+				elif [ "$OS" == "Darwin" ]; then
 					#osascript -e 'set volume with output muted'
 					osascript -e "set volume output volume 99" 
 				fi
@@ -5113,53 +5073,53 @@ master_volume_change() {
 		fi
 	else
 		if [ "$(($leftvolume-$num))" -gt "1" ]; then
-				if [ "$os" == "Linux" ]; then
+				if [ "$OS" == "Linux" ]; then
 					pactl set-sink-volume @DEFAULT_SINK@ $1
-				elif [ "$os" == "Darwin" ]; then
+				elif [ "$OS" == "Darwin" ]; then
 					#osascript -e 'set volume with output muted'
 					osascript -e "set volume output volume 99" 
 				fi
 			pactl set-sink-volume @DEFAULT_SINK@ $1
 		else
-			if [ "$os" == "Linux" ]; then
+			if [ "$OS" == "Linux" ]; then
 				pactl set-sink-volume @DEFAULT_SINK@ 1
-			elif [ "$os" == "Darwin" ]; then
+			elif [ "$OS" == "Darwin" ]; then
 				#osascript -e 'set volume with output muted'
 				osascript -e "set volume output volume 1" 
 			fi
 			#pactl set-sink-volume @DEFAULT_SINK@ 1%
 		fi
 	fi
-	get_master_volume
-	if [ "`echo -ne \"$MASTER_VOLUME_LEFT\" | cut -d'%' -f1`" -gt "100" ]; then
-		MASTER_VOLUME_LEFT="100%"
-		if [ "`echo -ne \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
-			MASTER_VOLUME_RIGHT="100%"
+	get_system_volume
+	if [ "`echo -ne \"$SYSTEM_VOLUME_LEFT\" | cut -d'%' -f1`" -gt "100" ]; then
+		SYSTEM_VOLUME_LEFT="100%"
+		if [ "`echo -ne \"$SYSTEM_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
+			SYSTEM_VOLUME_RIGHT="100%"
 		fi
-		if [ "$os" == "Linux" ]; then
+		if [ "$OS" == "Linux" ]; then
 			pactl set-sink-volume @DEFAULT_SINK@ 100
-		elif [ "$os" == "Darwin" ]; then
+		elif [ "$OS" == "Darwin" ]; then
 			#osascript -e 'set volume with output muted'
 			osascript -e "set volume output volume 1" 
 		fi
-		#pactl set-sink-volume @DEFAULT_SINK@ 100% $MASTER_VOLUME_RIGHT
+		#pactl set-sink-volume @DEFAULT_SINK@ 100% $SYSTEM_VOLUME_RIGHT
 	fi
-	if [ "`echo -ne \"$MASTER_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
-		MASTER_VOLUME_RIGHT="100%"
-		if [ "$os" == "Linux" ]; then
+	if [ "`echo -ne \"$SYSTEM_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
+		SYSTEM_VOLUME_RIGHT="100%"
+		if [ "$OS" == "Linux" ]; then
 			pactl set-sink-volume @DEFAULT_SINK@ 100%
-		elif [ "$os" == "Darwin" ]; then
+		elif [ "$OS" == "Darwin" ]; then
 			#osascript -e 'set volume with output muted'
 			osascript -e "set volume output volume 1" 
 		fi
-		#pactl set-sink-volume @DEFAULT_SINK@ $MASTER_VOLUME_LEFT 100%
+		#pactl set-sink-volume @DEFAULT_SINK@ $SYSTEM_VOLUME_LEFT 100%
 	fi
 
 	draw_volume 2 3
 	read -n1 -t 0.1 key
 	if [ "$key" != "" ]; then
 		if [ "$key" == "8" ] || [ "$key" == "9" ] || [ "$key" == "*" ] || [ "$key" == "(" ]; then
-			master_volume_change "$1"
+			system_volume_change "$1"
 		fi
 	fi
 }
@@ -5220,7 +5180,7 @@ fade_volume() {
 		fi
 		echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		draw_volume
-		read -rsn1 -t 0.25 c
+		read -rsn1 -t $BANNER_WAIT_TIME c
 		ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 		if [ "$?" == "1" ]; then
 			RIGHT_BANNER_WIDTH=$((${#POSITION} + ${#TOTAL_QUEUE} + 1 + (${#CORNER_DIVIDER}*2)))
@@ -5766,14 +5726,14 @@ cleanup_sigint() {
 cleanup() {
 	killall espeak-ng node play >/dev/null 2>/dev/null
 
-	tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
-	tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
+	tmp_volume_left="`echo $SYSTEM_VOLUME_LEFT | cut -d'%' -f1`"
+	tmp_volume_right="`echo $SYSTEM_VOLUME_RIGHT | cut -d'%' -f1`"
 	if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
-		#amixer sset Master $MASTER_VOLUME_LEFT,$MASTER_VOLUME_LEFT >/dev/null 2>/dev/null
-		pactl set-sink-volume @DEFAULT_SINK@ $MASTER_VOLUME_LEFT >/dev/null 2>/dev/null
+		#amixer sset Master $SYSTEM_VOLUME_LEFT,$SYSTEM_VOLUME_LEFT >/dev/null 2>/dev/null
+		pactl set-sink-volume @DEFAULT_SINK@ $SYSTEM_VOLUME_LEFT >/dev/null 2>/dev/null
 	elif [ "$tmp_volume_left" -lt "$tmp_volume_right" ]; then
-		#amixer sset Master $MASTER_VOLUME_RIGHT,$MASTER_VOLUME_RIGHT >/dev/null 2>/dev/null
-		pactl set-sink-volume @DEFAULT_SINK@ $MASTER_VOLUME_RIGHT >/dev/null 2>/dev/null
+		#amixer sset Master $SYSTEM_VOLUME_RIGHT,$SYSTEM_VOLUME_RIGHT >/dev/null 2>/dev/null
+		pactl set-sink-volume @DEFAULT_SINK@ $SYSTEM_VOLUME_RIGHT >/dev/null 2>/dev/null
 	fi
 	echo -ne "" >"$ALETHEIA/current_song"
 	echo -ne "$NOCOLOR"
@@ -5828,8 +5788,8 @@ empty_pane() {
 draw_volume() {
 	tput cup 0
 
-	tmp_volume_left=${MASTER_VOLUME_LEFT%\%}
-	tmp_volume_right=${MASTER_VOLUME_RIGHT%\%}
+	tmp_volume_left=${SYSTEM_VOLUME_LEFT%\%}
+	tmp_volume_right=${SYSTEM_VOLUME_RIGHT%\%}
 	if [ "$tmp_volume_left" == "" ]; then
 		tmp_volume_left="0"
 		tmp_volume_right="0"
@@ -6309,19 +6269,19 @@ load_only_loops() {
 	fi
 }
 
-master_volume_secondary_func() {
+process_key() {
 	case "$1" in
 	'[')
-		master_volume_change "-1% +0%"
+		system_volume_change "-1% +0%"
 		;;
 	']')
-		master_volume_change "+0% -1%"
+		system_volume_change "+0% -1%"
 		;;
 	'{')
-		master_volume_change "+1% +0%"
+		system_volume_change "+1% +0%"
 		;;
 	'}')
-		master_volume_change "+0% +1%"
+		system_volume_change "+0% +1%"
 		;;
 	esac
 }
@@ -6378,7 +6338,7 @@ load_loop_file() {
 			echo "volume 0 1" >"$ALETHEIA/pipe$$" &
 			draw_banner "LOOP ON"
 			gtts_speak "loading loop"
-			sleep 0.05
+			sleep $MPLAYER_WAIT_TIME
 			if [ -e "$filename_without_ext.repeat.$ext.locked" ]; then
 				#CONTENTS="`cat \"$filename_without_ext.repeat.$ext\".locked`"
 				#IFS='/'
@@ -6738,7 +6698,7 @@ add_downloaded() {
 			gtts_speak "nothing downloaded"
 			draw_banner "NONE"
 		fi
-		sleep 0.6
+		sleep $BANNER_WAIT_TIME
 		draw_pitch
 		draw_position
 	fi
@@ -6750,8 +6710,8 @@ say_status() {
 	gtts_speak "which corner?"
 	read -n1 x
 	if [ "$x" == "u" ]; then
-		tmp="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
-		tmp2="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
+		tmp="`echo $SYSTEM_VOLUME_LEFT | cut -d'%' -f1`"
+		tmp2="`echo $SYSTEM_VOLUME_RIGHT | cut -d'%' -f1`"
 		tmp3="`echo $VOLUME | cut -d'%' -f1`"
 		gtts_speak "$tmp3" true
 		gtts_speak "$tmp" true
@@ -7287,9 +7247,8 @@ help_screen() {
 				draw_equalizer
 				draw_banner "MENU"
 				draw_position
-			else
-				empty_pane
 			fi
+			empty_pane
 			return
 		elif [ "$updown" == "m" ]; then
 			man aletheia
@@ -8469,7 +8428,7 @@ save_settings() {
 	draw_position
 }
 
-master() {
+main() {
 	PAUSE=false
 	MUTE=false
 	LOCKED=false
@@ -8628,7 +8587,7 @@ master() {
 			gtts_speak "screen redrawn"
 		fi
 		if [ "$WEB_CLIENT" == "0" ]; then
-				read -rsn1 -t 0.2 input
+				read -rsn1 -t $MAIN_REFRESH_TIME input
 		else
 			read -rsn1 -t 0.4 input
 			if [ "$input" == "" ] && [ "$WEB_CLIENT" == "1" ]; then
@@ -8736,10 +8695,10 @@ master() {
 				fi
 				;;
 			'8')
-				master_volume_change "-3% -3%"
+				system_volume_change "-3% -3%"
 				;;
 			'9')
-				master_volume_change "+3% +3%"
+				system_volume_change "+3% +3%"
 				;;
 			'y')
 				set_default_edo
@@ -8845,7 +8804,7 @@ master() {
 				ps -p $MPLAYER_PID >/dev/null 2>/dev/null
 				if [ "$?" != "1" ]; then
 					echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
-					sleep 0.15
+					sleep $MPLAYER_WAIT_TIME
 					percent="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 					if [ "`isnum \"$percent\"`" == "0" ]; then
 						percent=1
@@ -8896,10 +8855,10 @@ master() {
 						if [ "`jobs | grep \"sleeper\" | grep \"Running\"`" == "" ] && [ "$old_input_char" != "l" ] && [ "$old_input_char" != "h" ] && [ "$old_input_char" != "j" ] && [ "$old_input_char" != "k" ]; then
 							sleeper &
 							echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
-							sleep 0.15
+							sleep $MPLAYER_WAIT_TIME
 							percent="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
 							echo "get_time_pos" >"$ALETHEIA/pipe$$" &
-							sleep 0.15
+							sleep $MPLAYER_WAIT_TIME
 							tmpq="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2 | cut -d'.' -f1`"
 							tput cup $LINES 1
 							if [ "`isnum \"$tmpq\"`" == "1" ]; then
@@ -9034,7 +8993,7 @@ master() {
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.05
 				draw_banner "POS SAVED"
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				if [ "$SAVED_POSITION" == "" ]; then
 					SAVED_TOTAL=1
 					SAVED_POSITION[1]="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
@@ -9061,7 +9020,7 @@ master() {
 					read -rsn1 _
 				elif [ "$command" != "" ]; then
 					echo -e "$command" >"$ALETHEIA/pipe$$" &
-					sleep 0.7
+					sleep $MPLAYER_WAIT_TIME
 					empty_pane
 					tput cup $(($LINES-3))
 					echo -ne "$PADDING$CYAN`tail -1 \"$ALETHEIA/mplayer_output\"`"
@@ -9095,7 +9054,7 @@ master() {
 				draw_banner "START"
 				gtts_speak "start"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
-				sleep 0.7
+				sleep $MPLAYER_WAIT_TIME
 				START_MARKER="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 				draw_pitch
 				draw_position
@@ -9115,7 +9074,7 @@ master() {
 				draw_banner "END"
 				gtts_speak "end"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
-				sleep 0.7
+				sleep $MPLAYER_WAIT_TIME
 				END_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 				END_MARKER=$END_TIME
 				space=0
@@ -9133,7 +9092,7 @@ master() {
 				else
 					gtts_speak "none"
 					draw_banner "NONE"
-					sleep 0.6
+					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
 				fi
@@ -9146,9 +9105,9 @@ master() {
 				fi
 				;;
 			'0')
-				get_master_volume
-				tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
-				tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
+				get_system_volume
+				tmp_volume_left="`echo $SYSTEM_VOLUME_LEFT | cut -d'%' -f1`"
+				tmp_volume_right="`echo $SYSTEM_VOLUME_RIGHT | cut -d'%' -f1`"
 				if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
 					total="$tmp_volume_left"
 					right=true
@@ -9177,11 +9136,11 @@ master() {
 						tmp_volume_right=$(($tmp_volume_right-1))
 					fi
 
-					get_master_volume
+					get_system_volume
 					pactl set-sink-volume @DEFAULT_SINK@ ${tmp_volume_left}% ${tmp_volume_right}%
 					#MIXER_OUTPUT="`amixer sset Master ${tmp_volume_left}%,${tmp_volume_right}% | grep \"Front\" | grep \"\[\"`"
-					#MASTER_VOLUME_LEFT="`echo \"$MIXER_OUTPUT\" | grep Left | cut -d'[' -f2 | cut -d']' -f1`"
-					#MASTER_VOLUME_RIGHT="`echo \"$MIXER_OUTPUT\" | grep Right | cut -d'[' -f2 | cut -d']' -f1`"
+					#SYSTEM_VOLUME_LEFT="`echo \"$MIXER_OUTPUT\" | grep Left | cut -d'[' -f2 | cut -d']' -f1`"
+					#SYSTEM_VOLUME_RIGHT="`echo \"$MIXER_OUTPUT\" | grep Right | cut -d'[' -f2 | cut -d']' -f1`"
 					draw_volume 2 3
 					read -rsn1 -t 0.08 c
 					ps -p $MPLAYER_PID >/dev/null 2>/dev/null
@@ -9203,22 +9162,22 @@ master() {
 				done
 				draw_pitch
 				if [ "$flaggy" == true ]; then
-					get_master_volume
+					get_system_volume
 					continue
 				fi
 				;;
 			')')
-				get_master_volume
-				tmp_volume_left="`echo $MASTER_VOLUME_LEFT | cut -d'%' -f1`"
-				tmp_volume_right="`echo $MASTER_VOLUME_RIGHT | cut -d'%' -f1`"
+				get_system_volume
+				tmp_volume_left="`echo $SYSTEM_VOLUME_LEFT | cut -d'%' -f1`"
+				tmp_volume_right="`echo $SYSTEM_VOLUME_RIGHT | cut -d'%' -f1`"
 				if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
-					MASTER_VOLUME_RIGHT="${tmp_volume_left}%"
+					SYSTEM_VOLUME_RIGHT="${tmp_volume_left}%"
 				else
-					MASTER_VOLUME_LEFT="${tmp_volume_right}%"
+					SYSTEM_VOLUME_LEFT="${tmp_volume_right}%"
 					tmp_volume_left=$tmp_volume_right
 				fi
 
-				pactl set-sink-volume @DEFAULT_SINK@ $MASTER_VOLUME_LEFT $MASTER_VOLUME_RIGHT
+				pactl set-sink-volume @DEFAULT_SINK@ $SYSTEM_VOLUME_LEFT $SYSTEM_VOLUME_RIGHT
 				draw_volume
 				espeak_say " $tmp_volume_left"
 				;;
@@ -9359,7 +9318,7 @@ master() {
 					draw_banner "OFF"
 				fi
 				stty -echo
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				stty echo
 				RIGHT_BANNER_WIDTH=0
 				draw_pitch
@@ -9549,7 +9508,7 @@ master() {
 						tput el
 						
 						gtts_speak "color saved"
-						sleep 0.6
+						sleep $BANNER_WAIT_TIME
 						break
 					elif [ "$char" == "v" ]; then
 						tmpBLUE=$BLUE
@@ -9609,7 +9568,7 @@ master() {
 				else
 					gtts_speak "nothing downloaded"
 					draw_banner "NONE"
-					sleep 0.6
+					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
 				fi
@@ -9626,7 +9585,7 @@ master() {
 					ALWAYS_ON_TOP=true
 					echo "vo_ontop 1" >"$ALETHEIA/pipe$$" &
 				fi
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
 				;;
@@ -9640,7 +9599,7 @@ master() {
 				else
 					gtts_speak "nothing downloaded"
 					draw_banner "NONE"
-					sleep 0.6
+					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
 				fi
@@ -9694,7 +9653,7 @@ master() {
 						draw_banner "off"
 						VOICE_ENABLED=false
 					fi
-					sleep 0.75
+					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
 				else
@@ -9714,7 +9673,7 @@ master() {
 						VOICE_ENABLED=false
 						draw_banner "ONLY TITLES"
 					fi
-					sleep 0.75
+					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
 				fi
@@ -9970,10 +9929,10 @@ master() {
 				redraw_screen true
 				;;
 			'*')
-				master_volume_change "-1% -1%"
+				system_volume_change "-1% -1%"
 				;;
 			'(')
-				master_volume_change "+1% +1%"
+				system_volume_change "+1% +1%"
 				;;
 			'!')
 				if [ "$PAUSE" == true ]; then
@@ -10039,7 +9998,7 @@ master() {
 					gtts_speak "locked off"
 					draw_banner "LOCK OFF"
 				fi
-				sleep 0.6
+				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
 				;;
@@ -10153,7 +10112,7 @@ master() {
 							;;
 					esac
 				else
-					master_volume_secondary_func "$input"
+					process_key "$input"
 				fi
 				;;
 		esac
@@ -10163,7 +10122,7 @@ master() {
 trap cleanup EXIT
 trap cleanup_sigint SIGINT
 
-if [ ! -d "$ALETHEIA/" ]; then
+if [ ! -d "$ALETHEIA" ]; then
 	mkdir "$ALETHEIA"
 fi
 
@@ -10173,6 +10132,18 @@ fi
 
 if [ ! -d "$ALETHEIA/playlists/" ]; then
 	mkdir "$ALETHEIA/playlists"
+fi
+
+if [ ! -d "$MUSICDIR" ]; then
+	mkdir "$MUSICDIR"
+fi
+
+if [ ! -d "$SOUNDDIR" ]; then
+	mkdir "$MUSICDIR"
+fi
+
+if [ ! -d "$VIDEODIR" ]; then
+	mkdir "$VIDEODIR"
 fi
 
 rm -f "$ALETHEIA/pipe*" >/dev/null 2>/dev/null
@@ -10289,40 +10260,26 @@ elif [ "$1" == "--video" ]; then
 		for i in "$KEYWORDS"; do
 			KEYWORD="$KEYWORD$i.*"
 		done
-		if [ -e "$VIDEODIR" ]; then
-			unset queue_array
+		unset queue_array
 
-			IFS=$'\n'
-			index=0
-			for i in `find "$VIDEODIR" -iregex ".*${KEYWORD}mkv" -o -iregex ".*${KEYWORD}mp4" -o -iregex ".*${KEYWORD}webm" | shuf`; do
-				queue_array[$index]="$i"
-				index=$(($index+1))
-			done
-			unset IFS
-		else
-			clear
-			tput cup $LINES
-			echo -e "\n${RED}Error: ${NOCOLOR}$VIDEODIR does not exist."
-			exit 0
-		fi
+		IFS=$'\n'
+		index=0
+		for i in `find "$VIDEODIR" -iregex ".*${KEYWORD}mkv" -o -iregex ".*${KEYWORD}mp4" -o -iregex ".*${KEYWORD}webm" | shuf`; do
+			queue_array[$index]="$i"
+			index=$(($index+1))
+		done
+		unset IFS
 		TOTAL_QUEUE=$(($index))
 	else
-		if [ -e "$VIDEODIR" ]; then
-			unset queue_array
+		unset queue_array
 
-			IFS=$'\n'
-			index=0
-			for i in `find "$VIDEODIR" -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.webm" | shuf`; do
-				queue_array[$index]="$i"
-				index=$(($index+1))
-			done
-			unset IFS
-		else
-			clear
-			tput cup $LINES
-			echo -e "\n${RED}Error: ${NOCOLOR}$VIDEODIR does not exist."
-			exit 0
-		fi
+		IFS=$'\n'
+		index=0
+		for i in `find "$VIDEODIR" -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.webm" | shuf`; do
+			queue_array[$index]="$i"
+			index=$(($index+1))
+		done
+		unset IFS
 	fi
 	if [ "$index" -lt "1" ]; then
 		clear
@@ -10473,7 +10430,7 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 						RUNTHROUGH=true
 					else
 						web_client_func
-						master
+						main
 						RETURN="$?"
 					fi
 				else
@@ -10488,12 +10445,12 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 					fi
 				else
 					web_client_func
-					master
+					main
 					RETURN="$?"
 				fi
 			else
 				web_client_func
-				master
+				main
 				RETURN="$?"
 			fi
 		fi
@@ -10510,7 +10467,7 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 							RUNTHROUGH=true
 						else
 							web_client_func
-							master
+							main
 							RETURN="$?"
 						fi
 					else
@@ -10521,12 +10478,12 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 				fi
 			else
 				web_client_func
-				master
+				main
 				RETURN="$?"
 			fi
 		else
 			web_client_func
-			master
+			main
 			RETURN="$?"
 		fi
 	fi
