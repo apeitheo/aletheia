@@ -1806,6 +1806,7 @@ repeat() {
 				load_loop_file
 				draw_pitch
 				draw_position
+				REPEAT_ONLY=false
 				return 200
 			elif [ "$input_char" == "Z" ]; then
 						draw_banner "WAIT" false false true
