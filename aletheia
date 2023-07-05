@@ -1749,7 +1749,7 @@ repeat() {
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				if [ "$scale" == true ]; then
 					scale=false
-					if [ "$updown" == "u" ] || [ "$updown" == "q" ]; then
+					if [ "$inputchar" == "u" ] || [ "$inputchar" == "q" ]; then
 						gtts_speak "scale closed"
 						draw_pitch
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
@@ -1757,25 +1757,25 @@ repeat() {
 					fi
 				else
 					if [ "$WEB_CLIENT" == "0" ]; then
-						read -rsn1 updown
+						read -rsn1 inputchar
 					else
-						read -rsn1 updown <$ALETHEIA/web_client_pipe$$
+						read -rsn1 inputchar <$ALETHEIA/web_client_pipe$$
 					fi
-					if [ "$updown" == "j" ]; then
+					if [ "$inputchar" == "j" ]; then
 						scale_down=true
 						scale=true
 						input_char=""
 						gtts_speak "scaling"
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=false
-					elif [ "$updown" == "k" ]; then
+					elif [ "$inputchar" == "k" ]; then
 						scale_down=false
 						scale=true
 						input_char=""
 						gtts_speak "scaling"
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=false
-					elif [ "$updown" == "u" ] || [ "$updown" == "q" ] || [ "$updown" == "" ]; then
+					elif [ "$inputchar" == "u" ] || [ "$inputchar" == "q" ] || [ "$inputchar" == "" ]; then
 						gtts_speak "scale closed"
 						draw_pitch
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
@@ -2958,20 +2958,11 @@ main_menu() {
 	flag=false
 	menu_start_over=true
 
-	#empty_pane
 	first=$((($LINES/2) - ($TOTAL_OPTS/2)-1))
 	last=$(($first + $TOTAL_OPTS - 1))
+
+	empty_pane
 	
-	for i in `seq 1 $first`; do
-		tput cup $i
-		tput el
-	done
-
-	for i in `seq $last $(($LINES-2))`; do
-		tput cup $i
-		tput el
-	done
-
 	until [ "$z" = "," ]; do
 		if [ "$z" == "" ]; then
 			x=1
@@ -3018,7 +3009,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`printf '%*s' $(($COLS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -3086,7 +3077,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING`printf '%*s' $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$i" -ge "2" ]; then
@@ -3134,7 +3125,7 @@ main_menu() {
 				fi
 			done
 
-			menu_buf="$menu_buf\n$PADDING`printf '%*s' $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
+			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
 
 			tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLS/2-5-$moveleft))
 
@@ -3513,10 +3504,6 @@ main_menu() {
 					sleep $BANNER_WAIT_TIME
 					NO_QUEUE_FLAG=true
 					menu_start_over=true
-					tput cup $LINES
-					echo -ne "$WHITE_BLACK"
-					printf '%*s' $COLS
-					echo -ne "$NOCOLOR"
 					continue
 				fi
 				JUMP="1"
@@ -3587,10 +3574,6 @@ main_menu() {
 						draw_banner "NONE"
 						gtts_speak "no music loops"
 						sleep $BANNER_WAIT_TIME
-						#tput cup $LINES
-						#echo -ne "$WHITE_BLACK"
-						#printf '%*s' $COLS
-						#echo -ne "$NOCOLOR"
 						continue
 						
 					fi
@@ -3724,12 +3707,7 @@ main_menu() {
 						JUMP=1
 						return $RETURN_JUMP
 					fi
-					if [ "$initial_screen" == true ]; then
-						empty_pane
-					else
-						reset_buffer
-						redraw_buffer
-					fi
+					empty_pane
 					menu_start_over=true
 					flag=false
 				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
@@ -5116,27 +5094,27 @@ system_volume_change() {
 }
 
 fade_volume() {
-	updown=""
+	inputchar=""
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <$ALETHEIA/web_client_pipe$$
 	fi
 	if [ "$_input" != "" ]; then
-		updown="$_input"
+		inputchar="$_input"
 	fi
 	draw_banner "FADE"
 	gtts_speak "select direction to fade"
 	PAUSE=false
 	MUTE=false
 	x=0
-	if [ "$updown" == "" ]; then
-		read -n1 updown
+	if [ "$inputchar" == "" ]; then
+		read -n1 inputchar
 	fi
 	down=false
 	up=false
-	if [ "$updown" == "j" ]; then
+	if [ "$inputchar" == "j" ]; then
 		down=true
 		gtts_speak "down"
-	elif [ "$updown" == "k" ]; then
+	elif [ "$inputchar" == "k" ]; then
 		up=true
 		gtts_speak "up"
 	else
@@ -6544,8 +6522,8 @@ queue_help_screen() {
 			empty_pane "$(($number_per_page + 2))"
 		fi
 
-		read -rsn1 updown
-		if [ "$updown" = "j" ]; then
+		read -rsn1 inputchar
+		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -6554,7 +6532,7 @@ queue_help_screen() {
 			if [ "$pos" -gt "$QUEUE_HELP_LENGTH" ]; then
 				pos="$(($QUEUE_HELP_LENGTH-$number_per_page-1))"
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$pos" == "1" ]; then
 				continue
@@ -6568,7 +6546,7 @@ queue_help_screen() {
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			echo -e "$QUEUE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		else
 			killall espeak-ng >/dev/null 2>/dev/null
@@ -6629,8 +6607,8 @@ scale_screen() {
 			empty_pane "$(($number_per_page + 2))"
 		fi
 
-		read -rsn1 updown
-		if [ "$updown" = "j" ]; then
+		read -rsn1 inputchar
+		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -6639,7 +6617,7 @@ scale_screen() {
 			if [ "$pos" -gt "$SCALE_HELP_LENGTH" ]; then
 				pos="$(($SCALE_HELP_LENGTH-$number_per_page-1))"
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$pos" == "1" ]; then
 				continue
@@ -6653,7 +6631,7 @@ scale_screen() {
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			echo -e "$SCALE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		else
 			killall espeak-ng >/dev/null 2>/dev/null
@@ -6836,18 +6814,18 @@ voice_settings_screen() {
 			fi
 		fi
 
-		read -rsn1 updown <&1
-		if [ "$updown" = "j" ]; then
+		read -rsn1 inputchar <&1
+		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$(($page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
 				page=$(($page+1))
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$page" -gt "0" ]; then
 				page=$(($page-1))
 			fi
-		elif [ "$updown" == "J" ]; then
+		elif [ "$inputchar" == "J" ]; then
 			if [ "$VOICE_PITCH" -gt "-30" ]; then
 				VOICE_PITCH="$(($VOICE_PITCH-1))"
 			fi
@@ -6858,7 +6836,7 @@ voice_settings_screen() {
 			fi
 			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 			flagged=true
-		elif [ "$updown" == "K" ]; then
+		elif [ "$inputchar" == "K" ]; then
 			if [ "$VOICE_PITCH" -lt "30" ]; then
 				VOICE_PITCH="$(($VOICE_PITCH+1))"
 			fi
@@ -6870,21 +6848,21 @@ voice_settings_screen() {
 			fi
 			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 			flagged=true
-		elif [ "$updown" == "8" ]; then
+		elif [ "$inputchar" == "8" ]; then
 			if [ "`echo -e \"$VOICE_VOLUME > 0.05\" | bc`" == "1" ]; then
 				VOICE_VOLUME="`echo \"$VOICE_VOLUME-0.05\" | bc`"
 			fi
 			gtts_speak "$VOICE_VOLUME" false false true
 			flagged=true
-		elif [ "$updown" == "9" ]; then
+		elif [ "$inputchar" == "9" ]; then
 			if [ "`echo -e \"$VOICE_VOLUME < 1.0\" | bc`" == "1" ]; then
 				VOICE_VOLUME="`echo \"$VOICE_VOLUME+0.05\" | bc`"
 			fi
 			gtts_speak "$VOICE_VOLUME" false false true
 			flagged=true
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			echo "$VOICE_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
-		elif [ "$updown" == "z" ]; then
+		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
 			reset_dimensions
@@ -6894,7 +6872,7 @@ voice_settings_screen() {
 			draw_position
 			number_per_page="$(($LINES-4))"
 			original_number_per_page="$number_per_page"
-		elif [ "$updown" == $'\e' ]; then
+		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
@@ -7097,18 +7075,18 @@ loop_help_screen() {
 			fi
 		fi
 
-		read -rsn1 updown <&1
-		if [ "$updown" = "j" ]; then
+		read -rsn1 inputchar <&1
+		if [ "$inputchar" = "j" ]; then
 			if [ "$(($page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
 				page=$(($page+1))
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			if [ "$page" -gt "0" ]; then
 				page=$(($page-1))
 			fi
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			echo "$REPEAT_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/-/minus /g" | sed "s/\./ point /g" | sed "s/^\^/control /g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
-		elif [ "$updown" == "z" ]; then
+		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
 			reset_dimensions
@@ -7118,7 +7096,7 @@ loop_help_screen() {
 			draw_position
 			number_per_page="$(($LINES-4))"
 			original_number_per_page="$number_per_page"
-		elif [ "$updown" == $'\e' ]; then
+		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
@@ -7168,7 +7146,7 @@ render_help_screen() {
 }
 
 help_screen() {
-	gtts_speak "key controls!"
+	gtts_speak "key controls"
 	local initial_screen=$1
 
 	page=0
@@ -7212,30 +7190,30 @@ help_screen() {
 			fi
 		fi
 
-		read -rsn1 updown <&1
-		if [ "$updown" = "j" ]; then
+		read -rsn1 inputchar <&1
+		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
 			if [ "$(($page+1))" -lt "${#HELP_BUFFER[@]}" ]; then
 				page=$(($page+1))
 				gtts_speak "page down"
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
 				page=$(($page-1))
 				gtts_speak "page up"
 			fi
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng play >/dev/null 2>/dev/null
 			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/^\^/control /g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
-		elif [ "$updown" == "z" ]; then
+		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
 			reset_dimensions
 			empty_pane
-		elif [ "$updown" == "q" ] || [ "$updown" == "i" ] || [ "$updown" == "?" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
 			gtts_speak "closed" true
@@ -7248,9 +7226,9 @@ help_screen() {
 			fi
 			empty_pane
 			return
-		elif [ "$updown" == "m" ]; then
+		elif [ "$inputchar" == "m" ]; then
 			man aletheia
-		elif [ "$updown" == $'\e' ]; then
+		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
@@ -7485,15 +7463,15 @@ search_queue() {
 		tput rc
 
 		if [ "$WEB_CLIENT" == "0" ]; then
-			read -rsn1 updown <&1
+			read -rsn1 inputchar <&1
 		else
-			read -rsn1 -t 0.1 updown <$ALETHEIA/web_client_pipe$$
-			if [ "$updown" == "" ]; then
-				read -rsn1 updown <&1
+			read -rsn1 -t 0.1 inputchar <$ALETHEIA/web_client_pipe$$
+			if [ "$inputchar" == "" ]; then
+				read -rsn1 inputchar <&1
 			fi
 		fi
 
-		if [ "$updown" = "j" ]; then
+		if [ "$inputchar" = "j" ]; then
 			killall play >/dev/null 2>/dev/null
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
@@ -7504,7 +7482,7 @@ search_queue() {
 			if [ "$pos" -ge "$total" ]; then
 				pos="$(($pos-$number_per_page))"
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall play >/dev/null 2>/dev/null
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
@@ -7520,9 +7498,9 @@ search_queue() {
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
-		elif [ "`isnum \"$updown\"`" != "0" ]; then
-			gtts_speak " $updown"
-			up_down="`read_line $updown`"
+		elif [ "`isnum \"$inputchar\"`" != "0" ]; then
+			gtts_speak " $inputchar"
+			up_down="`read_line $inputchar`"
 			jumpto="$up_down"
 			if [ "$jumpto" -le "$TOTAL_QUEUE" ]; then
 				if [ "$jumpto" -gt "0" ]; then
@@ -7535,7 +7513,7 @@ search_queue() {
 				fi
 			fi
 			return
-		elif [ "$updown" == "s" ]; then
+		elif [ "$inputchar" == "s" ]; then
 			start_search
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
@@ -7548,21 +7526,21 @@ search_queue() {
 				draw_position
 				return
 			fi
-		elif [ "$updown" == "" ]; then
+		elif [ "$inputchar" == "" ]; then
 			if [ "$VOICE_ENABLED" == true ]; then
 				killall espeak-ng >/dev/null 2>/dev/null
 			fi
 			LOOP_ARTIST=false
 			JUMP="`echo \"$SEARCHBUFFER\" | head -1 | cut -d':' -f1`"
 			return $RETURN_JUMP
-		elif [ "$updown" == "T" ]; then
+		elif [ "$inputchar" == "T" ]; then
 			FLAGGED=false
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			killall play >/dev/null 2>/dev/null
 			killall espeak-ng >/dev/null 2>/dev/null
 			espeak_say " $tmp_buf"
 			FLAGGED=false
-		elif [ "$updown" == "q" ]; then #|| [ "$updown" == "" ]; then
+		elif [ "$inputchar" == "q" ]; then #|| [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$REDRAWN" == false ]; then
 				BUFFER="$BUFFER_BACKUP"
@@ -7574,7 +7552,7 @@ search_queue() {
 				draw_pitch
 				draw_position
 			return
-		elif [ "$updown" == "z" ]; then
+		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			reset_dimensions
 			number_per_page="$(($LINES-4))"
@@ -7589,7 +7567,7 @@ search_queue() {
 			FLAGGED=false
 			pos=1
 			continue
-		elif [ "$updown" == $'\e' ]; then
+		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
@@ -7697,9 +7675,9 @@ queue_controls() {
 		fi
 		draw_banner "QUEUE"
 
-		read -rsn1 updown <&1
+		read -rsn1 inputchar <&1
 
-		if [ "$updown" = "j" ]; then
+		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -7708,7 +7686,7 @@ queue_controls() {
 			if [ "$pos" -gt "$total" ]; then
 				pos="$(($total-$number_per_page-1))"
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$pos" == "1" ]; then
 				continue
@@ -7722,9 +7700,9 @@ queue_controls() {
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
-		elif [ "`isnum \"$updown\"`" != "0" ]; then
+		elif [ "`isnum \"$inputchar\"`" != "0" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
-			up_down="`read_line \"$updown\"`"
+			up_down="`read_line \"$inputchar\"`"
 			jumpto="$up_down"
 			if [ "$jumpto" -le "$total" ]; then
 				if [ "$jumpto" -gt "0" ]; then
@@ -7755,7 +7733,7 @@ queue_controls() {
 				continue
 			fi
 			return
-		elif [ "$updown" == "D" ]; then
+		elif [ "$inputchar" == "D" ]; then
 			draw_banner "DELETE"
 			gtts_speak "number to delete?"
 			c="`read_line`"
@@ -7774,7 +7752,7 @@ queue_controls() {
 					fi
 				fi
 			fi
-		elif [ "$updown" == "" ]; then
+		elif [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$VOICE_ENABLED" == true ]; then
 				killall espeak-ng >/dev/null 2>/dev/null
@@ -7797,10 +7775,10 @@ queue_controls() {
 				kill $MPLAYER_PID >/dev/null 2>/dev/null
 				return $RETURN_JUMP
 			fi
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			espeak_say " $tmp_buf" true
-		elif [ "$updown" == "Z" ]; then
+		elif [ "$inputchar" == "Z" ]; then
 			if [ "$initial_screen" == true ]; then
 				continue
 			fi
@@ -7818,7 +7796,7 @@ queue_controls() {
 			fi
 			draw_banner "QUEUE"
 			draw_position
-		elif [ "$updown" == "q" ] || [ "$updown" == "i" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$REDRAWN" == false ]; then
 				BUFFER="$BUFFER_BACKUP"
@@ -7831,8 +7809,11 @@ queue_controls() {
 				draw_position
 			fi
 			gtts_speak "closed" true
+			if [ "$inputchar" == "i" ]; then
+				return -2
+			fi
 			return -1
-		elif [ "$updown" == "z" ]; then
+		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			reset_dimensions
 			number_per_page="$(($LINES-4))"
@@ -7847,7 +7828,7 @@ queue_controls() {
 			FLAGGED=false
 			pos=1
 			continue
-		elif [ "$updown" == $'\e' ]; then
+		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
@@ -8111,9 +8092,9 @@ print_queue() {
 		draw_banner "QUEUE"
 		tput rc
 		
-		read -rsn1 updown
+		read -rsn1 inputchar
 		tput civis
-		if [ "$updown" = "j" ]; then
+		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
 			CHANGED=true
@@ -8130,7 +8111,7 @@ print_queue() {
 			if [ "$current" -le "$truepos" ]; then
 				current=$pos
 			fi
-		elif [ "$updown" = "k" ]; then
+		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page up"
 			CHANGED=true
@@ -8147,7 +8128,7 @@ print_queue() {
 				pos=1
 			fi
 			current=$pos
-		elif [ "$updown" = "h" ]; then
+		elif [ "$inputchar" = "h" ]; then
 			if [ "$current" == "$TOTAL_QUEUE" ]; then
 				continue
 			fi
@@ -8169,7 +8150,7 @@ print_queue() {
 			fi
 
 			skip=true
-		elif [ "$updown" = "l" ]; then
+		elif [ "$inputchar" = "l" ]; then
 			if [ "$current" == "1" ]; then
 				continue
 			fi
@@ -8193,10 +8174,10 @@ print_queue() {
 			fi
 
 			skip=true
-		elif [ "$updown" == "," ]; then
+		elif [ "$inputchar" == "," ]; then
 			gtts_speak "$(echo -ne "${queue_array[$(($current-1))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
-		elif [ "`isnum \"$updown\"`" != "0" ]; then
-			up_down="`read_line \"$updown\"`"
+		elif [ "`isnum \"$inputchar\"`" != "0" ]; then
+			up_down="`read_line \"$inputchar\"`"
 			if [ "`isnum \"$up_down\"`" != "0" ]; then
 				up_down="${up_down#"${up_down%%[!0]*}"}"
 				if [ "$up_down" -lt "1" ]; then
@@ -8215,7 +8196,7 @@ print_queue() {
 					return 200
 				fi
 			fi
-		elif [ "$updown" == "b" ]; then
+		elif [ "$inputchar" == "b" ]; then
 			kill $MPLAYER_PID >/dev/null 2>/dev/null
 			if [ "$TRACK_RANDOM" == true ]; then
 				return $RETURN_TRACK_RANDOM_BACK
@@ -8226,7 +8207,7 @@ print_queue() {
 			else
 				return $RETURN_BACK
 			fi
-		elif [ "$updown" == "n" ]; then
+		elif [ "$inputchar" == "n" ]; then
 			ps -p $MPLAYER_PID >/dev/null
 			if [ "$?" != "1" ]; then
 				kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -8246,14 +8227,14 @@ print_queue() {
 					fi
 				fi
 			fi
-		elif [ "$updown" == "s" ]; then
+		elif [ "$inputchar" == "s" ]; then
 			start_search
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			elif [ "$?" == "-1" ]; then
 				return -1 
 			fi
-		elif [ "$updown" == "z" ]; then
+		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			CHANGED=true
 			REDRAWN=true
@@ -8268,10 +8249,10 @@ print_queue() {
 			draw_position
 			reset_buffer
 			continue
-		elif [ "$updown" == "?" ]; then
+		elif [ "$inputchar" == "?" ]; then
 			queue_help_screen
 			continue
-		elif [ "$updown" == "p" ]; then
+		elif [ "$inputchar" == "p" ]; then
 			if [ "$PAUSE" == true ]; then
 				draw_position
 				gtts_speak "unpaused"
@@ -8280,14 +8261,14 @@ print_queue() {
 			fi
 			toggle_pause true
 			continue
-		elif [ "$updown" == "d" ]; then
+		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$CHANGED" != false ]; then
 				espeak_say " $pos of $(($pos+$number_per_page-1)). $tmpbuf."
 			else
 				espeak_say " $pos of $(($pos+$number_per_page-1)). $tmpbuf."
 			fi
-		elif [ "$updown" == $'\e' ]; then
+		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
@@ -8331,7 +8312,7 @@ print_queue() {
 				return 200
 				;;
 			esac
-		elif [ "$updown" == "q" ] || [ "$updown" == ";" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == ";" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			BUFFER="$BUFFER_BACKUP"
 			echo -ne "$NOCOLOR"
@@ -8343,14 +8324,12 @@ print_queue() {
 			draw_position
 			gtts_speak "closed" true
 			return 200
-		elif [ "$updown" == "" ]; then
+		elif [ "$inputchar" == "" ]; then
 			kill $MPLAYER_PID >/dev/null 2>/dev/null
 			JUMP="$current"
 			draw_position
 			return $RETURN_JUMP
 		fi
-
-	
 	done
 	redraw_screen true
 }
