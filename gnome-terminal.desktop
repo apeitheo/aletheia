@@ -1,0 +1,6 @@
+[Desktop Entry]
+Type=Application
+Terminal=false
+Name=Aletheia
+Exec=gnome-terminal --command="aletheia"
+Icon=aletheia.png
