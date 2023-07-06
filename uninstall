@@ -1,10 +1,23 @@
 #!/bin/bash
+
+RED="\033[1;31m"
+BLUE="\033[1;36m"
+NOCOLOR="\033[0m"
+
 DESTDIR=${DESTDIR:-/usr/local}
+
+if [ ! -w "$DESTDIR" ]; then
+	echo -e "${RED}Error:$NOCOLOR Need root permission to uninstall from $DESTDIR"
+	exit 1
+fi
 
 sudo rm -f "${DESTDIR}/bin/aletheia"
 sudo rm -f "${DESTDIR}/share/man/man1/aletheia.1"
+
 if [ -e "${DESTDIR}/bin/aletheia" ] || [ -e "${DESTDIR}/share/man/man1/aletheia.1" ]; then
-	echo -e "\033[1;31mUninstall not successful\033[0m"
+	echo -e "${RED}Uninstall not successful$NOCOLOR"
+	exit 1
 else
-	echo -e "\033[1;36mAletheia successfully uninstalled\033[0m"
+	echo -e "${BLUE}Aletheia successfully uninstalled${BLUE}"
+	exit 0
 fi
