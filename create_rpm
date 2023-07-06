@@ -1,8 +1,16 @@
 #!/bin/bash
 
+RED="\033[1;31m"
+NOCOLOR="\033[0m"
+
+if [ "$(whoami)" != "root" ]; then
+	echo -e "${RED}Error:$NOCOLOR Needs root permission"
+	exit 1
+fi
+
 VERSION=${VERSION:-0.9.6}
-REVISION=2
-SRCDIR=${SRCDIR:-"."}
+REVISION=3
+SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
 
 if [ -e "$TMPDIR" ]; then
@@ -14,7 +22,11 @@ mkdir -p "$TMPDIR"/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SOURCES/man,SPECS,SRPM
 cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/"
 cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/man/"
 
-echo -e "Summary: A CLI media player with pitch controls and voice feedback\nName: aletheia\nVersion: ${VERSION}\nRelease: 1%{?dist}\nLicense: GPL3\nURL: http://www.patreon.com/aletheia_project\nRequires: mplayer\nRequires: pulseaudio-utils\nRequires: calc\nRequires: bc\nRequires: gtts\nRequires: espeak-ng\nRequires: sox\nRequires: ffmpeg\n\n%description\nA command-line media player with pitch and speed controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.\n\n%install\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/aletheia\" %{buildroot}/%{_bindir}/aletheia\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/man/aletheia.1\" %{buildroot}/%{_mandir}/man1/aletheia.1\n\n%files\n%attr(0755, root, root) %{_bindir}/aletheia\n%attr(0644, root, root) %{_mandir}/man1/aletheia.1.gz\n\n%changelog\n* `date +\"%a %b %e %Y\"` Brad Hermanson ${VERSION}-${REVISION}\n- Initial package release" >"$TMPDIR"/rpmbuild/SPECS/aletheia.spec
+echo -e "Summary: A CLI media player with pitch controls and voice feedback\nName: aletheia\nVersion: ${VERSION}\nRelease: 3%{?dist}\nLicense: GPL3\nBuildArch: %{_arch}\nURL: http://www.patreon.com/aletheia_project\nRequires: mplayer\nRequires: pulseaudio-utils\nRequires: calc\nRequires: bc\nRequires: gtts\nRequires: espeak-ng\nRequires: sox\nRequires: ffmpeg\n\n%description\nA command-line media player with pitch and speed controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.\n\n%install\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/aletheia\" %{buildroot}/%{_bindir}/aletheia\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/man/aletheia.1\" %{buildroot}/%{_mandir}/man1/aletheia.1\n\n%files\n%attr(0755, root, root) %{_bindir}/aletheia\n%attr(0644, root, root) %{_mandir}/man1/aletheia.1.gz\n\n%changelog\n* `date +\"%a %b %e %Y\"` Brad Hermanson ${VERSION}-${REVISION}\n- Initial package release" >"$TMPDIR"/rpmbuild/SPECS/aletheia.spec
 
 cd "$TMPDIR"
 rpmbuild -bb rpmbuild/SPECS/aletheia.spec
+
+if [ -e "$HOME/rpmbuild/RPMS/"*"/aletheia-${VERSION}-${REVISION}"*".rpm" ]; then
+	mv "$HOME/rpmbuild/RPMS/"*"/aletheia-${VERSION}-${REVISION}"*".rpm" $SRCDIR
+fi
