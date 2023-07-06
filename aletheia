@@ -3492,7 +3492,7 @@ main_menu() {
 				unset queue_array
 				IFS=$'\n'
 				index=0
-				for i in `find "$MUSICDIR" -iname "*.mp3" -o -iname "*.flac" | shuf`; do
+				for i in $(find "$MUSICDIR" -iname "*.mp3" -o -iname "*.flac" | sort); do
 					queue_array[$index]="$i"
 					index=$(($index+1))
 				done
@@ -3510,7 +3510,11 @@ main_menu() {
 				JUMP="1"
 				echo -ne "$NOCOLOR"
 			fi
-			start_search
+			if [ "$initial_screen" == true ]; then
+				start_search true
+			else
+				start_search
+			fi
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			fi
@@ -7265,8 +7269,6 @@ help_screen() {
 
 start_search() {
 	draw_banner "SEARCH"
-	#echo -ne "$WHITE_BLACK"
-	#printf '%*s' $(($COLS - 13 - 1))
 	draw_position
 	tput rc
 	echo -ne "$BLUE_BLACK"
@@ -7301,7 +7303,18 @@ start_search() {
 				draw_position
 			fi
 		else
-			SEARCHBUFFER="$(printf '%s\n' "${queue_array[@]}" | grep -ni "$jump")\n"
+			if [ "$1" == true ]; then
+				jump="$(echo -n "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
+				tmp=$(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep --text -ni "$jump" | head -1 | cut -d':' -f1)
+				if [ "$tmp" != "" ]; then
+					JUMP="$tmp"
+					return "$RETURN_JUMP"
+				else
+					return
+				fi
+			fi
+			jump="$(echo -ne "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
+			SEARCHBUFFER="$(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -ni "$jump")"
 			length="`echo -ne \"$SEARCHBUFFER\" | wc -l`"
 			if [ "$length" == "1" ]; then
 				if [ "`echo $SEARCHBUFFER | grep \":\"`" != "" ]; then
@@ -7339,38 +7352,40 @@ new_playlist() {
 	KEYWORD=""
 	gtts_speak "enter keyword to start new playlist"
 	draw_banner "SEARCH"
-	tmp="`read_line`"
-	if [ "$tmp" == "" ]; then
+	keyw="`read_line`"
+	if [ "$keyw" == "" ]; then
 		if [ "$initial_screen" == true ]; then
 			empty_pane
 		else
 			draw_pitch
 		fi
 	else
-		for i in "$tmp"; do
+		for i in "$keyw"; do
 			KEYWORD="$KEYWORD$i.*"
 		done
+		file_list="$(find "$MUSICDIR" -type f)"
+		matches="$(echo -ne "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${keyw}.*mp3$|.*${keyw}.*flac$")"
 		if [ "$2" == "true" ]; then
 			IFS=$'\n'
-			index=$(($TOTAL_QUEUE+1))
-			for i in `find "$MUSICDIR" -iregex ".*${KEYWORD}.*mp3" -o -iregex ".*${KEYWORD}.*flac"`; do
-				queue_array[$index]="$i"
+			index=$TOTAL_QUEUE
+			for i in $matches; do
+				ind="$(echo -n "$i" | cut -d':' -f1)"
+				queue_array[$index]="$(echo -n "$file_list" | sed -n "${ind}p")"
 				index=$(($index+1))
 			done
 			unset IFS
 		else
 			unset queue_array
-
 			IFS=$'\n'
 			index=0
-			for i in `find "$MUSICDIR" -iregex ".*${KEYWORD}.*mp3" -o -iregex ".*${KEYWORD}.*flac"`; do
-				queue_array[$index]="$i"
+			for i in $matches; do
+				ind="$(echo -n "$i" | cut -d':' -f1)"
+				queue_array[$index]="$(echo -n "$file_list" | sed -n "${ind}p")"
 				index=$(($index+1))
 			done
 			unset IFS
-
 		fi
-		if [ "$index" == "1" ]; then
+		if [ "$index" == "1" ] || [ "$index" == "0" ]; then
 			gtts_speak "nothing found" true
 			return
 		fi
