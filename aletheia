@@ -1363,7 +1363,7 @@ less_precise() {
 		EDO="$(($EDO/2))"
 		echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 		draw_pitch
-		sleep $MPLAYER_WAIT_TIME
+		sleep 0.01
 	done
 	echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 	draw_pitch
@@ -1384,7 +1384,7 @@ more_precise() {
 			EDO="$(($EDO*2))"
 			echo -e "speed_set `calc \"2^($INTERVAL/$EDO)\"`" >$ALETHEIA/pipe$$ &
 			draw_pitch
-			sleep $MPLAYER_WAIT_TIME
+			sleep 0.01
 		else
 			break
 		fi
