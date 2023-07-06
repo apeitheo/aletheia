@@ -849,11 +849,15 @@ J  Down
 K  Up"
 
 QUEUE_HELP="Queue Controls
-d  Speak Controls
+j  Page Down
+k  Page Up
+h  Selection Down
+l  Selection Up
 D  Remove Song
 <  Move Song Up
 >  Move Song Down
-s  Keyword Search"
+s  Keyword Search
+d  Speak Controls"
 
 SCALE_HELP="Scale Controls
 j  Lower Pitch (Fast)
