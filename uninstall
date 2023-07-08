@@ -11,8 +11,8 @@ if [ ! -w "$DESTDIR" ]; then
 	exit 1
 fi
 
-sudo rm -f "${DESTDIR}/bin/aletheia"
-sudo rm -f "${DESTDIR}/share/man/man1/aletheia.1"
+rm -f "${DESTDIR}/bin/aletheia"
+rm -f "${DESTDIR}/share/man/man1/aletheia.1"
 
 if [ -e "${DESTDIR}/bin/aletheia" ] || [ -e "${DESTDIR}/share/man/man1/aletheia.1" ]; then
 	echo -e "${RED}Uninstall not successful$NOCOLOR"
