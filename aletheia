@@ -16,10 +16,8 @@
 # Support: https://www.patreon.com/aletheia_project
 
 OS=$(uname -s)
-# MacOS needs testing first
-if [ "$TEST_MACOS" != true ]; then
-	OS="Linux"
-fi
+# MacOS needs work
+OS="Linux"
 PROGRAM_NAME="aletheia"
 SCRIPT_NAME=$(echo "$0" | rev | cut -d'/' -f1 | rev)
 SCRIPT_PATH=$(realpath "$0")
@@ -226,7 +224,7 @@ get_system_volume() {
 		IFS='/' read _ SYSTEM_VOLUME_LEFT _ SYSTEM_VOLUME_RIGHT _ <<<"$(pactl get-sink-volume @DEFAULT_SINK@)"
 		SYSTEM_VOLUME_LEFT=${SYSTEM_VOLUME_LEFT// /}
 		SYSTEM_VOLUME_RIGHT=${SYSTEM_VOLUME_RIGHT// /}
-	elif [ "$(uname -s)" == "Darwin" ]; then
+	elif [ "$OS" == "Darwin" ]; then
 		volume_text=$(osascript -e 'output volume of (get volume settings) as text')
 		# not sure it supports changing left and right channel separately;
 		# at least with osascript?
@@ -5032,74 +5030,46 @@ system_volume_change() {
 	if [ "$OS" == "Linux" ]; then
 		pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
 	elif [ "$OS" == "Darwin" ]; then
-		osascript -e "set volume output volume $SYSTEM_VOLUME_LEFT"
+		osascript -e "set volume without output muted"
 	else
 		return
 	fi
-	dir="`echo -ne \"$1\" | cut -b1`"
-	num="`echo -ne \"$1\" | cut -b2`"
+	dir="$(echo -ne "$1" | cut -b1)"
+	num="$(echo -ne "$1" | cut -b2)"
+	num2="$(echo -ne "$1" | cut -b6)"
 	if [ "$dir" == "+" ]; then
-		if [ "$(($leftvolume+$num))" -lt "99" ]; then
-			set_system_volume "$1"
-		else
-			if [ "$num" == "1" ]; then
-				if [ "$OS" == "Linux" ]; then
-					pactl set-sink-volume @DEFAULT_SINK@ $1
-				elif [ "$OS" == "Darwin" ]; then
-					osascript -e "set volume output volume $1"
-				fi
+		if (( $leftvolume + 1 <= 100 )) && (( $rightvolume + 1 <= 100 )); then
+			l=$(($leftvolume + $num))
+			r=$(($rightvolume + $num2))
+			if (( $l > 100 )) && (( $r > 100 )); then
+				set_system_volume "+$((100 - $leftvolume))% +$((100 - $rightvolume))%"
+			elif (( $l > 100 )); then
+				set_system_volume "+$((100 - $leftvolume))% +$num2%"
+			elif (( $r > 100 )); then
+				set_system_volume "+$num% +$((100 - $rightvolume))%"
 			else
-				if [ "$OS" == "Linux" ]; then
-					pactl set-sink-volume @DEFAULT_SINK@ $1
-				elif [ "$OS" == "Darwin" ]; then
-					osascript -e "set volume output volume $1" 
-				fi
+				set_system_volume "$1"
 			fi
 		fi
 	else
-		if [ "$(($leftvolume-$num))" -gt "1" ]; then
-				if [ "$OS" == "Linux" ]; then
-					pactl set-sink-volume @DEFAULT_SINK@ $1
-				elif [ "$OS" == "Darwin" ]; then
-					osascript -e "set volume output volume $1" 
-				fi
-			pactl set-sink-volume @DEFAULT_SINK@ $1
-		else
+		if (( $leftvolume - 1 >= 0 )) && (( $rightvolume - 1 >= 0 )); then
+			l=$(($leftvolume - $num))
+			r=$(($rightvolume - $num2))
 			if [ "$OS" == "Linux" ]; then
-				pactl set-sink-volume @DEFAULT_SINK@ 1
-			elif [ "$OS" == "Darwin" ]; then
-				osascript -e "set volume output volume 1" 
+				if (( $l < 0 )) && (( $r < 0 )); then
+					set_system_volume "-$leftvolume% -$rightvolume%"
+				elif (( $l < 0 )); then
+					set_system_volume "-$leftvolume% -$num2%"
+				elif (( $r < 0 )); then
+					set_system_volume "-$num% -$rightvolume%"
+				else
+					set_system_volume "$1"
+				fi
 			fi
 		fi
 	fi
 	get_system_volume
-	if [ "`echo -ne \"$SYSTEM_VOLUME_LEFT\" | cut -d'%' -f1`" -gt "100" ]; then
-		SYSTEM_VOLUME_LEFT="100%"
-		if [ "`echo -ne \"$SYSTEM_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
-			SYSTEM_VOLUME_RIGHT="100%"
-		fi
-		if [ "$OS" == "Linux" ]; then
-			pactl set-sink-volume @DEFAULT_SINK@ 100
-		elif [ "$OS" == "Darwin" ]; then
-			osascript -e "set volume output volume 100" 
-		fi
-	fi
-	if [ "`echo -ne \"$SYSTEM_VOLUME_RIGHT\" | cut -d'%' -f1`" -gt "100" ]; then
-		SYSTEM_VOLUME_RIGHT="100%"
-		if [ "$OS" == "Linux" ]; then
-			pactl set-sink-volume @DEFAULT_SINK@ 100%
-		elif [ "$OS" == "Darwin" ]; then
-			osascript -e "set volume output volume 100" 
-		fi
-	fi
-
 	draw_volume 2 3
-	read -n1 -t 0.1 key
-	if [ "$key" != "" ]; then
-		if [ "$key" == "8" ] || [ "$key" == "9" ] || [ "$key" == "*" ] || [ "$key" == "(" ]; then
-			system_volume_change "$1"
-		fi
-	fi
 }
 
 fade_volume() {
@@ -6259,10 +6229,10 @@ load_only_loops() {
 process_key() {
 	case "$1" in
 	'[')
-		system_volume_change "-1% +0%"
+		system_volume_change "-1% -0%"
 		;;
 	']')
-		system_volume_change "+0% -1%"
+		system_volume_change "-0% -1%"
 		;;
 	'{')
 		system_volume_change "+1% +0%"
