@@ -5612,7 +5612,11 @@ reset_buffer() {
 
 		pos_on_page=$(($pos_on_page+1))
 		
-		offset="$(($COLS - 11 - ${#pos} - ${#pad}))"
+		if [ "$pos" == "$POSITION" ]; then
+			offset="$(($COLS - 11 - ${#pos} - ${#pad}))"
+		else
+			offset="$(($COLS - 5 - ${#pos} - ${#pad}))"
+		fi
 		if [ "${#line}" -gt "$offset" ]; then
 			line="$(echo -ne "$line" | sed -e 's/^ .*//g' | cut -b 1-$(($offset-1)))…"
 		fi
