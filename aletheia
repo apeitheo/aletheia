@@ -655,15 +655,6 @@ vanish() {
 					echo -ne "$WHITE${newdisplay}${BLUE}_"
 					tput el
 					draw_indicator
-				elif [ "$newchar" == "i" ]; then
-					if [ "$1" != true ]; then
-						main_menu false
-						if [ "$?" == "$RETURN_JUMP" ]; then
-							JUMP="1"
-							return $RETURN_JUMP
-						fi
-					fi
-					break
 				elif [ "$newchar" == "p" ]; then
 					toggle_pause true
 				elif [ "$newchar" == "w" ]; then
@@ -816,9 +807,9 @@ if [ "$1" == "--vanish" ]; then
 	exit 0
 fi
 
-if [ "$(tput lines)" -lt "11" ] || [ "$(tput cols)" -lt "28" ]; then
+if [ "$(tput lines)" -lt "7" ] || [ "$(tput cols)" -lt "33" ]; then
 	if [ "$BYPASS_WARNING" != true ]; then
-		echo -e "${RED}Error:${NOCOLOR} Terminal dimensions too small (Requires >= 28x11)"
+		echo -e "${RED}Error:${NOCOLOR} Terminal dimensions too small (Requires >= 33x7)"
 		sleep 5
 	fi
 fi
@@ -2954,7 +2945,11 @@ main_menu() {
 	OPT[5]="Voice"
 	OPT[6]="Help"
 	OPT[7]="Quit"
-	TOTAL_OPTS=${#OPT[@]}
+	if [ "$(tput lines)" -gt "10" ]; then
+		TOTAL_OPTS=${#OPT[@]}
+	else
+		TOTAL_OPTS=3
+	fi
 
 	OPT_MUSIC_SUBMENU[1]="Loops"
 	OPT_MUSIC_SUBMENU[2]="Locks"
@@ -2974,6 +2969,11 @@ main_menu() {
 	empty_pane
 	
 	until [ "$z" = "," ]; do
+		if [ "$LINES" -le "10" ]; then
+			TOTAL_OPTS=3
+		else
+			TOTAL_OPTS=${#OPT[@]}
+		fi
 		if [ "$z" == "" ]; then
 			x=1
 			if [ "$initial_screen" == true ]; then
@@ -3140,21 +3140,6 @@ main_menu() {
 			tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLS/2-5-$moveleft))
 
 			echo -ne "$menu_buf"
-			#for i in `seq 1 $(($LINES-4-${TOTAL_OPTS}))`; do
-			#	tput cup $i
-			#	tput el
-			#done
-			#for i in `seq 0 $((($LINES-4-${TOTAL_OPTS})/2))`; do
-			#	tput cup $i
-			#	tput el
-			#done
-			#for i in `seq $(($LINES-4-${TOTAL_OPTS}))) $(($LINES-2))`; do
-			#	tput cup $i
-			#	tput el
-			#done
-			#tput cup $(($LINES-3-${TOTAL_OPTS}))
-
-			unset belowmenu
 		fi
 
 		if [ "$z" == "" ]; then
@@ -3170,12 +3155,15 @@ main_menu() {
 					if [ "$new_LINES" != "$LINES" ] || [ "$new_COLS" != "$COLS" ]; then
 						COLS=$new_COLS
 						LINES=$new_LINES
-						draw_wait
+						clear
 						if [ "$(($COLS%2))" == "0" ]; then
 							even=true
 						else
 							even=false
 						fi
+						render_help_screen
+						render_repeat_help_screen
+						render_voice_settings_screen
 						screen_redrawn=true
 						break
 					else
