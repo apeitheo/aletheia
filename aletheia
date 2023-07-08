@@ -816,6 +816,13 @@ if [ "$1" == "--vanish" ]; then
 	exit 0
 fi
 
+if [ "$(tput lines)" -lt "11" ] || [ "$(tput cols)" -lt "28" ]; then
+	if [ "$BYPASS_WARNING" != true ]; then
+		echo -e "${RED}Error:${NOCOLOR} Terminal dimensions too small (Requires >= 28x11)"
+		sleep 5
+	fi
+fi
+
 REPEAT_HELP="Loop Controls
 5  Start Position
 7  End Position
@@ -3452,6 +3459,10 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == ":" ]; then
+			tput cup 1
+			tput el
+			tput cup $(($LINES-2))
+			tput el
 			voice_settings_screen true
 			if [ "$initial_screen" == true ]; then
 				empty_pane
@@ -3462,12 +3473,16 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "?" ]; then
+			tput cup 1
+			tput el
+			tput cup $(($LINES-2))
+			tput el
 			if [ "$initial_screen" == true ]; then
 				help_screen true
 				empty_pane
 			else
 				help_screen false
-				redraw_buffer
+				empty_pane
 			fi
 			flag=false
 			menu_start_over=true
@@ -3718,6 +3733,10 @@ main_menu() {
 					menu_start_over=true
 					flag=false
 				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
+					tput cup 1
+					tput el
+					tput cup $(($LINES-2))
+					tput el
 					voice_settings_screen true
 					#if [ "$initial_screen" == true ]; then
 					#	empty_pane
@@ -3726,6 +3745,10 @@ main_menu() {
 					#fi
 					flag=false
 				elif [ "${OPT[$SELECTION]}" == "Help" ]; then
+					tput cup 1
+					tput el
+					tput cup $(($LINES-2))
+					tput el
 					if [ "$initial_screen" == true ]; then
 						help_screen true
 						#empty_pane
@@ -4216,16 +4239,6 @@ read_locked_file() {
 
 reset_to_locked() {
 	if [ -e "$FILENAME.locked" ]; then
-		#CONTENTS="$(cat "$FILENAME.locked")"
-		#IFS='/' read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
-		#if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
-		#	# backwards compatible with old style locked file
-		#	_scaletempo_flag=$oldstyle2
-		#fi
-		#INTERVAL=$_int
-		#EDO=$_edo
-		#INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-		#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 		read_locked_file "$(cat "$FILENAME.locked")"
 		LOCKED=true
 
@@ -6289,6 +6302,7 @@ generate_complementary_color() {
 
 load_loop_file() {
 	if [ "$LOOP_ON" == false ]; then
+		LOOP_ON=true
 		ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
 		filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | rev`"
 		if [ -e "$filename_without_ext.repeat.$ext" ]; then
@@ -6296,17 +6310,17 @@ load_loop_file() {
 			draw_banner "LOOP ON"
 			gtts_speak "loading loop"
 			sleep $MPLAYER_WAIT_TIME
+			if [ -e "$filename_without_ext.repeat.$ext.repeats" ]; then
+				REPEATS="$(cat "$filename_without_ext.repeat.$ext.repeats")"
+				REPEAT_CURRENT=1
+				REPEAT_TOTAL="$(echo "$REPEATS" | wc -l)"
+			else
+				REPEATS=""
+				REPEAT_CURRENT=0
+				REPEAT_TOTAL=0
+				END_TIME=""
+			fi
 			if [ -e "$filename_without_ext.repeat.$ext.locked" ]; then
-				#CONTENTS="`cat \"$filename_without_ext.repeat.$ext\".locked`"
-				#IFS='/'
-				#read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
-				#if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
-				#	# backwards compatible with old style locked file
-				#	_scaletempo_flag=$oldstyle2
-				#fi
-				#unset IFS
-				#INTERVAL=$_int
-				#EDO=$_edo
 				read_locked_file "$(cat "$filename_without_ext.repeat.$ext.locked")"
 				if [ "$_scaletempo_flag" != "0" ]; then
 					if [ "$_scaletempo_flag" == "1" ]; then
@@ -6334,24 +6348,23 @@ load_loop_file() {
 			draw_position
 		fi
 	else
-		ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
-		filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f3- | rev`"
-		if [ -e "$filename_without_ext.$ext" ]; then
+		LOOP_ON=false
+		if [ -e "$FILENAME" ]; then
 			echo "volume 0 1" >"$ALETHEIA/pipe$$" &
 			draw_banner "LOOP OFF" 
 			gtts_speak "loop disabled"
-			if [ -e "$filename_without_ext.$ext.locked" ]; then
-				#CONTENTS="`cat \"$filename_without_ext.$ext\".locked`"
-				#IFS='/'
-				#read _int _edo _scaletempo_flag oldstyle1 oldstyle2 <<< "$CONTENTS"
-				#if [ "$oldstyle1" != "" ] && [ "$oldstyle2" != "" ]; then
-				#	# backwards compatible with old style locked file
-				#	_scaletempo_flag=$oldstyle2
-				#fi
-				#unset IFS
-				#INTERVAL=$_int
-				#EDO=$_edo
-				read_locked_file "$(cat "$filename_without_ext.$ext.locked")"
+			if [ -e "$FILENAME.repeats" ]; then
+				REPEATS="$(cat "$FILENAME.repeats")"
+				REPEAT_CURRENT=1
+				REPEAT_TOTAL="$(echo "$REPEATS" | wc -l)"
+			else
+				REPEATS=""
+				REPEAT_CURRENT=0
+				REPEAT_TOTAL=0
+				END_TIME=""
+			fi
+			if [ -e "$FILENAME.locked" ]; then
+				read_locked_file "$(cat "$FILENAME.locked")"
 				if [ "$_scaletempo_flag" != "0" ]; then
 					if [ "$_scaletempo_flag" == "1" ]; then
 						SCALETEMPO=true
@@ -6366,15 +6379,14 @@ load_loop_file() {
 				fi
 			fi
 			sleep 0.05
-			#FIXME needs to read .repeat. .locked file for draw_pitch
-			echo -e "loadfile \"$filename_without_ext.repeat.$ext\"" >"$ALETHEIA/pipe$$" &
+			echo -e "loadfile \"$FILENAME\"" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
 			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
-			echo -e "loop 0 1" >"$ALETHEIA/pipe$$" &
-			LOOP=true
+			echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
+			LOOP=false
 			draw_pitch
 			draw_position
 		fi
@@ -7384,7 +7396,7 @@ new_playlist() {
 }
 
 search_queue() {
-	local total="`echo -e \"$SEARCHBUFFER\"| wc -l`"
+	local total="$(echo -e "$SEARCHBUFFER"| wc -l)"
 	local number_per_page="$(($LINES-4))"
 	local original_number_per_page="$number_per_page"
 
@@ -7402,28 +7414,28 @@ search_queue() {
 		BUFFER=""
 		tput cup 0
 		if [ "$(($total-$pos))" -lt "$number_per_page" ]; then
-			number_per_page=$(($total-$pos))
+			number_per_page=$(($total-$pos+1))
 			FLAGGED=true
 		fi
 		if [ "$pos" -gt "$total" ]; then
 			return
 		fi
 		tmp_buf=""
-		_last=$(($pos+$number_per_page-1))
-		_lines="`echo -e \"$SEARCHBUFFER\" | sed -n \"$pos,${_last}p\"`"
-		diff=$(($_last-$pos+1))
-		for i in `seq 1 $diff`; do
+		_last=$(($pos+$number_per_page))
+		_lines="$(echo -e "$SEARCHBUFFER" | sed -n "$pos,${_last}p")"
+		diff=$(($_last-$pos))
+		for i in $(seq 1 $diff); do
 			truepos=$(($i))
-			line="`echo -e \"$_lines\" | sed -n \"${truepos}p\"`"
-			m="`echo -ne \"$line\" | cut -d':' -f1`"
+			line="$(echo -ne "$_lines" | sed -n "${truepos}p")"
+			m="$(echo -ne "$line" | cut -d':' -f1)"
 			if [ "$m" == "" ]; then
 				break
 			fi
 
-			line="`echo \"$line\" | cut -d':' -f2 | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev`"
-			if [ "`echo -ne \"$line\" | grep \" - \"`" != "" ]; then
-				artist="`echo -ne \"$line\" | sed -e \"s/ - //g\" | cut -d'' -f1`"
-				song="`echo -ne \"$line\" | rev | sed -e \"s/ - //g\" | cut -d'' -f1 | rev`"
+			line="$(echo "$line" | cut -d':' -f2 | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
+			if [ "$(echo -ne "$line" | grep " - ")" != "" ]; then
+				artist="$(echo -ne "$line" | sed -e "s/ - //g" | cut -d'' -f1)"
+				song="$(echo -ne "$line" | rev | sed -e "s/ - //g" | cut -d'' -f1 | rev)"
 				line="$artist - $song"
 			fi
 			tmp_buf="$tmp_buf. $m. $line. "
@@ -7442,10 +7454,10 @@ search_queue() {
 				pad=""
 			fi
 
-			offset="$(($COLS - ${#m} - 1 - ${#pad} - 1 - 2 ))"
+			offset="$(($COLS - ${#m} - 4 - ${#pad}))"
 
 
-			line="`echo \"$line\" | cut -b 1-$offset`"
+			line="$(echo "$line" | cut -b 1-$offset)"
 			BUFFER="$BUFFER$BLUE$PADDING ${m} $COLOR$line$(tput el)\n"
 		done
 		tput cup 2
@@ -7455,7 +7467,7 @@ search_queue() {
 			empty_pane "$(($number_per_page+2))"
 		fi
 		draw_banner "SEARCH"
-		printf '%*s' $(($COLS - 13 - 1))
+		printf '%*s' $(($COLS - 14))
 		tput rc
 
 		if [ "$WEB_CLIENT" == "0" ]; then
@@ -8426,23 +8438,9 @@ main() {
 	if [ -e "$FILENAME.locked" ]; then
 		LOCKED=true
 
-		#CONTENTS="$(cat "$FILENAME".locked)"
-		#IFS='/' read _int _edo _scaletempo_flag <<< "$CONTENTS"
-
 		if [ "$LOCKED_OFF" == false ]; then
 			read_locked_file "$(cat "$FILENAME.locked")"
-			#INTERVAL="$_int"
-			#EDO="$_edo"
-			#INTERVAL_LIMIT=`calc "$EDO * 2.6"`
-			#INTERVAL_UPPER_LIMIT=`calc "$EDO * 2.1"`
 		fi
-
-		#if [ "$EDO" != "$DEFAULT_EDO" ]; then
-		#	tmp=$EDO
-		#	until [ "$(($tmp % 2))" != "0" ]; do
-		#		tmp=$(($tmp/2))
-		#	done
-		#fi
 
 		if [ "$VOLUME" == "" ]; then
 			VOLUME="$DEFAULT_VOLUME"
