@@ -208,6 +208,7 @@ SONG=""
 PICK=""
 PLAY_PID=""
 DOWNLOAD_POSITION=""
+SONG_LENGTH=""
 PADDING=" "
 
 VOICE_ENABLED=false
@@ -5621,36 +5622,27 @@ reset_buffer() {
 		fi
 
 		if [ "$pos" == "$POSITION" ]; then
-			if [ -e "$new_line.time" ]; then
-				song_length="`cat \"$new_line.time\"`"
-				if [ "$song_length" == "" ]; then
-					song_length="--:--"
-				fi
+			SONG_LENGTH="$(ffprobe -i "$new_line" -show_entries format=duration -v quiet -of csv="p=0" | cut -d'.' -f1)"
+			if [ "$SONG_LENGTH" == "" ]; then
+				SONG_LENGTH="--:--"
 			else
-				song_length="`ffprobe -i \"$new_line\" -show_entries format=duration -v quiet -of csv=\"p=0\" | cut -d'.' -f1`"
-				if [ "$song_length" == "" ]; then
-					song_length="--:--"
-				else
-					song_length="`date -u -d @$song_length +%M:%S`"
-					echo -ne "$song_length" >"$new_line.time"
-				fi
+				SONG_LENGTH="`date -u -d @$SONG_LENGTH +%M:%S`"
 			fi
-			one="`echo -ne \"$song_length\" | cut -d':' -f1`"
-			two="`echo -ne \"$song_length\" | cut -d':' -f2`"
+			minutes="$(echo -ne "$SONG_LENGTH" | cut -d':' -f1)"
+			seconds="$(echo -ne "$SONG_LENGTH" | cut -d':' -f2)"
 			buf_space="`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5))`"
 		else
 			buf_space="`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3))`"
 		fi
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
-			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$one$WHITE_BLACK:$BLUE_BLACK$two$PADDING`tput sgr0`\n"
+			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING`tput sgr0`\n"
 			LOCKING_POS="$(($i-1))"
-			
 		else
 			if [ "$PANELS_ENABLED" == false ]; then
 				if [ "$pos" == "$POSITION" ]; then
-					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$BLUE$BLUE$one$WHITE:$BLUE$two$PADDING\n"
+					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$BLUE$BLUE$minutes$WHITE:$BLUE$seconds$PADDING\n"
 					LOCKING_POS="$(($i-1))"
-					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$one:$two$PADDING\n"
+					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$minutes:$seconds$PADDING\n"
 				else
 					BUFFER="$BUFFER$PADDING$WHITE$INDICATOR $BLUE$display_pad$BLUE$pos $WHITE$line$buf_space$PADDING\n"
 					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$buf_space$PADDING\n"
@@ -5660,7 +5652,6 @@ reset_buffer() {
 				UNCOLORED_BUFFER="$BUFFER$PADDING$INDICATOR $display_pad$pos $line$buf_space$PADDING\n"
 			fi
 		fi
-		#UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING  $display_pad$pos $line$buf_space$one:$two$PADDING\n"
 	done
 }
 
@@ -8759,9 +8750,6 @@ main() {
 				done
 				;;
 			'P')
-				#sleeper() {
-				#	sleep 1
-				#}
 				old_percent=0
 				percentbreak=false
 				ps -p $MPLAYER_PID >/dev/null 2>/dev/null
@@ -8784,11 +8772,10 @@ main() {
 					gtts_speak "progress bar"
 					printf '%*s' $percent | tr " " "="
 					printf '%*s' $(($total_ - $percent))
-					tt="`cat \"$FILENAME.time\"`"
 					echo -ne "$BLUE_BLACK] "
-					echo -ne "$BLUE`echo -ne \"$tt\" | cut -d':' -f1`$WHITE:$BLUE`echo -ne \"$tt\" | cut -d':' -f2`$PADDING"
-					minutes="`echo -ne \"$tt\" | cut -d':' -f1`"
-					seconds="`echo -ne \"$tt\" | cut -d':' -f2`"
+					minutes="$(echo -ne "$SONG_LENGTH" | cut -d':' -f1)"
+					seconds="$(echo -ne "$SONG_LENGTH" | cut -d':' -f2)"
+					echo -ne "$BLUE$minutes$WHITE:$BLUE$seconds$PADDING"
 					if [ "`echo -ne \"$minutes\" | cut -c 1`" == "0" ]; then
 						minutes="`echo -ne \"$minutes\" | cut -c 2`"
 					fi
@@ -8815,69 +8802,65 @@ main() {
 								fi
 							fi
 						fi
-						#if [ "`jobs | grep \"sleeper\" | grep \"Running\"`" == "" ] && [ "$old_input_char" != "l" ] && [ "$old_input_char" != "h" ] && [ "$old_input_char" != "j" ] && [ "$old_input_char" != "k" ]; then
-						#if [ "$old_input_char" != "l" ] && [ "$old_input_char" != "h" ] && [ "$old_input_char" != "j" ] && [ "$old_input_char" != "k" ]; then
-							#sleeper &
-							echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
-							sleep $MPLAYER_WAIT_TIME
-							percent="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
-							echo "get_time_pos" >"$ALETHEIA/pipe$$" &
-							sleep $MPLAYER_WAIT_TIME
-							tmpq="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2 | cut -d'.' -f1`"
-							tput cup $LINES 1
-							if [ "`isnum \"$tmpq\"`" == "1" ]; then
-								dateo="`date -u -d @$tmpq +%M:%S`"
-								skip2=false
+						echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
+						sleep $MPLAYER_WAIT_TIME
+						percent="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2`"
+						echo "get_time_pos" >"$ALETHEIA/pipe$$" &
+						sleep $MPLAYER_WAIT_TIME
+						tmpq="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d'=' -f2 | cut -d'.' -f1`"
+						tput cup $LINES 1
+						if [ "`isnum \"$tmpq\"`" == "1" ]; then
+							dateo="`date -u -d @$tmpq +%M:%S`"
+							skip2=false
+						else
+							dateo="00:00"
+							percent=$total_
+							skip2=true
+						fi
+						echo -ne "$BLUE`echo -ne \"$dateo\" | cut -d':' -f1`$WHITE:$BLUE`echo -ne \"$dateo\" | cut -d':' -f2`"
+						if [ "$skip2" == false ]; then
+							tput cup $LINES $(($COLS-1-5))
+							if [ "$INTERVAL" -lt "0" ]; then
+								int="`echo -ne \"$INTERVAL\" | cut -c 2-`"
+								neg=true
+								skip=false
+							elif [ "$INTERVAL" -gt "0" ]; then
+								int="$INTERVAL"
+								neg=false
+								skip=false
 							else
-								dateo="00:00"
+								skip=true
+							fi
+							if [ "$skip" == false ]; then
+								if [ "$neg" == true ]; then
+									total_seconds_dateo="`calc \"$total_seconds_tt * (2 * $int / $EDO)\" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1`"
+								else
+									total_seconds_dateo="`calc \"$total_seconds_tt * (($int / $EDO)/2)\" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1`"
+									total_seconds_dateo=$(($total_seconds_tt-$total_seconds_dateo))
+								fi
+								new_minutes=$(($total_seconds_dateo / 60))
+								new_seconds=$(($total_seconds_dateo % 60))
+							else
+								new_minutes=$minutes
+								new_seconds=$seconds
+							fi
+							tput cup $LINES $(($COLS-1-5))
+							new_minutes="`printf '%02d' $new_minutes`"
+							new_seconds="`printf '%02d' $new_seconds`"
+							echo -ne "$BLUE$new_minutes$WHITE:$BLUE$new_seconds"
+							if [ "`isnum \"$percent\"`" == "0" ]; then
 								percent=$total_
-								skip2=true
 							fi
-							echo -ne "$BLUE`echo -ne \"$dateo\" | cut -d':' -f1`$WHITE:$BLUE`echo -ne \"$dateo\" | cut -d':' -f2`"
-							if [ "$skip2" == false ]; then
-								tput cup $LINES $(($COLS-1-5))
-								if [ "$INTERVAL" -lt "0" ]; then
-									int="`echo -ne \"$INTERVAL\" | cut -c 2-`"
-									neg=true
-									skip=false
-								elif [ "$INTERVAL" -gt "0" ]; then
-									int="$INTERVAL"
-									neg=false
-									skip=false
-								else
-									skip=true
-								fi
-								if [ "$skip" == false ]; then
-									if [ "$neg" == true ]; then
-										total_seconds_dateo="`calc \"$total_seconds_tt * (2 * $int / $EDO)\" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1`"
-									else
-										total_seconds_dateo="`calc \"$total_seconds_tt * (($int / $EDO)/2)\" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1`"
-										total_seconds_dateo=$(($total_seconds_tt-$total_seconds_dateo))
-									fi
-									new_minutes=$(($total_seconds_dateo / 60))
-									new_seconds=$(($total_seconds_dateo % 60))
-								else
-									new_minutes=$minutes
-									new_seconds=$seconds
-								fi
-								tput cup $LINES $(($COLS-1-5))
-								new_minutes="`printf '%02d' $new_minutes`"
-								new_seconds="`printf '%02d' $new_seconds`"
-								echo -ne "$BLUE$new_minutes$WHITE:$BLUE$new_seconds"
-								if [ "`isnum \"$percent\"`" == "0" ]; then
-									percent=$total_
-								fi
-								percent=`calc "$percent/100*$total_+1" | sed -e "s/\t//g" | cut -d'.' -f1`
-								if [ "$percent" -gt "$total_" ]; then
-									percent="$total_"
-								fi
-								
-								tput cup $LINES $((1+7))
-								echo -ne "$WHITE_BLACK"
-								printf '%*s' $percent | tr " " "="
-								printf '%*s' $(($total_ - $percent))
+							percent=`calc "$percent/100*$total_+1" | sed -e "s/\t//g" | cut -d'.' -f1`
+							if [ "$percent" -gt "$total_" ]; then
+								percent="$total_"
 							fi
-						#fi
+							
+							tput cup $LINES $((1+7))
+							echo -ne "$WHITE_BLACK"
+							printf '%*s' $percent | tr " " "="
+							printf '%*s' $(($total_ - $percent))
+						fi
 						read -n1 -t 1 input_char
 						if [ "$input_char" == "l" ]; then
 							if [ "$old_percent" -gt "$percent" ]; then
@@ -9726,9 +9709,6 @@ main() {
 					if [ -e "$FILENAME.repeats" ]; then
 						mv "$FILENAME.repeats" "$ALETHEIA/deleted"
 					fi
-					if [ -e "$FILENAME.time" ]; then
-						mv "$FILENAME.time" "$ALETHEIA/deleted"
-					fi
 					path="`echo -ne \"$FILENAME\" | rev | cut -d'/' -f2- | rev`"
 					if [ "`ls -1 \"$path\"`" == "" ]; then
 						rmdir "$path"
@@ -9867,9 +9847,6 @@ main() {
 					fi
 					if [ -e "$FILENAME.repeats" ]; then
 						mv "$FILENAME.repeats" "${path}/$newname.$ext.repeats" >/dev/null 2>/dev/null
-					fi
-					if [ -e "$FILENAME.time" ]; then
-						mv "$FILENAME.time" "${path}/$newname.$ext.time" >/dev/null 2>/dev/null
 					fi
 					gtts_speak "rename complete" true
 					if [ "$POSITION" = "" ]; then
