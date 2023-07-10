@@ -1,28 +1,49 @@
 Welcome to Aletheia 0.9.6!
 
+Aletheia is a command-line media player with a wide range of features designed
+to make it easy to adjust pitch and tempo in real-time using customizable
+intervals, allowing precise control over the playback speed and tonality of
+media files. It also supports loop creation with customizable start and end
+points for seamless looping. Aletheia has optional voice feedback and the
+ability to play videos, import downloads, and export playlists and loops. In
+addition, it offers various scaling features to smoothly transition between
+separate intervals.
+
 The dependencies needed to run Aletheia are:
 
-bash, pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, and mplayer
+bash, pulseaudio-utils, calc, bc, gtts-cli, espeak-ng, sox, ffmpeg, and mplayer
 
 To learn the basics of Aletheia, read the manpage and check out the controls
 by clicking the "Help" option in the menu, or by pressing the '?' key at any
 time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit.
 If you need voice feedback, hit 'd' followed by '#' and confirm to save.
 
-Installation: ./install
-Uninstallation: ./uninstall
+If your distribution isn't listed below, you can use the provided install and
+uninstall scripts:
 
-These install to /usr/local by default. Use the DESTDIR environment variable to
-install elsewhere.
+Installation:		./install
+Uninstallation:		./uninstall
 
-Debian Package:	./create_deb
-Fedora Package:	./create_rpm
-Slackware Package: ./aletheia.SlackBuild
+Debian Package:		./create_deb
+Fedora Package:		./create_rpm
+Slackware Package: 	./aletheia.SlackBuild
 
-List of installed files:
+List of installed files when using ./install:
 
 /usr/local/bin/aletheia
 /usr/local/share/man/man1/aletheia.1
+
+DESTDIR=/path/to/directory ./install to install somewhere other than /usr/local
+
+List of installed files for DEB/RPM packages:
+
+/usr/bin/aletheia
+/usr/share/man/man1/aletheia.1.gz
+
+List of installed files for Slackware package:
+
+/usr/bin/aletheia
+/usr/man/man1/aletheia.1.gz
 
 There are xfce4-terminal and gnome-terminal.desktop files, as well as an icon,
 included to dedicate a terminal to Aletheia and give it a launchable icon. To
