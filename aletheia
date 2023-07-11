@@ -856,10 +856,10 @@ s  Keyword Search
 d  Speak Controls"
 
 SCALE_HELP="Scale Controls
-j  Lower Pitch (Fast)
-k  Raise Pitch (Fast)
-J  Lower Pitch (Slow)
-K  Raise Pitch (Slow)
+j  Scale Down
+k  Scale Up
+o  Double EDO
+m  Halve EDO
 c  Reverse Direction
 y  $DEFAULT_EDO-EDO
 v  Toggle Pitch"
@@ -1900,13 +1900,14 @@ repeat() {
 				RIGHT_BANNER_WIDTH="$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))"
 				draw_banner "HELP" false false true
 				tput cup $LINES $(($COLUMNS-12))
-				echo -ne "${GREEN_BLACK}BEG$WHITE_BLACK:${GREEN_BLACK}END$WHITE_BLACK:${GREEN_BLACK}GAP$PADDING"
+				echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
 				loop_help_screen
 				killall espeak-ng >/dev/null 2>/dev/null
 				toggle_pause true
 				old_time_before=$time_before
 				time_before=`date +%s.%N`
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
+				redraw_buffer
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
 				flagged=true
@@ -2725,7 +2726,7 @@ scale_edo() {
 		draw_position
 		return
 	elif [ "$edo_change" == "?" ]; then
-		scale_screen
+		scale_help_screen
 		draw_pitch
 		draw_position
 		return
@@ -3155,6 +3156,7 @@ main_menu() {
 					sleep 0.05
 					if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
 						clear
+						draw_wait
 						if [ "$(($COLUMNS%2))" == "0" ]; then
 							even=true
 						else
@@ -3163,6 +3165,9 @@ main_menu() {
 						render_help_screen
 						render_repeat_help_screen
 						render_voice_settings_screen
+						render_scale_help_screen
+						echo -ne "$NOCOLOR"
+						clear
 						screen_redrawn=true
 						old_LINES=$LINES
 						old_COLUMNS=$COLUMNS
@@ -3841,8 +3846,9 @@ scale() {
 		draw_position
 		return
 	elif [ "$interval_change" == "?" ]; then
-		scale_screen
+		scale_help_screen
 		RIGHT_BANNER_WIDTH=0
+		redraw_buffer
 		draw_pitch
 		draw_position
 		return
@@ -5449,6 +5455,7 @@ reset_dimensions() {
 		render_help_screen
 		render_voice_settings_screen
 		render_repeat_help_screen
+		render_scale_help_screen
 	fi
 }
 
@@ -5938,6 +5945,7 @@ toggle_colors() {
 	render_help_screen
 	render_voice_settings_screen
 	render_repeat_help_screen
+	render_scale_help_screen
 	if [ "$1" == false ] || [ "$1" == "" ]; then
 		reset_buffer
 	fi
@@ -5966,6 +5974,7 @@ invert_colors() {
 	render_help_screen
 	render_voice_settings_screen
 	render_repeat_help_screen
+	render_scale_help_screen
 	if [ "$1" == false ] || [ "$1" == "" ]; then
 		reset_buffer
 	fi
@@ -6525,86 +6534,95 @@ queue_help_screen() {
 	done
 }
 
-scale_screen() {
+scale_help_screen() {
 	gtts_speak "scale controls"
-	local flagged=false
-	original_number_per_page="$number_per_page"
-	number_per_page="$(($LINES-4))"
+	local initial_screen=$1
 
-	FLAGGED=false
-	if [ "$SCALE_HELP_LENGTH" -le "$number_per_page" ]; then
-		number_per_page="$SCALE_HELP_LENGTH"
-		FLAGGED=true
-	fi
-
-	pos=1
-	while [ "$pos" -le "$SCALE_HELP_LENGTH" ]; do
-		buf=""
-		tput cup 0
-		if [ "$(($SCALE_HELP_LENGTH-$pos))" -lt $number_per_page ]; then
-			number_per_page=$(($SCALE_HELP_LENGTH-$pos+1))
-			FLAGGED=true
-		fi
-		if [ "$pos" -gt "$SCALE_HELP_LENGTH" ]; then
-			return
-		fi
-		for i in `seq $pos $(($pos + $(($number_per_page-1))))`; do
-			line="`echo -e \"$SCALE_HELP\" | sed -n ${i}p`"
-			if [ "`echo \"$line\" | cut -b2`" != " " ]; then
-				tmp1="$BLUE$line"
-				tmp2=""
-			else
-				tmp1="$BLUE `echo \"$line\" | cut -b1`"
-				tmp2="$WHITE`echo \"$line\" | cut -d' ' -f2-`"
-			fi
-
-			buf="$buf$PADDING$tmp1 $tmp2`tput el`\n"
-		done
-		draw_banner "CONTROLS" false true
+	page=0
+	until [ "$page" -lt "0" ] || [ "$page" -gt "${#SCALE_HELP_BUFFER[@]}" ]; do
+		number_per_page=$(($LINES-4))
+		original_number_per_page=$number_per_page
 
 		tput cup 2
-		echo -ne "$NOCOLOR$buf"
+		echo -ne "$NOCOLOR${SCALE_HELP_BUFFER[$page]}"
 
-		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($number_per_page + 2))"
+		helpbuflines=`echo -ne \"${SCALE_HELP_BUFFER[$page]}\" | wc -l`
+		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
+			empty_pane "$(($helpbuflines+2))"
 		fi
 
-		read -rsn1 inputchar
+		if [ "$TWO_COLUMN" == true ]; then
+			if [ "$page" == "0" ]; then
+				_first=1
+				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+			else
+				_first=$((($page*$number_per_page*2)+1))
+				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+			fi
+		else
+			if [ "$page" == "0" ]; then
+				_first=1
+				last=$((($page*$number_per_page)+$number_per_page))
+			else
+				_first=$((($page*$number_per_page)+1))
+				last=$((($page*$number_per_page)+$number_per_page))
+			fi
+		fi
+
+		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
-			if [ "$FLAGGED" == true ]; then
-				continue
-			fi
-			pos="$(($pos+$number_per_page))"
-			if [ "$pos" -gt "$SCALE_HELP_LENGTH" ]; then
-				pos="$(($SCALE_HELP_LENGTH-$number_per_page-1))"
+			gtts_speak "page down"
+			if [ "$(($page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
+				page=$(($page+1))
+				gtts_speak "page down"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
-			if [ "$pos" == "1" ]; then
-				continue
-			else
-				FLAGGED=false
-			fi
-			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-				number_per_page="$original_number_per_page"
-			fi
-			pos="$(($pos-$number_per_page))"
-			if [ "$pos" -le "0" ]; then
-				pos=1
+			gtts_speak "page up"
+			if [ "$page" -gt "0" ]; then
+				page=$(($page-1))
+				gtts_speak "page up"
 			fi
 		elif [ "$inputchar" == "d" ]; then
-			echo -e "$SCALE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
-		else
+			killall espeak-ng play >/dev/null 2>/dev/null
+			echo "$SCALE_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+		elif [ "$inputchar" == "z" ]; then
+			draw_wait
+			page=0
+			reset_dimensions
+			empty_pane
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
+			killall play >/dev/null 2>/dev/null
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
-			draw_volume
-			draw_equalizer
-			draw_pitch
-			draw_position
-			redraw_buffer
-			empty_pane $(($number_per_page+2))
+			#draw_pitch
+			#draw_position
+			return
+		elif [ "$inputchar" == $'\e' ]; then
+			read -n2 -t 0.03 key
+			case $key in
+			'[B')
+				if [ "$(($page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
+					page=$(($page+1))
+				fi
+				;;
+			'[A')
+				if [ "$page" -gt "0" ]; then
+					page=$(($page-1))
+				fi
+				;;
+			*)
+				killall espeak-ng >/dev/null 2>/dev/null
+				gtts_speak "closed" true
+				number_per_page="$original_number_per_page"
+				return
+				;;
+			esac
+		else
+			gtts_speak "closed" true
+			number_per_page="$original_number_per_page"
 			return
 		fi
 	done
@@ -6740,6 +6758,11 @@ shuffle_queue() {
 render_voice_settings_screen() {
 	render $(($VOICE_HELP_LENGTH+1)) "`echo -ne \"$VOICE_HELP\" | wc -L`" "$VOICE_HELP"
 	VOICE_HELP_BUFFER=("${TMP_BUFFER[@]}")
+}
+
+render_scale_help_screen() {
+	render $(($SCALE_HELP_LENGTH+1)) "`echo -ne \"$SCALE_HELP\" | wc -L`" "$SCALE_HELP"
+	SCALE_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
 voice_settings_screen() {
@@ -7000,69 +7023,78 @@ render() {
 
 render_repeat_help_screen() {
 	render $(($REPEAT_HELP_LENGTH+1)) "`echo -ne \"$REPEAT_HELP\" | wc -L`" "$REPEAT_HELP"
-	REPEATHELP_BUFFER=("${TMP_BUFFER[@]}")
+	REPEAT_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
 loop_help_screen() {
 	gtts_speak "loop controls"
-	flagged=false
+	local initial_screen=$1
+
 	page=0
-	until [ "$page" -lt "0" ] || [ "$page" -gt "${#REPEATHELP_BUFFER[@]}" ]; do
+	until [ "$page" -lt "0" ] || [ "$page" -gt "${#REPEAT_HELP_BUFFER[@]}" ]; do
 		number_per_page=$(($LINES-4))
 		original_number_per_page=$number_per_page
 
 		tput cup 2
-		echo -ne "$NOCOLOR${REPEATHELP_BUFFER[$page]}"
+		echo -ne "$NOCOLOR${REPEAT_HELP_BUFFER[$page]}"
 
-		helpbuflines=`echo -ne \"${REPEATHELP_BUFFER[$page]}\" | wc -l`
+		helpbuflines=`echo -ne \"${REPEAT_HELP_BUFFER[$page]}\" | wc -l`
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
 			empty_pane "$(($helpbuflines+2))"
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
 			if [ "$page" == "0" ]; then
-				first=1
-				last=$(($number_per_page*2))
+				_first=1
+				last=$((($page*$number_per_page*2)+($number_per_page*2)))
 			else
-				first=$((($page*$number_per_page*2)+1))
-				last=$((($page*number_per_page*2)+($number_per_page*2)))
+				_first=$((($page*$number_per_page*2)+1))
+				last=$((($page*$number_per_page*2)+($number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
-				first=1
-				last=$number_per_page
+				_first=1
+				last=$((($page*$number_per_page)+$number_per_page))
 			else
-				first=$((($page*$number_per_page)+1))
+				_first=$((($page*$number_per_page)+1))
 				last=$((($page*$number_per_page)+$number_per_page))
 			fi
 		fi
 
 		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
-			if [ "$(($page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
+			killall espeak-ng >/dev/null 2>/dev/null
+			gtts_speak "page down"
+			if [ "$(($page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
 				page=$(($page+1))
+				gtts_speak "page down"
 			fi
 		elif [ "$inputchar" = "k" ]; then
+			killall espeak-ng >/dev/null 2>/dev/null
+			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
 				page=$(($page-1))
+				gtts_speak "page up"
 			fi
 		elif [ "$inputchar" == "d" ]; then
-			echo "$REPEAT_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/-/minus /g" | sed "s/\./ point /g" | sed "s/^\^/control /g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			killall espeak-ng play >/dev/null 2>/dev/null
+			echo "$REPEAT_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
 			reset_dimensions
-			draw_volume
-			draw_equalizer
-			draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
-			draw_position
-			number_per_page="$(($LINES-4))"
-			original_number_per_page="$number_per_page"
+			empty_pane
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
+			killall espeak-ng >/dev/null 2>/dev/null
+			killall play >/dev/null 2>/dev/null
+			gtts_speak "closed" true
+			number_per_page="$original_number_per_page"
+			return
 		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$(($page+1))" -lt "${#REPEATHELP_BUFFER[@]}" ]; then
+				if [ "$(($page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
 					page=$(($page+1))
 				fi
 				;;
@@ -7072,30 +7104,15 @@ loop_help_screen() {
 				fi
 				;;
 			*)
-				if [ "$switchback" == false ]; then
-					gtts_speak "closed" true
-				fi
-				if [ "$switchback" == true ]; then
-					VOICE_ENABLED=false
-				fi
+				killall espeak-ng >/dev/null 2>/dev/null
+				gtts_speak "closed" true
 				number_per_page="$original_number_per_page"
-				if [ "$1" == false ] || [ "$1" == "" ]; then
-					redraw_buffer
-				fi
 				return
 				;;
 			esac
 		else
-			if [ "$switchback" == false ]; then
-				gtts_speak "closed" true
-			fi
-			if [ "$switchback" == true ]; then
-				VOICE_ENABLED=false
-			fi
+			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
-			if [ "$1" == false ] || [ "$1" == "" ]; then
-				redraw_buffer
-			fi
 			return
 		fi
 	done
@@ -7169,7 +7186,7 @@ help_screen() {
 			fi
 		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng play >/dev/null 2>/dev/null
-			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/^\^/control /g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
@@ -8516,6 +8533,7 @@ main() {
 	while true; do
 		if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
 			clear
+			draw_wait
 			reset_dimensions
 			redraw_screen false
 			if [ "$MUTE" == true ]; then
@@ -9481,6 +9499,7 @@ main() {
 					render_help_screen
 					render_voice_settings_screen
 					render_repeat_help_screen
+					render_scale_help_screen
 				else
 					draw_banner "WAIT"
 					draw_position
@@ -9546,6 +9565,8 @@ main() {
 				if [ "$DIMENSIONS_RESET" == true ]; then
 					render_help_screen
 					render_voice_settings_screen
+					render_repeat_help_screen
+					render_scale_help_screen
 					DIMENSIONS_RESET=false
 				fi
 				voice_settings_screen
@@ -10307,6 +10328,7 @@ else
 	render_help_screen
 	render_voice_settings_screen
 	render_repeat_help_screen
+	render_scale_help_screen
 	rendered=true
 	empty_pane
 
@@ -10327,6 +10349,7 @@ if [ "$rendered" == false ]; then
 	render_help_screen
 	render_voice_settings_screen
 	render_repeat_help_screen
+	render_scale_help_screen
 	empty_pane
 fi
 
