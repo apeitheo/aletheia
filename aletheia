@@ -47,6 +47,7 @@ elif [ "$1" == "--help" ]; then
 	exit 0
 fi
 
+tput init
 tput civis
 stty -echo
 stty -ixon
@@ -216,8 +217,6 @@ VOICE_PITCH=0
 VOICE_VOLUME=.85
 ONLY_VOICE_TITLES=false
 
-LINES=$(tput lines)
-COLS=$(tput cols)
 POSITION_WIDTH=0
 
 get_system_volume() {
@@ -233,7 +232,7 @@ get_system_volume() {
 		SYSTEM_VOLUME_RIGHT=$volume_text
 	else
 		clear
-		tput cup $(($(tput lines)-3))
+		tput cup $(($LINES-3))
 		echo "NOTE"
 		echo "Aletheia does not currently support audio control using the '8' and '9' keys for adjusting system volume on your OS. Contact the developer for information on how to port to your OS of choice."
 		echo "Do you want to continue [Y/n]? "
@@ -557,19 +556,19 @@ vanish() {
 	line_count=1
 	word_count=0
 	saved_spot=""
-	width=$(($COLS-((${#char_count}+2+${#word_count}+${#line_count})*2)-(${#PADDING}*2)-20))
+	width=$(($COLUMNS-((${#char_count}+2+${#word_count}+${#line_count})*2)-(${#PADDING}*2)-20))
 	tput cup $LINES
 	tput el
 	tput cup $LINES
 	echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE --"
 	LEFTBANNER_WIDTH="$((6+6))"
-	tput cup $LINES $(($COLS/2))
+	tput cup $LINES $(($COLUMNS/2))
 	echo -ne "${BLUE}_"
 	tput sc
 	visible=true
 	char=""
 	draw_indicator() {
-		tput cup $LINES $(($COLS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
+		tput cup $LINES $(($COLUMNS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
 		echo -ne "$BLUE${char_count}$WHITE:$BLUE${word_count}$WHITE:$BLUE${line_count}$PADDING"
 	}
 	draw_indicator
@@ -625,15 +624,15 @@ vanish() {
 					quit=true
 					break
 				elif [ "$newchar" == "h" ]; then
-					if [ "$width" -gt "$((($COLS*5)/8))" ]; then
+					if [ "$width" -gt "$((($COLUMNS*5)/8))" ]; then
 						continue
 					fi
 					width="$(($width+2))"
 					newdisplay="`echo -ne \"$display\" | tail -c $width`"
 					if [ "${char_count}" -le "$(($width))" ]; then
-						tput cup $LINES $((($COLS/2)-$((${char_count}/2))))
+						tput cup $LINES $((($COLUMNS/2)-$((${char_count}/2))))
 					else
-						tput cup $LINES $((($COLS/2)-($width/2)))
+						tput cup $LINES $((($COLUMNS/2)-($width/2)))
 					fi
 
 					echo -ne "$WHITE${newdisplay}${BLUE}_"
@@ -647,9 +646,9 @@ vanish() {
 					fi
 					newdisplay="`echo -ne \"$display\" | tail -c $width`"
 					if [ "${char_count}" -le "$(($width))" ]; then
-						tput cup $LINES $((($COLS/2)-$((${char_count}/2))))
+						tput cup $LINES $((($COLUMNS/2)-$((${char_count}/2))))
 					else
-						tput cup $LINES $((($COLS/2)-($width/2)))
+						tput cup $LINES $((($COLUMNS/2)-($width/2)))
 					fi
 					tput cub1
 					echo -ne " "
@@ -692,7 +691,7 @@ vanish() {
 						feedback_enabled=true
 					fi
 				elif [ "$newchar" == "v" ]; then
-					fold -w $COLS -s <<< "$inputnew" | less
+					fold -w $COLUMNS -s <<< "$inputnew" | less
 					gtts_speak "insert mode"
 					tput cup $LINES
 					old_LEFTBANNER_WIDTH=$LEFTBANNER_WIDTH
@@ -739,7 +738,7 @@ vanish() {
 				word="`echo -ne \"$word\" | rev | cut -c2- | rev`"
 			fi
 			if [ "${char_count}" -lt "$(($width))" ]; then
-				saved_spot=$((($COLS/2)-$((${char_count}/2))-1))
+				saved_spot=$((($COLUMNS/2)-$((${char_count}/2))-1))
 				tput cup $LINES $saved_spot
 				echo -ne " "
 			fi
@@ -788,10 +787,10 @@ vanish() {
 		newdisplay="`echo -ne \"$display\" | tail -c $width`"
 		tput sc
 		if [ "${char_count}" -le "$(($width))" ]; then
-			saved_spot=$((($COLS/2)-$((${char_count}/2))))
+			saved_spot=$((($COLUMNS/2)-$((${char_count}/2))))
 			tput cup $LINES $saved_spot
 		else
-			saved_spot=$((($COLS/2)-($width/2)))
+			saved_spot=$((($COLUMNS/2)-($width/2)))
 			tput cup $LINES $saved_spot
 		fi
 		echo -ne "$WHITE${newdisplay}${BLUE}_ \b"
@@ -808,7 +807,7 @@ if [ "$1" == "--vanish" ]; then
 	exit 0
 fi
 
-if [ "$(tput lines)" -lt "7" ] || [ "$(tput cols)" -lt "33" ]; then
+if [ "$LINES" -lt "7" ] || [ "$COLUMNS" -lt "33" ]; then
 	if [ "$BYPASS_WARNING" != true ]; then
 		echo -e "${RED}Error:${NOCOLOR} Terminal dimensions too small (Requires >= 33x7)"
 		sleep 5
@@ -1031,11 +1030,11 @@ draw_banner() {
 				length="$RIGHT_BANNER_WIDTH"
 			fi
 		fi
-		if [ "$((${#1} + 6 + $RIGHT_BANNER_WIDTH + (${#PADDING}*2)))" -lt "$COLS" ]; then
-			printf '%*s' $(($COLS - ${#1} - 7 - (${#PADDING}*2) - $length))
+		if [ "$((${#1} + 6 + $RIGHT_BANNER_WIDTH + (${#PADDING}*2)))" -lt "$COLUMNS" ]; then
+			printf '%*s' $(($COLUMNS - ${#1} - 7 - (${#PADDING}*2) - $length))
 		fi
 	else
-		tput cup $LINES $(($COLS - ${#1} - 8))
+		tput cup $LINES $(($COLUMNS - ${#1} - 8))
 		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}$1$COLOR1 --$COLOR1 "
 		RIGHT_BANNER_WIDTH=$((${#1}+6))
 	fi
@@ -1274,16 +1273,16 @@ track_toggle() {
 about() {
 	tput cup 0
 	echo -ne "$BLUE_BLACK"
-	printf '%*s' $(tput cols)
+	printf '%*s' $COLUMNS
 	echo -ne "$NOCOLOR"
 	draw_banner "LOADING"
-	tput cup $LINES $(($COLS-${#PADDING}))
+	tput cup $LINES $(($COLUMNS-${#PADDING}))
 	echo -ne "$BLUE_BLACK${PADDING}"
 	empty_pane
 	lines_divided=$(($LINES/2))
-	cols_divided=$(($COLS/2))
+	cols_divided=$(($COLUMNS/2))
 
-	if [ "$(($COLS%2))" == "0" ]; then
+	if [ "$(($COLUMNS%2))" == "0" ]; then
 		even=true
 		pad="_"
 	else
@@ -1291,14 +1290,14 @@ about() {
 		pad=""
 	fi
 	if [ "$even" == true ]; then
-		tput cup $(($lines_divided-2)) $(( ($COLS/2) - 4))
+		tput cup $(($lines_divided-2)) $(( ($COLUMNS/2) - 4))
 	else
-		tput cup $(($lines_divided-2)) $(( ($COLS/2) - 3))
+		tput cup $(($lines_divided-2)) $(( ($COLUMNS/2) - 3))
 	fi
 	echo -ne "${WHITE}ἀ${BLUE}λ${WHITE}ήθεια${BLUE}_"
 	tput sc
 
-	tput cup $lines_divided $(( ($COLS/2) - 7))
+	tput cup $lines_divided $(( ($COLUMNS/2) - 7))
 	if [ "$even" == true ]; then
 		echo -ne "${WHITE}GPL${BLUE}3 ${WHITE}2021${BLUE}-${WHITE}2023"
 		tput cup $(($lines_divided+2)) $(( $cols_divided - 3))
@@ -1425,7 +1424,7 @@ zero_interval_jump() {
 }
 
 draw_loop() {
-	tput cup $LINES $(($COLS-$RIGHT_BANNER_WIDTH-${#PADDING}))
+	tput cup $LINES $(($COLUMNS-$RIGHT_BANNER_WIDTH-${#PADDING}))
 	echo -ne "$BLUE_BLACK$START_MARKER$WHITE_BLACK:$BLUE_BLACK$END_MARKER$WHITE_BLACK:$BLUE_BLACK$space$PADDING"
 }
 
@@ -1900,7 +1899,7 @@ repeat() {
 				toggle_pause true
 				RIGHT_BANNER_WIDTH="$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))"
 				draw_banner "HELP" false false true
-				tput cup $LINES $(($COLS-1-11))
+				tput cup $LINES $(($COLUMNS-12))
 				echo -ne "${GREEN_BLACK}BEG$WHITE_BLACK:${GREEN_BLACK}END$WHITE_BLACK:${GREEN_BLACK}GAP$PADDING"
 				loop_help_screen
 				killall espeak-ng >/dev/null 2>/dev/null
@@ -2920,6 +2919,8 @@ scale_edo() {
 
 main_menu() {
 	z=""
+	old_LINES=$LINES
+	old_COLUMNS=$COLUMNS
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
 	fi
@@ -2933,7 +2934,7 @@ main_menu() {
 	local initial_screen=$1
 	tagged=false
 
-	if [ "$(($COLS%2))" == "0" ]; then
+	if [ "$(($COLUMNS%2))" == "0" ]; then
 		even=true
 	else
 		even=false
@@ -2946,7 +2947,7 @@ main_menu() {
 	OPT[5]="Voice"
 	OPT[6]="Help"
 	OPT[7]="Quit"
-	if [ "$(tput lines)" -gt "10" ]; then
+	if [ "$LINES" -gt "10" ]; then
 		TOTAL_OPTS=${#OPT[@]}
 	else
 		TOTAL_OPTS=3
@@ -2988,12 +2989,12 @@ main_menu() {
 				echo -ne "$NOCOLOR"
 			fi
 
-			if [ "$(($COLS%2))" == "0" ]; then
+			if [ "$(($COLUMNS%2))" == "0" ]; then
 				moveleft=1
 			else
 				moveleft=0
 			fi
-			tput cup $first $(($COLS/2-5-$moveleft))
+			tput cup $first $(($COLUMNS/2-5-$moveleft))
 				menu_buf="$PADDING$COLOR_ACCENT$TOP_BAR_MENU`tput el`"
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk${LINE_CHAR_END}`tput el`"
@@ -3020,7 +3021,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLUMNS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -3088,7 +3089,7 @@ main_menu() {
 					else
 						pad=""
 					fi
-					menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+					menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLUMNS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
 					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 						if [ "$SELECTION" == "1" ]; then
 							if [ "$i" -ge "2" ]; then
@@ -3136,9 +3137,9 @@ main_menu() {
 				fi
 			done
 
-			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
+			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLUMNS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
 
-			tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLS/2-5-$moveleft))
+			tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLUMNS/2-5-$moveleft))
 
 			echo -ne "$menu_buf"
 		fi
@@ -3151,13 +3152,10 @@ main_menu() {
 				if [ "$tmp_z" != "" ]; then
 					z=$tmp_z
 				else
-					new_LINES=`tput lines`
-					new_COLS=`tput cols`
-					if [ "$new_LINES" != "$LINES" ] || [ "$new_COLS" != "$COLS" ]; then
-						COLS=$new_COLS
-						LINES=$new_LINES
+					sleep 0.05
+					if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
 						clear
-						if [ "$(($COLS%2))" == "0" ]; then
+						if [ "$(($COLUMNS%2))" == "0" ]; then
 							even=true
 						else
 							even=false
@@ -3166,6 +3164,13 @@ main_menu() {
 						render_repeat_help_screen
 						render_voice_settings_screen
 						screen_redrawn=true
+						old_LINES=$LINES
+						old_COLUMNS=$COLUMNS
+						if [ "$initial_screen" == false ]; then
+							draw_volume
+							draw_equalizer
+							draw_position
+						fi
 						break
 					else
 						screen_redrawn=false
@@ -3601,7 +3606,7 @@ main_menu() {
 						sleep $BANNER_WAIT_TIME
 						#tput cup $LINES
 						#echo -ne "$WHITE_BLACK"
-						#printf '%*s' $COLS
+						#printf '%*s' $COLUMNS
 						#echo -ne "$NOCOLOR"
 						continue
 					else
@@ -5437,15 +5442,9 @@ read_number() {
 
 reset_dimensions() {
 	local norender=$1
-	new_LINES=`tput lines`
-	new_COLS=`tput cols`
-	if [ "$LINES" != "$new_LINES" ] || [ "$COLS" != "$new_COLS" ]; then
+	if [ "$LINES" != "$old_LINES" ] || [ "$COLUMNS" != "$old_COLUMNS" ]; then
 		DIMENSIONS_RESET=true
-		COLS=$new_COLS
-		LINES=$new_LINES
 	fi
-	LINES=$new_LINES
-	COLS=$new_COLS
 	if [ "$norender" == "false" ] || [ "$norender" == "" ]; then
 		render_help_screen
 		render_voice_settings_screen
@@ -5481,19 +5480,6 @@ redraw_screen() {
 	tput el
 	tput cup $(($LINES-2))
 	tput el
-}
-
-winch_window() {
-	draw_wait
-	gtts_speak "screen redrawn"
-	tput civis
-	reset_dimensions
-	redraw_screen #false
-	if [ "$MUTE" == true ]; then
-		draw_banner "MUTE"
-	elif [ "$PAUSE" == true ]; then
-		draw_banner "PAUSE"
-	fi
 }
 
 reset_buffer() {
@@ -5602,9 +5588,9 @@ reset_buffer() {
 		pos_on_page=$(($pos_on_page+1))
 		
 		if [ "$pos" == "$POSITION" ]; then
-			offset="$(($COLS - 11 - ${#pos} - ${#pad}))"
+			offset="$(($COLUMNS - 11 - ${#pos} - ${#pad}))"
 		else
-			offset="$(($COLS - 5 - ${#pos} - ${#pad}))"
+			offset="$(($COLUMNS - 5 - ${#pos} - ${#pad}))"
 		fi
 		if [ "${#line}" -gt "$offset" ]; then
 			line="$(echo -ne "$line" | sed -e 's/^ .*//g' | cut -b 1-$(($offset-1)))…"
@@ -5630,9 +5616,9 @@ reset_buffer() {
 			fi
 			minutes="$(echo -ne "$SONG_LENGTH" | cut -d':' -f1)"
 			seconds="$(echo -ne "$SONG_LENGTH" | cut -d':' -f2)"
-			buf_space="`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5))`"
+			buf_space="`printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5))`"
 		else
-			buf_space="`printf '%*s' $(($COLS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3))`"
+			buf_space="`printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3))`"
 		fi
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
 			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING`tput sgr0`\n"
@@ -5710,7 +5696,7 @@ redraw_buffer() {
 		number_per_page=$TOTAL_QUEUE
 	fi
 
-	if [ "$(($COLS-$TOTAL_QUEUE-4))" -gt "0" ]; then
+	if [ "$(($COLUMNS-$TOTAL_QUEUE-4))" -gt "0" ]; then
 		empty_pane $((2+$TOTAL_QUEUE))
 	fi
 
@@ -5751,7 +5737,7 @@ draw_volume() {
 		VOLUME="$DEFAULT_VOLUME"
 	fi
 	echo -ne "$BLUE_BLACK$PADDING$VOLUME$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$tmp_volume_left$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$tmp_volume_right"
-	printf '%*s' $(($COLS - (${#CORNER_DIVIDER}*2) - ${#equal} -${#VOLUME} - (${#PADDING}*2) - ${#tmp_volume_left} - ${#tmp_volume_right}))
+	printf '%*s' $(($COLUMNS - (${#CORNER_DIVIDER}*2) - ${#equal} -${#VOLUME} - (${#PADDING}*2) - ${#tmp_volume_left} - ${#tmp_volume_right}))
 	echo -ne "$NOCOLOR"
 }
 
@@ -5759,7 +5745,7 @@ draw_position() {
 	local equalizer=$1
 	RIGHT_BANNER_WIDTH=0
 	POSITION_WIDTH=$((${#POSITION} + ${#TOTAL_QUEUE} + 1 + (${#CORNER_DIVIDER}*2)))
-	tput cup $LINES $(($COLS-${#POSITION} - ${#TOTAL_QUEUE} - 1 - (${#CORNER_DIVIDER}*2) - ${#PADDING}))
+	tput cup $LINES $(($COLUMNS-${#POSITION} - ${#TOTAL_QUEUE} - 1 - (${#CORNER_DIVIDER}*2) - ${#PADDING}))
 	if [ "$LOOP" == true ]; then
 		center="1"
 	elif [ "$LOOP_ARTIST" == true ]; then
@@ -5998,7 +5984,7 @@ draw_wait() {
 		echo -ne "$NOCOLOR"
 		clear
 	fi
-	tput cup $((`tput lines`/2)) $(((`tput cols`/2)-5))
+	tput cup $(($LINES/2)) $((($COLUMNS/2)-5))
 	echo -ne "$NOCOLOR${WHITE}-- ${BLUE}WAIT ${WHITE}--$NOCOLOR"
 	gtts_speak "wait" false true
 }
@@ -6415,9 +6401,9 @@ draw_pitch() {
 
 	POSITION_WIDTH="$((${#POSITION}+${#TOTAL_QUEUE}+1+(${#CORNER_DIVIDER}*2)))"
 	if [ "$POSITION_WIDTH" -lt "$RIGHT_BANNER_WIDTH" ]; then
-		printf '%*s' $(($COLS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $RIGHT_BANNER_WIDTH))
+		printf '%*s' $(($COLUMNS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $RIGHT_BANNER_WIDTH))
 	else
-		printf '%*s' $(($COLS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $POSITION_WIDTH))
+		printf '%*s' $(($COLUMNS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $POSITION_WIDTH))
 	fi
 	echo -ne "$NOCOLOR"
 }
@@ -6430,7 +6416,7 @@ draw_equalizer() {
 	equal="`echo $EQUALIZER | cut -d':' -f1`"
 	equal="$equal:`echo $EQUALIZER | cut -d':' -f4`"
 	equal="$equal:`echo $EQUALIZER | cut -d':' -f8`"
-	tput cup 0 $(($COLS-${#equal1}-${#equal2}-${#equal3}-(${#CORNER_DIVIDER}*2)-${#PADDING}))
+	tput cup 0 $(($COLUMNS-${#equal1}-${#equal2}-${#equal3}-(${#CORNER_DIVIDER}*2)-${#PADDING}))
 	echo -ne "$BLUE_BLACK$equal1$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$equal2$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$equal3$PADDING$NOCOLOR"
 }
 
@@ -6909,7 +6895,7 @@ render() {
 		FLAGGED=true
 	fi
 	
-	if [ "$COLS" -ge "$((($width*2)+3))" ]; then
+	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
 		if [ "$FLAGGED" == true ]; then
 			TWO_COLUMN=false
 			d=1
@@ -6983,13 +6969,13 @@ render() {
 			fi
 
 			if [ "$TWO_COLUMN" == true ]; then
-				difference=$(( (($COLS/2) - $width + 2) / 2))
+				difference=$(( (($COLUMNS/2) - $width + 2) / 2))
 			else
-				difference=$(( (($COLS - $width + 2) / 2 ) ))
+				difference=$(( (($COLUMNS - $width + 2) / 2 ) ))
 			fi
 
 			if [ "$pmt_line" != "" ] && [ "$line" != "" ]; then
-				buf="$buf`printf '%*s' $difference`$tmp1 $tmp2`tput el``tput cup $(($x+2)) $((($COLS/2+1)))``printf '%*s' $(($difference-1))`$pmt1 $pmt2`tput el`\n"
+				buf="$buf`printf '%*s' $difference`$tmp1 $tmp2`tput el``tput cup $(($x+2)) $((($COLUMNS/2+1)))``printf '%*s' $(($difference-1))`$pmt1 $pmt2`tput el`\n"
 			else
 				buf="$buf`printf '%*s' $difference`$tmp1 $tmp2`tput el`\n"
 			fi
@@ -7132,12 +7118,12 @@ help_screen() {
 
 		tput cup 0
 		echo -ne "$BLUE_BLACK${PADDING}PCM${WHITE_BLACK}:${BLUE_BLACK}LEF${WHITE_BLACK}:${BLUE_BLACK}RIG"
-		printf '%*s' $(($COLS - 2 - 22))
+		printf '%*s' $(($COLUMNS - 24))
 		echo -ne "${BLUE_BLACK}BAS${WHITE_BLACK}:${BLUE_BLACK}MID${WHITE_BLACK}:${BLUE_BLACK}TRE$PADDING$NOCOLOR"
 
 		tput cup $LINES
 		echo -ne "${BLUE_BLACK}${PADDING}INT${WHITE_BLACK}:${BLUE_BLACK}EDO${WHITE_BLACK}:${BLUE_BLACK}TOG"
-		printf '%*s' $(($COLS - 2 - 22))
+		printf '%*s' $(($COLUMNS - 24))
 		echo -ne "${BLUE_BLACK}POS${WHITE_BLACK}:${BLUE_BLACK}QUE${WHITE_BLACK}:${BLUE_BLACK}TOG$PADDING$NOCOLOR"
 
 		tput cup 2
@@ -7437,7 +7423,7 @@ search_queue() {
 				pad=""
 			fi
 
-			offset="$(($COLS - ${#m} - 4 - ${#pad}))"
+			offset="$(($COLUMNS - ${#m} - 4 - ${#pad}))"
 
 
 			line="$(echo "$line" | cut -b 1-$offset)"
@@ -7450,7 +7436,7 @@ search_queue() {
 			empty_pane "$(($number_per_page+2))"
 		fi
 		draw_banner "SEARCH"
-		printf '%*s' $(($COLS - 14))
+		printf '%*s' $(($COLUMNS - 14))
 		tput rc
 
 		if [ "$WEB_CLIENT" == "0" ]; then
@@ -7647,7 +7633,7 @@ queue_controls() {
 				pad=""
 			fi
 
-			offset="$(($COLS-${#i} - 2 -1))"
+			offset="$(($COLUMNS-${#i} - 3))"
 
 			line="`echo \"$line\" | cut -b 1-$offset`"
 
@@ -8060,11 +8046,11 @@ print_queue() {
 					rep="$BLUE"
 				fi
 				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
-					nline="`echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLS-(${#PADDING}*2)-3-${#m}-${#display_pad}))`"
-					padd="`printf '%*s' $(($COLS-(${#PADDING}*2)-3-${#m}-${#nline}-${#display_pad}))`"
+					nline="`echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad}))`"
+					padd="`printf '%*s' $(($COLUMNS-(${#PADDING}*2)-3-${#m}-${#nline}-${#display_pad}))`"
 					new_buf="$new_buf$BLUE_BLACK${PADDING}$INDICATOR$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$nline$padd$PADDING$NOCOLOR\n"
 				else
-					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE`echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLS-(${#PADDING}*2)-3-${#m}))``tput el`\n"
+					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE`echo -ne \"${queue_array[$(($m-1))]}\" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLUMNS-(${#PADDING}*2)-3-${#m}))``tput el`\n"
 				fi
 				m=$(($m+1))
 			done
@@ -8523,14 +8509,13 @@ main() {
 		draw_position
 	fi
 
+	old_LINES=$LINES
+	old_COLUMNS=$COLUMNS
+
 	stty -echo
 	while true; do
-		new_LINES=`tput lines`
-		new_COLS=`tput cols`
-		if [ "$new_LINES" != "$LINES" ] || [ "$new_COLS" != "$COLS" ]; then
-			COLS=$new_COLS
-			LINES=$new_LINES
-			draw_wait
+		if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
+			clear
 			reset_dimensions
 			redraw_screen false
 			if [ "$MUTE" == true ]; then
@@ -8539,6 +8524,8 @@ main() {
 				draw_banner "PAUSE"
 			fi
 			gtts_speak "screen redrawn"
+			old_LINES=$LINES
+			old_COLUMNS=$COLUMNS
 		fi
 		if [ "$WEB_CLIENT" == "0" ]; then
 				read -rsn1 -t $MAIN_REFRESH_TIME input
@@ -8760,7 +8747,7 @@ main() {
 					if [ "`isnum \"$percent\"`" == "0" ]; then
 						percent=1
 					fi
-					total_=$(($COLS-(${#PADDING}*2)-14))
+					total_=$(($COLUMNS-(${#PADDING}*2)-14))
 					PAUSE=false
 					tput cup $LINES
 					echo -ne "$BLUE_BLACK${PADDING}00$WHITE_BLACK:${BLUE_BLACK}00 "
@@ -8819,7 +8806,7 @@ main() {
 						fi
 						echo -ne "$BLUE`echo -ne \"$dateo\" | cut -d':' -f1`$WHITE:$BLUE`echo -ne \"$dateo\" | cut -d':' -f2`"
 						if [ "$skip2" == false ]; then
-							tput cup $LINES $(($COLS-1-5))
+							tput cup $LINES $(($COLUMNS-6))
 							if [ "$INTERVAL" -lt "0" ]; then
 								int="`echo -ne \"$INTERVAL\" | cut -c 2-`"
 								neg=true
@@ -8844,7 +8831,7 @@ main() {
 								new_minutes=$minutes
 								new_seconds=$seconds
 							fi
-							tput cup $LINES $(($COLS-1-5))
+							tput cup $LINES $(($COLUMNS-6))
 							new_minutes="`printf '%02d' $new_minutes`"
 							new_seconds="`printf '%02d' $new_seconds`"
 							echo -ne "$BLUE$new_minutes$WHITE:$BLUE$new_seconds"
@@ -9358,8 +9345,8 @@ main() {
 			'')
 				draw_indicator() {
 					RIGHT_BANNER_WIDTH="29"
-					if [ "$(($COLS-$RIGHT_BANNER_WIDTH-$LEFT_BANNER_WIDTH-2-(${#PADDING}*2)))" -gt "1" ]; then
-						tput cup $LINES $(($COLS-${#PADDING}-$RIGHT_BANNER_WIDTH))
+					if [ "$(($COLUMNS-$RIGHT_BANNER_WIDTH-$LEFT_BANNER_WIDTH-2-(${#PADDING}*2)))" -gt "1" ]; then
+						tput cup $LINES $(($COLUMNS-${#PADDING}-$RIGHT_BANNER_WIDTH))
 						echo -ne "${BLUE_BLACK}v:${WHITE_BLACK}invert ${BLUE_BLACK}#:${WHITE_BLACK}save ${BLUE_BLACK}n:${WHITE_BLACK}next ${BLUE_BLACK}b:${WHITE_BLACK}back$PADDING"
 						echo -ne "$COLOR_TEXT"
 					else
@@ -9827,7 +9814,7 @@ main() {
 					gtts_speak "enter the new title"
 					tput rc
 					echo -ne "$WHITE_BLACK"
-					printf '%*s' $(($COLS - 14))
+					printf '%*s' $(($COLUMNS - 14))
 					tput rc
 					echo -ne "$WHITE_BLACK"
 					newname="`read_line`"
