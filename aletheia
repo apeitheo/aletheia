@@ -1805,26 +1805,45 @@ repeat() {
 				REPEAT_ONLY=false
 				return 200
 			elif [ "$input_char" == "Z" ]; then
-						draw_banner "WAIT" false false true
-						gtts_speak "wait"
-						ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
-						filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | rev`"
-						rm -f "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
-						rm -f "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
-						ffmpeg -i "$FILENAME" -ss $START_MARKER -t $(calc "$END_MARKER-$START_MARKER+0.265") -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
-						len="`ffprobe -i \"$filename_without_ext.repeat0.$ext\" -show_entries format=duration -v quiet -of csv='p=0'`"
-						sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat1.$ext" trim 0 -0.180 >/dev/null 2>/dev/null
-						delay="$(echo "($space/20)" | bc)"
-						ffmpeg -i "$filename_without_ext.repeat1.$ext" -af "apad=pad_dur=$delay" "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
-						rm -f "$filename_without_ext.repeat0.$ext"
-						rm -f "$filename_without_ext.repeat1.$ext"
-						cp "$FILENAME.locked" "$filename_without_ext.repeat.$ext.locked" >/dev/null 2>/dev/null
-						RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
-						draw_loop
-						gtts_speak "finished"
 				old_time_before=$time_before
 				time_before=`date +%s.%N`
+				draw_banner "WAIT" false false true
+				gtts_speak "wait"
+				ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f1 | rev`"
+				filename_without_ext="`echo -ne \"$FILENAME\" | rev | cut -d'.' -f2- | rev`"
+				rm -f "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
+				rm -f "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
+				ffmpeg -i "$FILENAME" -ss $START_MARKER -t $(calc "$END_MARKER-$START_MARKER+0.265") -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
+				len="`ffprobe -i \"$filename_without_ext.repeat0.$ext\" -show_entries format=duration -v quiet -of csv='p=0'`"
+				sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat1.$ext" trim 0 -0.180 >/dev/null 2>/dev/null
+				delay="$(echo "($space/20)" | bc)"
+				ffmpeg -i "$filename_without_ext.repeat1.$ext" -af "apad=pad_dur=$delay" "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
+				rm -f "$filename_without_ext.repeat0.$ext"
+				rm -f "$filename_without_ext.repeat1.$ext"
+				cp "$FILENAME.locked" "$filename_without_ext.repeat.$ext.locked" >/dev/null 2>/dev/null
+				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
+				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+				draw_loop
+				gtts_speak "finished"
+				if [ -e "$filename_without_ext.repeat.$ext" ]; then
+					REP="$BLUE_BLACK"
+				else
+					REP=""
+				fi
+				tput cup $(($LOCKING_POS+2)) $((1))
+				if [ -e "$FILENAME.locked" ]; then
+					if [ -e "$FILENAME.repeats" ]; then
+						echo -ne "${WHITE_BLACK}${REP}#"
+					else
+						echo -ne "$BLUE_BLACK${REP}$"
+					fi
+				else
+					if [ -e "$FILENAME.repeats" ]; then
+						echo -ne "${WHITE_BLACK}${REP}&"
+					else
+						echo -ne "${WHITE_BLACK} "
+					fi
+				fi
 				flagged=true
 			elif [ "$input_char" == "A" ]; then
 				old_time_before=$time_before
@@ -2255,19 +2274,18 @@ repeat() {
 				flagged=true
 			elif [ "$input_char" == "b" ]; then
 				RIGHT_BANNER_WIDTH=0
-				ps -p $MPLAYER_PID >/dev/null
-				if [ "$?" != "1" ]; then
-					kill $MPLAYER_PID >/dev/null 2>/dev/null
-					if [ "$REPEAT_ONLY" == true ]; then
+				kill $MPLAYER_PID >/dev/null 2>/dev/null
+				if [ "$REPEAT_ONLY" == true ]; then
+					return $RETURN_ONLY_LOCKED_BACK
+				else
+					if [ "$TRACK_RANDOM" == true ]; then
+						return $RETURN_TRACK_RANDOM_BACK
+					elif [ "$LOOP_ARTIST" == true ]; then
+						return $RETURN_LOOP_ARTIST_BACK
+					elif [ "$ONLY_LOCKED" == true ]; then
 						return $RETURN_ONLY_LOCKED_BACK
 					else
-						if [ "$TRACK_RANDOM" == true ]; then
-							return $RETURN_TRACK_RANDOM_BACK
-						elif [ "$LOOP_ARTIST" == true ]; then
-							return $RETURN_LOOP_ARTIST_BACK
-						elif [ "$ONLY_LOCKED" == true ]; then
-							return $RETURN_ONLY_LOCKED_BACK
-						fi	
+						return $RETURN_BACK
 					fi
 				fi
 			elif [ "$input_char" == "y" ]; then
@@ -2321,13 +2339,20 @@ repeat() {
 			elif [ "$input_char" == "x" ]; then
 				old_time_before=$time_before
 				time_before=`date +%s.%N`
+				ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f1 | rev)"
+				filename_without_ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | rev)"
+				if [ -e "$filename_without_ext.repeat.$ext" ]; then
+					REP="$BLUE_BLACK"
+				else
+					REP=""
+				fi
 				tput cup $(($LOCKING_POS+2)) $((1))
 				if [ -e "$FILENAME.locked" ]; then
 					rm -f "$FILENAME".locked
 					LOCKED=false
 					gtts_speak "unlocked"
 					if [ -e "$FILENAME.repeats" ]; then
-						echo -ne "${WHITE_BLACK}&"
+						echo -ne "${WHITE_BLACK}${REP}&"
 					else
 						echo -ne "$BLUE_BLACK "
 					fi
@@ -2340,9 +2365,9 @@ repeat() {
 					LOCKED=true
 					gtts_speak "locked"
 					if [ -e "$FILENAME.repeats" ]; then
-						echo -ne "${WHITE_BLACK}#"
+						echo -ne "${WHITE_BLACK}${REP}#"
 					else
-						echo -ne "${WHITE_BLACK}$"
+						echo -ne "${WHITE_BLACK}${REP}$"
 					fi
 				fi
 				flagged=true
@@ -9022,6 +9047,9 @@ main() {
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
 				START_MARKER="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
+				if [ "$(echo "$BANNER_WAIT_TIME > $MPLAYER_WAIT_TIME" | bc)" == "1" ]; then
+					sleep $(echo "$BANNER_WAIT_TIME - $MPLAYER_WAIT_TIME" | bc)
+				fi
 				draw_pitch
 				draw_position
 				;;
@@ -9044,6 +9072,9 @@ main() {
 				END_TIME="`tail -1 \"$ALETHEIA/mplayer_output\" | cut -d '=' -f2`"
 				END_MARKER=$END_TIME
 				space=0
+				if [ "$(echo "$BANNER_WAIT_TIME > $MPLAYER_WAIT_TIME" | bc)" == "1" ]; then
+					sleep $(echo "$BANNER_WAIT_TIME - $MPLAYER_WAIT_TIME" | bc)
+				fi
 				draw_pitch
 				draw_position
 				;;
@@ -9328,13 +9359,20 @@ main() {
 				zero_interval_jump
 				;;
 			'x')
+				ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f1 | rev)"
+				filename_without_ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | rev)"
+				if [ -e "$filename_without_ext.repeat.$ext" ]; then
+					REP="$BLUE_BLACK"
+				else
+					REP=""
+				fi
 				tput cup $(($LOCKING_POS+2)) $((1))
 				if [ -e "$FILENAME.locked" ]; then
 					rm -f "$FILENAME".locked
 					LOCKED=false
 					gtts_speak "unlocked"
 					if [ -e "$FILENAME.repeats" ]; then
-						echo -ne "${WHITE_BLACK}&"
+						echo -ne "${WHITE_BLACK}${REP}&"
 					else
 						echo -ne "$BLUE_BLACK "
 					fi
@@ -9351,9 +9389,9 @@ main() {
 					LOCKED=true
 					gtts_speak "locked"
 					if [ -e "$FILENAME.repeats" ]; then
-						echo -ne "${WHITE_BLACK}#"
+						echo -ne "${WHITE_BLACK}${REP}#"
 					else
-						echo -ne "${WHITE_BLACK}$"
+						echo -ne "${WHITE_BLACK}${REP}$"
 					fi
 				fi
 				;;
