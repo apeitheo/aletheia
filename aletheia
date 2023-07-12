@@ -6568,6 +6568,13 @@ scale_help_screen() {
 	draw_banner "HELP" false true
 	local initial_screen=$1
 
+	width="$(echo -ne "$SCALE_HELP" | wc -L)"
+	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+		TWO_COLUMN=true
+	else
+		TWO_COLUMN=false
+	fi
+
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#SCALE_HELP_BUFFER[@]}" ]; do
 		number_per_page=$(($LINES-4))
@@ -6802,6 +6809,14 @@ render_scale_help_screen() {
 voice_settings_screen() {
 	gtts_speak "voice settings"
 	flagged=false
+
+	width="$(echo -ne "$VOICE_HELP" | wc -L)"
+	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+		TWO_COLUMN=true
+	else
+		TWO_COLUMN=false
+	fi
+
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#VOICE_HELP_BUFFER[@]}" ]; do
 		number_per_page=$(($LINES-4))
@@ -7064,6 +7079,13 @@ loop_help_screen() {
 	gtts_speak "loop controls"
 	local initial_screen=$1
 
+	width="$(echo -ne "$REPEAT_HELP" | wc -L)"
+	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+		TWO_COLUMN=true
+	else
+		TWO_COLUMN=false
+	fi
+
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#REPEAT_HELP_BUFFER[@]}" ]; do
 		number_per_page=$(($LINES-4))
@@ -7166,6 +7188,13 @@ render_help_screen() {
 help_screen() {
 	gtts_speak "key controls"
 	local initial_screen=$1
+
+	width="$(echo -ne "$HELP" | wc -L)"
+	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+		TWO_COLUMN=true
+	else
+		TWO_COLUMN=false
+	fi
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#HELP_BUFFER[@]}" ]; do
