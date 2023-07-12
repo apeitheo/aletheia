@@ -746,18 +746,18 @@ vanish() {
 		elif [ "$char" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
-			espeak-ng " $inputnew" &
+			espeak-ng -v en-us+m1 " $inputnew" &
 		elif [ "$char" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
 		else
 			char_count=$(($char_count+1))
-			if [ "$char" == "" ]; then
+			if [ "$char" == " " ]; then
 				preword=false
 				inputnew="${inputnew} "
 				display="${display} "
 				if [ "$feedback_enabled" == true ]; then
-					espeak-ng "$word" &
+					espeak-ng -v en-us+m1 "$word" &
 				fi
 				if [ "$inspace" == false ]; then
 					word_count=$(($word_count+1))
@@ -774,7 +774,7 @@ vanish() {
 				fi
 				if [ "$char" == "." ] || [ "$char" == "?" ] || [ "$char" == "," ] || [ "$char" == "!" ]; then
 					if [ "$feedback_enabled" == true ]; then
-						espeak-ng "$word" &
+						espeak-ng -v en-us+m1 "$word" &
 					fi
 					word_count=$(($word_count+1))
 					inword=false
@@ -914,7 +914,7 @@ _  Octave Down
 M  Inverse INT
 Y  Zero INT
 Pitch Fade Controls
-X  Speed/Reset
+X  Scale Speed
 t  Zero INT
 u  INT Up/Down
 U  EDO Up/Down
@@ -942,7 +942,7 @@ P  Progress Bar
 a  Equalizer
 Queue Controls
 ;  Queue
-O  Edit (VIM)
+O  Edit
 R  Shuffle
 A  Sort
 \"  Last of Artist
@@ -964,7 +964,7 @@ Loop Controls
 5  Start Position
 7  End Position
 6  Enter Loop 
-^  Switch Loops
+6  Switch Loops
 &  Lock Loop
 %  Unlock Loop
 ^E  Play Only Loops
@@ -996,9 +996,9 @@ espeak_say() {
 	if [ "$voice_enabled" == true ] || [ "$2" == true ]; then
 		killall espeak-ng >/dev/null 2>/dev/null
 		if [ "$3" == true ] && [ "$1" != " " ]; then
-			espeak-ng " $1" #-s$voice_speed -v$voice_gender -a$voice_volume -p$voice_pitch " $1" >/dev/null 2>/dev/null
+			espeak-ng -v en-us+m1 " $1"
 		elif [ "$1" != " " ]; then
-			espeak-ng " $1" & #-s$voice_speed -v$voice_gender -a$voice_volume -p$voice_pitch " $1" >/dev/null 2>/dev/null &
+			espeak-ng -v en-us+m1 " $1" &
 		fi
 	fi
 }
@@ -1310,10 +1310,6 @@ about() {
 	fi
 	echo -ne "$(echo -ne "$WHITE$VERSION" | sed "s/\./$(echo -ne "$BLUE").$(echo -ne "$WHITE")/g")"
 	tput cup $(($lines_divided-2)) $(( $cols_divided - 4))
-	#if [ "$VOICE_ENABLED" == true ]; then
-	#	killall espeak-ng >/dev/null 2>/dev/null
-	#	gtts_speak "Aletheia, version $VERSION" &
-	#fi
 }
 
 set_scale_speed() {
@@ -3295,6 +3291,7 @@ main_menu() {
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			fi
+			menu_start_over=true
 			z=""
 			continue
 		elif [ "$z" == "" ]; then
@@ -5619,21 +5616,28 @@ reset_buffer() {
 			if [ "$SONG_LENGTH" == "" ]; then
 				SONG_LENGTH="--:--"
 			else
-				SONG_LENGTH="`date -u -d @$SONG_LENGTH +%M:%S`"
+				SONG_LENGTH="`date -u -d @$SONG_LENGTH +%H:%M:%S`"
 			fi
-			minutes="$(echo -ne "$SONG_LENGTH" | cut -d':' -f1)"
-			seconds="$(echo -ne "$SONG_LENGTH" | cut -d':' -f2)"
-			buf_space="`printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5))`"
+			IFS=':' read hours minutes seconds <<< "$SONG_LENGTH"
+			if [ "$hours" != "00" ]; then
+				buf_space="`printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-8))`"
+				APPEND_BLACK="${BLUE_BLACK}$hours${WHITE_BLACK}:${BLUE_BLACK}"
+				APPEND="${BLUE}$hours${WHITE}:$BLUE"
+			else
+				buf_space="`printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5))`"
+				APPEND=""
+				APPEND_BLACK=""
+			fi
 		else
 			buf_space="`printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3))`"
 		fi
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
-			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING`tput sgr0`\n"
+			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$APPEND_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING`tput sgr0`\n"
 			LOCKING_POS="$(($i-1))"
 		else
 			if [ "$PANELS_ENABLED" == false ]; then
 				if [ "$pos" == "$POSITION" ]; then
-					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$BLUE$BLUE$minutes$WHITE:$BLUE$seconds$PADDING\n"
+					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$APPEND$BLUE$minutes$WHITE:$BLUE$seconds$PADDING\n"
 					LOCKING_POS="$(($i-1))"
 					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$minutes:$seconds$PADDING\n"
 				else
@@ -6518,7 +6522,7 @@ queue_help_screen() {
 				pos=1
 			fi
 		elif [ "$inputchar" == "d" ]; then
-			echo -e "$QUEUE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo -e "$QUEUE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
 		else
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "closed" true
@@ -6536,6 +6540,7 @@ queue_help_screen() {
 
 scale_help_screen() {
 	gtts_speak "scale controls"
+	draw_banner "HELP" false true
 	local initial_screen=$1
 
 	page=0
@@ -6586,12 +6591,16 @@ scale_help_screen() {
 			fi
 		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng play >/dev/null 2>/dev/null
-			echo "$SCALE_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo "$SCALE_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed "s/-/ /g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
 			reset_dimensions
+			draw_volume
+			draw_equalizer
 			empty_pane
+			draw_banner "SCALE"
+			draw_banner "HELP" false true
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
@@ -6846,7 +6855,7 @@ voice_settings_screen() {
 			gtts_speak "$VOICE_VOLUME" false false true
 			flagged=true
 		elif [ "$inputchar" == "d" ]; then
-			echo "$VOICE_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo "$VOICE_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
@@ -7078,12 +7087,17 @@ loop_help_screen() {
 			fi
 		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng play >/dev/null 2>/dev/null
-			echo "$REPEAT_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo "$REPEAT_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/-/minus /g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
 			reset_dimensions
+			draw_volume
+			draw_equalizer
 			empty_pane
+			draw_banner "HELP" false false true
+			tput cup $LINES $(($COLUMNS-12))
+			echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
@@ -7186,7 +7200,7 @@ help_screen() {
 			fi
 		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng play >/dev/null 2>/dev/null
-			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/|/vertical slash/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -k 2 & >/dev/null 2>/dev/null
+			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g" | sed "s/-EDO/ EDO/g" | sed "s/EDO/e d o/g" | sed "s/INT/interval/g" | sed "s/PCM/p c m/g" | sed "s/'/single quote/g" | sed "s/\"/double quote/g" | sed "s/\./period/g" | sed "s/|/vertical slash/g" | sed "s/-[0-9]/minus &/g" | sed "s/\([a-zA-Z]\)\/\([a-zA-Z]\)/\1 or \2/g" | sed "s/?/question mark/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			page=0
