@@ -8442,34 +8442,6 @@ save_settings() {
 		_save_setting "ONLY_VOICE_TITLES" "$ONLY_VOICE_TITLES"
 		_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
 		_save_setting "DEFAULT_EQUALIZER" "$DEFAULT_EQUALIZER"
-		clean_sequence=${BLUE#*\033}
-		clean_sequence=${clean_sequence%m}
-		IFS=';' read -ra color_values <<< "$clean_sequence"
-		r=$(printf "%02x" "${color_values[3]}")
-		g=$(printf "%02x" "${color_values[4]}")
-		b=$(printf "%02x" "${color_values[5]}")
-		hex_color="#$r$g$b"
-		_save_setting "COLOR_HIGHLIGHT" "$hex_color"
-		clean_sequence=${WHITE#*\033}
-		clean_sequence=${clean_sequence%m}
-		IFS=';' read -ra color_values <<< "$clean_sequence"
-		r=$(printf "%02x" "${color_values[3]}")
-		g=$(printf "%02x" "${color_values[4]}")
-		b=$(printf "%02x" "${color_values[5]}")
-		hex_color="#$r$g$b"
-		_save_setting "COLOR_UNSELECTED" "$hex_color"
-
-		if [ "$PANELS_ENABLED" == true ];then
-			clean_sequence=${BLUE_BLACK#*\033}
-			clean_sequence=${clean_sequence%m}
-			IFS=';' read -ra color_values <<< "$clean_sequence"
-			r=$(printf "%02x" "${color_values[8]}")
-			g=$(printf "%02x" "${color_values[9]}")
-			b=$(printf "%02x" "${color_values[10]}")
-			hex_color="#$r$g$b"
-			_save_setting "COLOR_PANEL" "$hex_color"
-		fi
-
 		if [ "$VOICE_ENABLED" == true ]; then
 			_save_setting "VOICE_ENABLED" "true"
 		else
@@ -9545,14 +9517,16 @@ main() {
 						b=$(printf "%02x" "${color_values[5]}")
 						hex_color="#$r$g$b"
 						_save_setting "COLOR_UNSELECTED" "$hex_color"
-						clean_sequence=${BLUE_BLACK#*\033}
-						clean_sequence=${clean_sequence%m}
-						IFS=';' read -ra color_values <<< "$clean_sequence"
-						r=$(printf "%02x" "${color_values[8]}")
-						g=$(printf "%02x" "${color_values[9]}")
-						b=$(printf "%02x" "${color_values[10]}")
-						hex_color="#$r$g$b"
-						_save_setting "COLOR_PANEL" "$hex_color"
+						if [ "$PANELS_ENABLED" == true ]; then
+							clean_sequence=${BLUE_BLACK#*\033}
+							clean_sequence=${clean_sequence%m}
+							IFS=';' read -ra color_values <<< "$clean_sequence"
+							r=$(printf "%02x" "${color_values[8]}")
+							g=$(printf "%02x" "${color_values[9]}")
+							b=$(printf "%02x" "${color_values[10]}")
+							hex_color="#$r$g$b"
+							_save_setting "COLOR_PANEL" "$hex_color"
+						fi
 						echo -e "$CONFIG" >"$ALETHEIA/config"
 						draw_banner "SAVED"
 						tput el
