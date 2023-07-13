@@ -8329,6 +8329,62 @@ print_queue() {
 		elif [ "$inputchar" == "?" ]; then
 			queue_help_screen
 			continue
+		elif [ "$inputchar" == "<" ]; then
+			if [ "$current" -lt "$TOTAL_QUEUE" ]; then
+				if [ "$current" == "$POSITION" ]; then
+					POSITION=$(($POSITION+1))
+				elif [ "$(($current+1))" == "$POSITION" ]; then
+					POSITION=$(($POSITION-1))
+				fi
+				tmp="${queue_array[$current]}"
+				queue_array[$current]="${queue_array[$(($current-1))]}"
+				queue_array[$(($current-1))]="$tmp"
+				current=$(($current+1))
+				if [ "$current" -gt "$truepos" ]; then
+					killall espeak-ng >/dev/null 2>/dev/null
+					gtts_speak "page down"
+					CHANGED=true
+					if [ "$FLAGGED" == true ]; then
+						continue
+					fi
+					if [ "$(($pos+$number_per_page))" -le "$TOTAL_QUEUE" ]; then
+						if [ "$(($pos+($number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
+							pos="$(($TOTAL_QUEUE-$number_per_page+1))"
+						else
+							pos="$(($pos+$number_per_page))"
+						fi
+					fi
+				fi
+			fi
+		elif [ "$inputchar" == ">" ]; then
+			if [ "$current" -gt "1" ]; then
+				if [ "$current" == "$POSITION" ]; then
+					POSITION=$(($POSITION-1))
+				elif [ "$(($current-1))" == "$POSITION" ]; then
+					POSITION=$(($POSITION+1))
+				fi
+				tmp="${queue_array[$(($current-2))]}"
+				queue_array[$(($current-2))]="${queue_array[$(($current-1))]}"
+				queue_array[$(($current-1))]="$tmp"
+				current=$(($current-1))
+				if [ "$current" -lt "$(($truepos-$number_per_page+1))" ]; then
+					killall espeak-ng >/dev/null 2>/dev/null
+					gtts_speak "page up"
+					CHANGED=true
+					if [ "$pos" == "1" ]; then
+						continue
+					else
+						FLAGGED=false
+					fi
+					if [ "$number_per_page" -lt "$original_number_per_page" ]; then
+						number_per_page="$original_number_per_page"
+					fi
+					pos="$(($pos-$number_per_page))"
+					if [ "$pos" -le "0" ]; then
+						pos=1
+					fi
+				fi
+			fi
 		elif [ "$inputchar" == "p" ]; then
 			if [ "$PAUSE" == true ]; then
 				draw_position
