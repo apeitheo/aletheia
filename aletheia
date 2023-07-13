@@ -815,12 +815,12 @@ if [ "$LINES" -lt "7" ] || [ "$COLUMNS" -lt "33" ]; then
 fi
 
 REPEAT_HELP="Loop Controls
-5  Start Position
-7  End Position
-&  Save New Loop
 6  Switch Loops
-%  Remove Loop
+&  Lock New Loop
 ^X  Update Loop
+%  Remove Loop
+Z  Export Loop
+^L  Exported Loop
 S  Start -0.01
 F  Start +0.01
 s  Start -0.05
@@ -831,8 +831,10 @@ h  End -0.05
 l  End +0.05
 ,  Gap -1
 .  Gap +1
-e  End/Start Seam 
-^H  Seek to Start"
+e  Play Transition
+^H  Seek to Start
+5  Start Position
+7  End Position"
 
 VOICE_HELP="Voice Controls
 d  Toggle Voice
@@ -960,13 +962,16 @@ Search Controls
 S  New Search
 s  Jump To
 ^F  Add Songs
-Loop Controls
+Loop Editor Controls
 5  Start Position
 7  End Position
 6  Enter Loop 
 6  Switch Loops
-&  Lock Loop
-%  Unlock Loop
+&  Lock New Loop
+^X  Update Loop
+%  Remove Loop
+Z  Export Loop
+^L  Exported Loop
 ^E  Play Only Loops
 ^H  Seek to Start
 Video Controls
@@ -1799,11 +1804,16 @@ repeat() {
 				redraw_buffer
 				flagged=true
 			elif [ "$input_char" == "" ]; then
+				old_time_before=$time_before
+				time_before=`date +%s.%N`
 				load_loop_file
-				draw_pitch
-				draw_position
-				REPEAT_ONLY=false
-				return 200
+				if [ "$?" != "1" ]; then
+					draw_pitch
+					draw_position
+					REPEAT_ONLY=false
+					return 200
+				fi
+				flagged=true
 			elif [ "$input_char" == "Z" ]; then
 				old_time_before=$time_before
 				time_before=`date +%s.%N`
@@ -6353,6 +6363,9 @@ load_loop_file() {
 			LOOP=true
 			draw_pitch
 			draw_position
+		else
+			LOOP_ON=false
+			return 1
 		fi
 	else
 		LOOP_ON=false
