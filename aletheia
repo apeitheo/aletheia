@@ -442,8 +442,10 @@ if [ -e "$ALETHEIA/config" ]; then
 			green=$((16#${color:2:2}))
 			blue=$((16#${color:4:2}))
 
-			WHITE_BLACK="${WHITE%m};48;2;$bred;$bgreen;${bblue}m"
-			BLUE_BLACK="${BLUE%m};48;2;$bred;$bgreen;${bblue}m"
+			if [ "$PANELS_ENABLED" == true ]; then
+				WHITE_BLACK="${WHITE%m};48;2;$bred;$bgreen;${bblue}m"
+				BLUE_BLACK="${BLUE%m};48;2;$bred;$bgreen;${bblue}m"
+			fi
 			COLOR_ACCENT="\033[1;38;2;$bred;$bgreen;${bblue}m"
 		fi
 
@@ -8457,14 +8459,16 @@ save_settings() {
 		hex_color="#$r$g$b"
 		_save_setting "COLOR_UNSELECTED" "$hex_color"
 
-		clean_sequence=${BLUE_BLACK#*\033}
-		clean_sequence=${clean_sequence%m}
-		IFS=';' read -ra color_values <<< "$clean_sequence"
-		r=$(printf "%02x" "${color_values[8]}")
-		g=$(printf "%02x" "${color_values[9]}")
-		b=$(printf "%02x" "${color_values[10]}")
-		hex_color="#$r$g$b"
-		_save_setting "COLOR_PANEL" "$hex_color"
+		if [ "$PANELS_ENABLED" == true ];then
+			clean_sequence=${BLUE_BLACK#*\033}
+			clean_sequence=${clean_sequence%m}
+			IFS=';' read -ra color_values <<< "$clean_sequence"
+			r=$(printf "%02x" "${color_values[8]}")
+			g=$(printf "%02x" "${color_values[9]}")
+			b=$(printf "%02x" "${color_values[10]}")
+			hex_color="#$r$g$b"
+			_save_setting "COLOR_PANEL" "$hex_color"
+		fi
 
 		if [ "$VOICE_ENABLED" == true ]; then
 			_save_setting "VOICE_ENABLED" "true"
@@ -10428,6 +10432,9 @@ else
 
 	if [ -e "$ALETHEIA/config" ]; then
 		EQUALIZER="`cat $ALETHEIA/config | grep DEFAULT_EQUALIZER | cut -d'=' -f2`"
+		if [ "$EQUALIZER" == "" ]; then
+			EQUALIZER="$DEFAULT_EQUALIZER"
+		fi
 	fi
 	draw_equalizer
 
