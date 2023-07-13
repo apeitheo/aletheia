@@ -1481,7 +1481,7 @@ repeat() {
 				space=0
 			fi
 		else
-			draw_banner "NONE"
+			draw_banner "NO LOOPS"
 			gtts_speak "no loops"
 			sleep $BANNER_WAIT_TIME
 			draw_pitch
@@ -3614,7 +3614,7 @@ main_menu() {
 					VIDEO=false
 					load_only_loops true
 					if [ "$TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NONE"
+						draw_banner "NO LOOPS"
 						gtts_speak "no music loops"
 						sleep $BANNER_WAIT_TIME
 						continue
@@ -3628,7 +3628,7 @@ main_menu() {
 					VIDEO=false
 					set_only_locked false false false false true
 					if [ "$?" == "50" ]; then
-						draw_banner "NONE"
+						draw_banner "NO LOCKS"
 						gtts_speak "no locked music" true
 						sleep $BANNER_WAIT_TIME
 						#tput cup $LINES
@@ -3671,7 +3671,7 @@ main_menu() {
 					SHUFFLED=true
 					TOTAL_QUEUE=$index
 					if [ "$TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NONE"
+						draw_banner "NO MUSIC"
 						sleep $BANNER_WAIT_TIME
 						gtts_speak "no music" true
 						menu_start_over=true
@@ -10165,15 +10165,15 @@ if [ ! -d "$ALETHEIA/playlists/" ]; then
 fi
 
 if [ ! -d "$MUSICDIR" ]; then
-	mkdir "$MUSICDIR"
+	mkdir -p "$MUSICDIR"
 fi
 
 if [ ! -d "$SOUNDDIR" ]; then
-	mkdir "$MUSICDIR"
+	mkdir -p "$SOUNDDIR"
 fi
 
 if [ ! -d "$VIDEODIR" ]; then
-	mkdir "$VIDEODIR"
+	mkdir -p "$VIDEODIR"
 fi
 
 rm -f "$ALETHEIA/pipe*" >/dev/null 2>/dev/null
