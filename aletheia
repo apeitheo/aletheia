@@ -853,7 +853,7 @@ j  Page Down
 k  Page Up
 h  Selection Down
 l  Selection Up
-D  Remove Song
+x  Remove Song
 <  Move Song Up
 >  Move Song Down
 s  Keyword Search
@@ -8329,6 +8329,35 @@ print_queue() {
 		elif [ "$inputchar" == "?" ]; then
 			queue_help_screen
 			continue
+		elif [ "$inputchar" == "x" ]; then
+			if [ "$TOTAL_QUEUE" == "1" ]; then
+				continue
+			fi
+			for (( i=$(($current-1)); i < ${#queue_array[@]}; i++ )); do
+				queue_array[$i]="${queue_array[$(($i+1))]}"
+			done
+			unset queue_array[$i]
+			TOTAL_QUEUE=$(($TOTAL_QUEUE-1))
+			draw_position
+			if [ "$TOTAL_QUEUE" -lt "$number_per_page" ]; then
+				number_per_page=$TOTAL_QUEUE
+			fi
+			if [ "$(($pos+$number_per_page))" -gt "$TOTAL_QUEUE" ]; then
+				if [ "$pos" -gt 1 ]; then
+					pos=$(($pos-1))
+				fi
+			fi
+			if [ "$(($current-1))" == "$TOTAL_QUEUE" ]; then
+				current=$(($current-1))
+			fi
+			if [ "$current" == "$POSITION" ]; then
+				kill $MPLAYER_PID >/dev/null 2>/dev/null
+				#JUMP="$POSITION"
+				#return $RETURN_JUMP
+				POSITION=$(($POSITION-1))
+			elif [ "$current" -lt "$POSITION" ]; then
+				POSITION=$(($POSITION-1))
+			fi
 		elif [ "$inputchar" == "<" ]; then
 			if [ "$current" -lt "$TOTAL_QUEUE" ]; then
 				if [ "$current" == "$POSITION" ]; then
