@@ -13,6 +13,7 @@
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details,
 # available at https://www.gnu.org/licenses/
 #
+# GitHub:  https://github.com/apeitheo/aletheia
 # Support: https://www.patreon.com/aletheia_project
 
 OS=$(uname -s)
@@ -86,20 +87,9 @@ LINE_CHAR_END="\033(B"
 TOP_BAR_MENU="${LINE_CHAR}lqqqqqqqqk$LINE_CHAR_END"
 BOTTOM_BAR_MENU="${LINE_CHAR}mqqqqqqqqj$LINE_CHAR_END"
 BAR="${LINE_CHAR}x${LINE_CHAR_END}"
-DARK_BACKGROUND=${DARK_BACKGROUND:-true}
+DARK_BACKGROUND=${DARK_BACKGROUND:-""}
 NOCOLOR="\033[0m"
-
-if [ "$DARK_BACKGROUND" == true ]; then
-	WHITE='\033[1;37m'
-	LIGHTWHITE='\033[0;37m'
-	WHITE_BLACK='\033[1;37;1;40m'
-else
-	WHITE='\033[1;30m'
-	LIGHTWHITE='\033[0;30m'
-	WHITE_BLACK='\033[1;30;1;40m'
-fi
-
-COLOR_PANEL="#162934"
+DEFAULT_THEME=true
 
 if [ "$COLORS_ENABLED" == false ]; then
 	GREEN_BLACK='\033[1;37;1;40m'
@@ -253,7 +243,7 @@ get_system_volume() {
 get_system_volume
 
 read_config() {
-	echo -ne "`echo \"$CONFIG\" | grep -i "$1" | cut -d'=' -f2 | sed -e \"s/^ *//g\" | sed -e \"s/* $//g\" | tr '[:upper:]' '[:lower:]'`"
+	echo -ne "$CONFIG" | grep -i "$1" | cut -d'=' -f2 | sed -e "s/^ *//g" | sed -e "s/* $//g" | tr '[:upper:]' '[:lower:]' | sed "s/\"//g" | sed "s/'//g"
 }
 
 if [ -e "$ALETHEIA/config" ]; then
@@ -324,9 +314,13 @@ if [ -e "$ALETHEIA/config" ]; then
 			WHITE_BLACK='\033[1;37m'
 		fi
 
-		value="`read_config \"DARK_BACKGROUND\"`"
-		if [ "$value" != "" ]; then
-			DARK_BACKGROUND="$value"
+		if [ "$DARK_BACKGROUND" == "" ]; then
+			value="`read_config \"DARK_BACKGROUND\"`"
+			if [ "$value" != "" ]; then
+				DARK_BACKGROUND="$value"
+			else
+				DARK_BACKGROUND=true
+			fi
 		fi
 
 		value="`read_config \"COLORS_ENABLED\"`"
@@ -334,44 +328,6 @@ if [ -e "$ALETHEIA/config" ]; then
 			COLORS_ENABLED="$value"
 		fi
 
-		if [ "$COLORS_ENABLED" == false ]; then
-			GREEN_BLACK='\033[1;37;1;40m'
-			BLUE_BLACK='\033[1;37;1;40m'
-			RED_BLACK='\033[1;37;1;40m'
-			CYAN_BLACK='\033[1;37;1;40m'
-			RED='\033[1;37m'
-			LIGHTRED='\033[0;37m'
-			GREEN='\033[1;37m'
-			BLUE='\033[1;37m'
-			YELLOW='\033[1;37m'
-			LIGHTBLUE='\033[1;37m'
-			PURPLE='\033[1;37m'
-			CYAN='\033[1;37m'
-		else
-			RED='\033[1;31m'
-			LIGHTRED='\033[0;31m'
-			GREEN='\033[1;32m'
-			BLUE='\033[1;34m'
-			YELLOW='\033[1;33m'
-			LIGHTBLUE='\033[1;34m'
-			PURPLE='\033[1;35m'
-			CYAN='\033[1;36m'
-			LIGHTCYAN='\033[0;36m'
-			LIGHTRED='\033[0;31m'
-			if [ "$PANELS_ENABLED" == true ]; then
-				GREEN_BLACK='\033[1;32;1;40m'
-				RED_BLACK='\033[1;31;1;40m'
-				CYAN_BLACK='\033[1;36;1;40m'
-				BLUE_BLACK='\033[1;34;1;40m'
-				WHITE_BLACK='\033[1;37;1;40m'
-			else
-				GREEN_BLACK='\033[1;32m'
-				RED_BLACK='\033[1;31m'
-				CYAN_BLACK='\033[1;36m'
-				BLUE_BLACK='\033[1;34m'
-				WHITE_BLACK='\033[1;37m'
-			fi
-		fi
 		if [ "$DARK_BACKGROUND" == true ]; then
 			WHITE='\033[1;37m'
 			LIGHTWHITE='\033[0;37m'
@@ -428,25 +384,31 @@ if [ -e "$ALETHEIA/config" ]; then
 			COLOR_PANEL="$value"
 
 			colorblue="${COLOR_PANEL#"#"}"
-			bred=$((16#${colorblue:0:2}))
-			bgreen=$((16#${colorblue:2:2}))
-			bblue=$((16#${colorblue:4:2}))
-
-			colorwhite="${COLOR_UNSELECTED#"#"}"
-			wred=$((16#${colorwhite:0:2}))
-			wgreen=$((16#${colorwhite:2:2}))
-			wblue=$((16#${colorwhite:4:2}))
-			
-			color="${value#"#"}"
-			red=$((16#${color:0:2}))
-			green=$((16#${color:2:2}))
-			blue=$((16#${color:4:2}))
+			red=$((16#${colorblue:0:2}))
+			green=$((16#${colorblue:2:2}))
+			blue=$((16#${colorblue:4:2}))
 
 			if [ "$PANELS_ENABLED" == true ]; then
-				WHITE_BLACK="${WHITE%m};48;2;$bred;$bgreen;${bblue}m"
-				BLUE_BLACK="${BLUE%m};48;2;$bred;$bgreen;${bblue}m"
+				WHITE_BLACK="${WHITE%m};48;2;$red;$green;${blue}m"
+				BLUE_BLACK="${BLUE%m};48;2;$red;$green;${blue}m"
 			fi
-			COLOR_ACCENT="\033[1;38;2;$bred;$bgreen;${bblue}m"
+			COLOR_ACCENT="\033[1;38;2;$red;$green;${blue}m"
+		fi
+
+		value="`read_config \"DEFAULT_THEME\"`"
+		if [ "$value" != "" ]; then
+			DEFAULT_THEME="$value"
+			OVERRIDE=true
+		else
+			OVERRIDE=false
+		fi
+
+		if [ "$OVERRIDE" == false ]; then
+			if [ "$COLOR_HIGHLIGHT" == "" ] || [ "$COLOR_PANEL" == "" ] || [ "$COLOR_UNSELECTED" == "" ]; then
+				DEFAULT_THEME=true
+			else
+				DEFAULT_THEME=false
+			fi
 		fi
 
 		value="`read_config \"COLOR_SELECTED\"`"
@@ -465,6 +427,65 @@ if [ -e "$ALETHEIA/config" ]; then
 				GREEN_BLACK="\033[1;38;2;${red};${green};${blue}m"
 			fi
 		fi
+
+		if [ "$COLORS_ENABLED" == false ]; then
+			GREEN_BLACK='\033[1;37;1;40m'
+			BLUE_BLACK='\033[1;37;1;40m'
+			RED_BLACK='\033[1;37;1;40m'
+			CYAN_BLACK='\033[1;37;1;40m'
+			RED='\033[1;37m'
+			LIGHTRED='\033[0;37m'
+			GREEN='\033[1;37m'
+			BLUE='\033[1;37m'
+			YELLOW='\033[1;37m'
+			LIGHTBLUE='\033[1;37m'
+			PURPLE='\033[1;37m'
+			CYAN='\033[1;37m'
+			DEFAULT_THEME=false
+		fi
+	fi
+fi
+
+if [ "$DARK_BACKGROUND" == "" ]; then
+	DARK_BACKGROUND=true
+fi
+
+if [ "$DEFAULT_THEME" == true ]; then
+	if [ "$DARK_BACKGROUND" == true ]; then
+		COLOR_UNSELECTED="#FFFFFF"
+		COLOR_PANEL="#272727"
+		COLOR_HIGHLIGHT="#83B7E6"
+	else
+		COLOR_UNSELECTED="#000000"
+		COLOR_PANEL="#E2E2E2"
+		COLOR_HIGHLIGHT="#336699"
+	fi
+
+	color="${COLOR_UNSELECTED#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+	WHITE="\033[1;38;2;$red;$green;${blue}m"
+
+	color="${COLOR_HIGHLIGHT#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+	BLUE="\033[1;38;2;$red;$green;${blue}m"
+
+	color="${COLOR_PANEL#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+
+	COLOR_ACCENT="\033[1;38;2;$red;$green;${blue}m"
+
+	if [ "$PANELS_ENABLED" == true ]; then
+		WHITE_BLACK="${WHITE%m};48;2;$red;$green;${blue}m"
+		BLUE_BLACK="${BLUE%m};48;2;$red;$green;${blue}m"
+	else
+		WHITE_BLACK="$WHITE"
+		BLUE_BLACK="$BLUE"
 	fi
 fi
 
@@ -985,10 +1006,11 @@ W  Add Downloads
 ^W  Jump Downloads
 ^N  Add and Jump
 Advanced Controls
+^A  Select Theme
 ^P  Toggle Panels
+^D  Toggle Dark Mode
 ^O  Invert Color
-^Y  Color On/Off
-^A  Select Color
+^Y  Toggle Color
 z  Redraw Screen
 ~  Sleep mode
 |  Vanish Editor"
@@ -2951,6 +2973,157 @@ scale_edo() {
 	fi
 }
 
+draw_menu() {
+	tput cup $first $(($COLUMNS/2-5-$moveleft))
+		menu_buf="$PADDING$COLOR_ACCENT$TOP_BAR_MENU`tput el`"
+	if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+		menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk${LINE_CHAR_END}`tput el`"
+	else
+		menu_buf="$menu_buf"
+	fi
+
+	for i in `seq 1 $TOTAL_OPTS`; do
+		pad="  "
+		temp="${#OPT[$i]}"
+		while [ "$temp" -le "$pad_" ]; do
+			pad="$pad "
+			temp="$(($temp+1))"
+		done
+		if [ "${OPT[$i]}" == "Music" ]; then #|| [ "${OPT[$i]}" == "Sound" ] || [ "${OPT[$i]}" == "Video" ]; then
+			arrow=" ›"
+		else
+			arrow="  "
+		fi
+		if [ "$i" = "$SELECTION" ]; then
+			COLOR="$WHITE"
+			if [ "${#OPT[$i]}" -lt "5" ]; then
+				pad=" "
+			else
+				pad=""
+			fi
+			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLUMNS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+				if [ "$SELECTION" == "1" ]; then
+					if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
+						menu_buf="${menu_buf}${BLUE_BLACK} Loops $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					elif [ "$i" == "1" ]; then
+						menu_buf="${menu_buf}$WHITE Loops $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					fi
+				fi
+			fi
+			if [ "$SOUND_RIGHT_WINDOW" == true ]; then
+				if [ "$SELECTION" == "1" ]; then
+					menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk$LINE_CHAR_END`tput el`"
+				elif [ "$SELECTION" == "2" ]; then
+					if [ "$SOUND_SELECTION" == "1" ] && [ "$i" == "2" ]; then
+						menu_buf="${menu_buf}${BLUE_BLACK} Loops $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					elif [ "$i" == "2" ]; then
+						menu_buf="${menu_buf}$WHITE Loops $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					fi
+				fi
+			fi
+			if [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+				if [ "$i" == "2" ]; then
+					menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk$LINE_CHAR_END`tput el`"
+				elif [ "$i" == "3" ] || [ "$i" == "4" ]; then
+					if [ "$VIDEO_SELECTION" == "1" ] && [ "$i" == "3" ]; then
+						menu_buf="${menu_buf}${BLUE_BLACK} Loops $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					elif [ "$i" == "3" ]; then
+						menu_buf="${menu_buf}$WHITE Loops $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					fi
+				fi
+			fi
+			if [ "$tagged" == false ] || [ "$tagged" == "" ]; then
+				if [ "$nospeak" == false ]; then
+					if [ "$menu_start_over" == true ]; then
+						if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+							gtts_speak "menu, ${OPT[$i]}, ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}"
+						elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
+							gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
+						elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+							gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
+						else
+							gtts_speak "menu, ${OPT[$i]}"
+						fi
+						menu_start_over=false
+					else
+						if [ "$NO_QUEUE_FLAG" == false ]; then
+							if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}"
+							elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
+								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
+							elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
+							else
+								gtts_speak "${OPT[$i]}"
+							fi
+						else
+							NO_QUEUE_FLAG=false
+						fi
+					fi
+				fi
+			fi
+		else
+			if [ "${#OPT[$i]}" -lt "5" ]; then
+				pad=" "
+			else
+				pad=""
+			fi
+			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLUMNS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
+			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+				if [ "$SELECTION" == "1" ]; then
+					if [ "$i" -ge "2" ]; then
+							if [ "$MUSIC_SELECTION" == "$i" ] && [ "$i" == "2" ]; then
+								menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$i]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+							elif [ "$i" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+								menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$i]} $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+							fi
+					fi
+				fi
+			fi
+			if [ "$SOUND_RIGHT_WINDOW" == true ]; then
+				if [[ ( "$SELECTION" == "2" || "$SELECTION" == "3" ) && ( "$i" == "2" || "$i" == "3" ) ]]; then
+					if [ "$SOUND_SELECTION" == "$(($i-1))" ]; then
+						menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$(($i-1))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					elif [ "$(($i-1))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-1))]} $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					fi
+				elif [ "$i" == "1" ]; then
+					menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqk$LINE_CHAR_END`tput el`"
+				fi
+			fi
+
+			if [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+				if [ "$SELECTION" == "3" ] && [ "$i" == "4" ]; then
+					if [ "$VIDEO_SELECTION" == "$(($i-2))" ]; then
+						menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$(($i-2))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					elif [ "$(($i-2))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-2))]} $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
+					fi
+				elif [ "$i" == "2" ]; then
+					menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqk$LINE_CHAR_END`tput el`"
+				fi
+			fi
+
+			if [ "$i" == "3" ] && [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+				menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqj$LINE_CHAR_END`tput el`"
+			fi
+			if [ "$i" == "4" ] && [ "$SOUND_RIGHT_WINDOW" == true ]; then
+				menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqj$LINE_CHAR_END`tput el`"
+			fi
+			if [ "$i" == "5" ] && [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+				menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqj$LINE_CHAR_END`tput el`"
+			fi
+		fi
+	done
+
+	menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLUMNS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
+
+	tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLUMNS/2-5-$moveleft))
+
+	echo -ne "$menu_buf"
+}
+
 main_menu() {
 	z=""
 	old_LINES=$LINES
@@ -3028,154 +3201,7 @@ main_menu() {
 			else
 				moveleft=0
 			fi
-			tput cup $first $(($COLUMNS/2-5-$moveleft))
-				menu_buf="$PADDING$COLOR_ACCENT$TOP_BAR_MENU`tput el`"
-			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-				menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk${LINE_CHAR_END}`tput el`"
-			else
-				menu_buf="$menu_buf"
-			fi
-
-			for i in `seq 1 $TOTAL_OPTS`; do
-				pad="  "
-				temp="${#OPT[$i]}"
-				while [ "$temp" -le "$pad_" ]; do
-					pad="$pad "
-					temp="$(($temp+1))"
-				done
-				if [ "${OPT[$i]}" == "Music" ]; then #|| [ "${OPT[$i]}" == "Sound" ] || [ "${OPT[$i]}" == "Video" ]; then
-					arrow=" ›"
-				else
-					arrow="  "
-				fi
-				if [ "$i" = "$SELECTION" ]; then
-					COLOR="$WHITE"
-					if [ "${#OPT[$i]}" -lt "5" ]; then
-						pad=" "
-					else
-						pad=""
-					fi
-					menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT`tput cuf $(($COLUMNS/2-5-$moveleft))`$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
-					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-						if [ "$SELECTION" == "1" ]; then
-							if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
-								menu_buf="${menu_buf}${BLUE_BLACK} Loops $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							elif [ "$i" == "1" ]; then
-								menu_buf="${menu_buf}$WHITE Loops $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							fi
-						fi
-					fi
-					if [ "$SOUND_RIGHT_WINDOW" == true ]; then
-						if [ "$SELECTION" == "1" ]; then
-							menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk$LINE_CHAR_END`tput el`"
-						elif [ "$SELECTION" == "2" ]; then
-							if [ "$SOUND_SELECTION" == "1" ] && [ "$i" == "2" ]; then
-								menu_buf="${menu_buf}${BLUE_BLACK} Loops $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							elif [ "$i" == "2" ]; then
-								menu_buf="${menu_buf}$WHITE Loops $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							fi
-						fi
-					fi
-					if [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-						if [ "$i" == "2" ]; then
-							menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk$LINE_CHAR_END`tput el`"
-						elif [ "$i" == "3" ] || [ "$i" == "4" ]; then
-							if [ "$VIDEO_SELECTION" == "1" ] && [ "$i" == "3" ]; then
-								menu_buf="${menu_buf}${BLUE_BLACK} Loops $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							elif [ "$i" == "3" ]; then
-								menu_buf="${menu_buf}$WHITE Loops $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							fi
-						fi
-					fi
-					if [ "$tagged" == false ] || [ "$tagged" == "" ]; then
-						if [ "$nospeak" == false ]; then
-							if [ "$menu_start_over" == true ]; then
-								if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-									gtts_speak "menu, ${OPT[$i]}, ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}"
-								elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
-									gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
-								elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-									gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
-								else
-									gtts_speak "menu, ${OPT[$i]}"
-								fi
-								menu_start_over=false
-							else
-								if [ "$NO_QUEUE_FLAG" == false ]; then
-									if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-										gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}"
-									elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
-										gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
-									elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-										gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
-									else
-										gtts_speak "${OPT[$i]}"
-									fi
-								else
-									NO_QUEUE_FLAG=false
-								fi
-							fi
-						fi
-					fi
-				else
-					if [ "${#OPT[$i]}" -lt "5" ]; then
-						pad=" "
-					else
-						pad=""
-					fi
-					menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLUMNS/2-5-$moveleft))`$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR`tput el`"
-					if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-						if [ "$SELECTION" == "1" ]; then
-							if [ "$i" -ge "2" ]; then
-									if [ "$MUSIC_SELECTION" == "$i" ] && [ "$i" == "2" ]; then
-										menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$i]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-									elif [ "$i" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-										menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$i]} $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-									fi
-							fi
-						fi
-					fi
-					if [ "$SOUND_RIGHT_WINDOW" == true ]; then
-						if [[ ( "$SELECTION" == "2" || "$SELECTION" == "3" ) && ( "$i" == "2" || "$i" == "3" ) ]]; then
-							if [ "$SOUND_SELECTION" == "$(($i-1))" ]; then
-								menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$(($i-1))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							elif [ "$(($i-1))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-								menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-1))]} $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							fi
-						elif [ "$i" == "1" ]; then
-							menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqk$LINE_CHAR_END`tput el`"
-						fi
-					fi
-
-					if [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-						if [ "$SELECTION" == "3" ] && [ "$i" == "4" ]; then
-							if [ "$VIDEO_SELECTION" == "$(($i-2))" ]; then
-								menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$(($i-2))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							elif [ "$(($i-2))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-								menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-2))]} $COLOR_ACCENT$BAR$NOCOLOR`tput el`"
-							fi
-						elif [ "$i" == "2" ]; then
-							menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqk$LINE_CHAR_END`tput el`"
-						fi
-					fi
-
-					if [ "$i" == "3" ] && [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-						menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqj$LINE_CHAR_END`tput el`"
-					fi
-					if [ "$i" == "4" ] && [ "$SOUND_RIGHT_WINDOW" == true ]; then
-						menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqj$LINE_CHAR_END`tput el`"
-					fi
-					if [ "$i" == "5" ] && [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-						menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqj$LINE_CHAR_END`tput el`"
-					fi
-				fi
-			done
-
-			menu_buf="$menu_buf\n$PADDING`tput cuf $(($COLUMNS/2-5-$moveleft))`$COLOR_ACCENT$BOTTOM_BAR_MENU`tput el`"
-
-			tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLUMNS/2-5-$moveleft))
-
-			echo -ne "$menu_buf"
+			draw_menu
 		fi
 
 		if [ "$z" == "" ]; then
@@ -3322,6 +3348,14 @@ main_menu() {
 		elif [ "$z" == "a" ]; then
 			set_equalizer false true
 			draw_equalizer
+			z=""
+			continue
+		elif [ "$z" == "" ]; then
+			toggle_dark_mode
+			z=""
+			continue
+		elif [ "$z" == "" ]; then
+			select_color true
 			z=""
 			continue
 		elif [ "$z" == "|" ]; then
@@ -5907,6 +5941,219 @@ toggle_panels() {
 	draw_position
 }
 
+draw_select_color_indicator() {
+	RIGHT_BANNER_WIDTH="29"
+	if [ "$(($COLUMNS-$RIGHT_BANNER_WIDTH-$LEFT_BANNER_WIDTH-2-(${#PADDING}*2)))" -gt "1" ]; then
+		tput cup $LINES $(($COLUMNS-${#PADDING}-$RIGHT_BANNER_WIDTH))
+		echo -ne "${BLUE_BLACK}v:${WHITE_BLACK}invert ${BLUE_BLACK}#:${WHITE_BLACK}save ${BLUE_BLACK}n:${WHITE_BLACK}next ${BLUE_BLACK}b:${WHITE_BLACK}back$PADDING"
+		echo -ne "$COLOR_TEXT"
+	else
+		draw_position
+	fi
+}
+
+select_color() {
+	orig_BLUE=$BLUE
+	orig_BLUE_BLACK=$BLUE_BLACK
+	orig_WHITE=$WHITE
+	orig_WHITE_BLACK=$WHITE_BLACK
+	orig_COLOR_ACCENT=$COLOR_ACCENT
+	gtts_speak "select color"
+	if [ "$complementary_color" == "" ]; then
+		complementary_color=false
+	fi
+	char=""
+	until [ "$char" == "q" ]; do
+		if [ "$char" == "n" ] || [ "$char" == "" ]; then
+			gtts_speak "next color"
+			prev_BLUE=$BLUE
+			prev_BLUE_BLACK=$BLUE_BLACK
+			lBLUE=$(generate_random_color)
+			color="${lBLUE#"#"}"
+			bred=$((16#${color:0:2}))
+			bgreen=$((16#${color:2:2}))
+			bblue=$((16#${color:4:2}))
+			BLUE="\033[1;38;2;${bred};${bgreen};${bblue}m"
+
+			prev_WHITE=$WHITE
+			prev_WHITE_BLACK=$WHITE_BLACK
+			if [ "$complementary_color" == true ]; then
+				lWHITE=$(generate_complementary_color "$BLUE")
+			else
+				lWHITE=$(generate_random_color)
+			fi
+			color="${lWHITE#"#"}"
+			wred=$((16#${color:0:2}))
+			wgreen=$((16#${color:2:2}))
+			wblue=$((16#${color:4:2}))
+			WHITE="\033[1;38;2;${wred};${wgreen};${wblue}m"
+			WHITE_BLACK="\033[1;38;2;${wred};${wgreen};${wblue}m"
+
+			newBLUE=$(generate_dark_random_color)
+			color="${newBLUE#"#"}"
+			red=$((16#${color:0:2}))
+			green=$((16#${color:2:2}))
+			blue=$((16#${color:4:2}))
+
+			if [ "$PANELS_ENABLED" == true ]; then
+				WHITE_BLACK="\033[1;38;2;$wred;$wgreen;$wblue;48;2;$red;$green;${blue}m"
+				BLUE_BLACK="\033[1;38;2;$bred;$bgreen;$bblue;48;2;$red;$green;${blue}m"
+			else
+				WHITE_BLACK="$WHITE"
+				BLUE_BLACK="$BLUE"
+			fi
+			prev_COLOR_ACCENT=$COLOR_ACCENT
+			COLOR_ACCENT="\033[1;38;2;$red;$green;${blue}m"
+		elif [ "$char" == "b" ]; then
+			gtts_speak "previous color"
+			BLUE=$prev_BLUE
+			BLUE_BLACK=$prev_BLUE_BLACK
+			WHITE=$prev_WHITE
+			WHITE_BLACK=$prev_WHITE_BLACK
+			COLOR_ACCENT=$prev_COLOR_ACCENT
+		elif [ "$char" == "#" ]; then
+			DEFAULT_THEME=false
+			COLORS_ENABLED=true
+			_save_setting "DEFAULT_THEME" "$DEFAULT_THEME"
+			_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
+			clean_sequence=${BLUE#*\033}
+			clean_sequence=${clean_sequence%m}
+			IFS=';' read -ra color_values <<< "$clean_sequence"
+			r=$(printf "%02x" "${color_values[3]}")
+			g=$(printf "%02x" "${color_values[4]}")
+			b=$(printf "%02x" "${color_values[5]}")
+			hex_color="#$r$g$b"
+			_save_setting "COLOR_HIGHLIGHT" "$hex_color"
+			clean_sequence=${WHITE#*\033}
+			clean_sequence=${clean_sequence%m}
+			IFS=';' read -ra color_values <<< "$clean_sequence"
+			r=$(printf "%02x" "${color_values[3]}")
+			g=$(printf "%02x" "${color_values[4]}")
+			b=$(printf "%02x" "${color_values[5]}")
+			hex_color="#$r$g$b"
+			_save_setting "COLOR_UNSELECTED" "$hex_color"
+			if [ "$PANELS_ENABLED" == true ]; then
+				clean_sequence=${BLUE_BLACK#*\033}
+				clean_sequence=${clean_sequence%m}
+				IFS=';' read -ra color_values <<< "$clean_sequence"
+				r=$(printf "%02x" "${color_values[8]}")
+				g=$(printf "%02x" "${color_values[9]}")
+				b=$(printf "%02x" "${color_values[10]}")
+				hex_color="#$r$g$b"
+				_save_setting "COLOR_PANEL" "$hex_color"
+			fi
+			echo -e "$CONFIG" >"$ALETHEIA/config"
+			draw_banner "SAVED"
+			tput el
+			gtts_speak "color saved"
+			sleep $BANNER_WAIT_TIME
+			break
+		elif [ "$char" == "v" ]; then
+			tmpBLUE=$BLUE
+			tmpBLUE_BLACK=$BLUE_BLACK
+			BLUE=$WHITE
+			BLUE_BLACK=$WHITE_BLACK
+			WHITE=$tmpBLUE
+			WHITE_BLACK=$tmpBLUE_BLACK
+		elif [ "$char" == "c" ]; then
+			if [ "$complementary_color" == true ]; then
+				complementary_color=false
+				gtts_speak "random"
+			else
+				gtts_speak "complementary"
+				complementary_color=true
+			fi
+			draw_select_color_indicator
+			flaggy=true
+			char="n"
+		fi
+		reset_buffer
+		draw_volume
+		draw_equalizer
+		if [ "$1" != true ]; then
+			redraw_buffer
+		else
+			draw_menu
+		fi
+		draw_banner "COLOR"
+		draw_select_color_indicator
+		if [ "$flaggy" != true ]; then
+			read -rsn1 char
+		else
+			flaggy=false
+		fi
+	done
+	RIGHT_BANNER_WIDTH="$((${#POSITION}+${#TOTAL_QUEUE}+3))"
+	if [ "$char" != "q" ]; then
+		draw_banner "WAIT"
+		render_help_screen
+		render_voice_settings_screen
+		render_repeat_help_screen
+		render_scale_help_screen
+	else
+		draw_banner "WAIT"
+		draw_position
+		BLUE=$orig_BLUE
+		BLUE_BLACK=$orig_BLUE_BLACK
+		WHITE=$orig_WHITE
+		WHITE_BLACK=$orig_WHITE_BLACK
+		COLOR_ACCENT=$orig_COLOR_ACCENT
+		reset_buffer
+	fi
+	if [ "$1" != true ]; then
+		redraw_screen
+	fi
+}
+
+toggle_dark_mode() {
+	DEFAULT_THEME=true
+	if [ "$DARK_BACKGROUND" == true ]; then
+		DARK_BACKGROUND=false
+		draw_banner "LIGHT"
+		sleep $BANNER_WAIT_TIME
+	elif [ "$DARK_BACKGROUND" == false ]; then
+		DARK_BACKGROUND=true
+		draw_banner "DARK"
+		sleep $BANNER_WAIT_TIME
+	fi
+	if [ "$DARK_BACKGROUND" == true ]; then
+		COLOR_UNSELECTED="#FFFFFF"
+		COLOR_PANEL="#272727"
+		COLOR_HIGHLIGHT="#83B7E6"
+	else
+		COLOR_UNSELECTED="#000000"
+		COLOR_PANEL="#E2E2E2"
+		COLOR_HIGHLIGHT="#336699"
+	fi
+
+	color="${COLOR_UNSELECTED#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+	WHITE="\033[1;38;2;$red;$green;${blue}m"
+
+	color="${COLOR_HIGHLIGHT#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+	BLUE="\033[1;38;2;$red;$green;${blue}m"
+
+	color="${COLOR_PANEL#"#"}"
+	red=$((16#${color:0:2}))
+	green=$((16#${color:2:2}))
+	blue=$((16#${color:4:2}))
+
+	COLOR_ACCENT="\033[1;38;2;$red;$green;${blue}m"
+
+	if [ "$PANELS_ENABLED" == true ]; then
+		WHITE_BLACK="${WHITE%m};48;2;$red;$green;${blue}m"
+		BLUE_BLACK="${BLUE%m};48;2;$red;$green;${blue}m"
+	else
+		WHITE_BLACK="$WHITE"
+		BLUE_BLACK="$BLUE"
+	fi
+}
+
 toggle_colors() {
 	draw_wait
 	if [ "$COLORS_ENABLED" == false ]; then
@@ -5938,7 +6185,7 @@ toggle_colors() {
 	else
 		orig_blue_black=$BLUE_BLACK
 		orig_white_black=$WHITE_BLACK
-		orig
+		orig_blue=$BLUE
 		COLORS_ENABLED=false
 		if [ "$PANELS_ENABLED" == true ]; then
 			GREEN_BLACK='\033[1;37;1;40m'
@@ -8466,6 +8713,7 @@ print_queue() {
 					BUFFER="$BUFFER_BACKUP"
 				fi
 				echo -ne "$NOCOLOR"
+				reset_buffer
 				draw_equalizer
 				draw_volume
 				draw_pitch
@@ -8527,6 +8775,7 @@ save_settings() {
 		_save_setting "ONLY_VOICE_TITLES" "$ONLY_VOICE_TITLES"
 		_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
 		_save_setting "DEFAULT_EQUALIZER" "$DEFAULT_EQUALIZER"
+		_save_setting "DEFAULT_THEME" "$DEFAULT_THEME"
 		if [ "$VOICE_ENABLED" == true ]; then
 			_save_setting "VOICE_ENABLED" "true"
 		else
@@ -8907,7 +9156,11 @@ main() {
 					if [ "`isnum \"$percent\"`" == "0" ]; then
 						percent=1
 					fi
-					total_=$(($COLUMNS-(${#PADDING}*2)-14))
+					if [ "$hours" == "00" ]; then
+						total_=$(($COLUMNS-(${#PADDING}*2)-14))
+					else
+						total_=$(($COLUMNS-(${#PADDING}*2)-17))
+					fi
 					PAUSE=false
 					tput cup $LINES
 					echo -ne "$BLUE_BLACK${PADDING}00$WHITE_BLACK:${BLUE_BLACK}00 "
@@ -8920,9 +9173,11 @@ main() {
 					printf '%*s' $percent | tr " " "="
 					printf '%*s' $(($total_ - $percent))
 					echo -ne "$BLUE_BLACK] "
-					minutes="$(echo -ne "$SONG_LENGTH" | cut -d':' -f1)"
-					seconds="$(echo -ne "$SONG_LENGTH" | cut -d':' -f2)"
-					echo -ne "$BLUE$minutes$WHITE:$BLUE$seconds$PADDING"
+					if [ "$hours" == "00" ]; then
+						echo -ne "$BLUE_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING"
+					else
+						echo -ne "$BLUE_BLACK$hours$WHITE_BLACK:$BLUE_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING"
+					fi
 					if [ "`echo -ne \"$minutes\" | cut -c 1`" == "0" ]; then
 						minutes="`echo -ne \"$minutes\" | cut -c 2`"
 					fi
@@ -9516,158 +9771,10 @@ main() {
 				toggle_scale_tempo
 				;;
 			'')
-				draw_indicator() {
-					RIGHT_BANNER_WIDTH="29"
-					if [ "$(($COLUMNS-$RIGHT_BANNER_WIDTH-$LEFT_BANNER_WIDTH-2-(${#PADDING}*2)))" -gt "1" ]; then
-						tput cup $LINES $(($COLUMNS-${#PADDING}-$RIGHT_BANNER_WIDTH))
-						echo -ne "${BLUE_BLACK}v:${WHITE_BLACK}invert ${BLUE_BLACK}#:${WHITE_BLACK}save ${BLUE_BLACK}n:${WHITE_BLACK}next ${BLUE_BLACK}b:${WHITE_BLACK}back$PADDING"
-						echo -ne "$COLOR_TEXT"
-					else
-						draw_position
-					fi
-				}
-
-				orig_BLUE=$BLUE
-				orig_BLUE_BLACK=$BLUE_BLACK
-				orig_WHITE=$WHITE
-				orig_WHITE_BLACK=$WHITE_BLACK
-				orig_COLOR_ACCENT=$COLOR_ACCENT
-				gtts_speak "select color"
-				if [ "$complementary_color" == "" ]; then
-					complementary_color=false
-				fi
-				char=""
-				until [ "$char" == "q" ]; do
-					if [ "$char" == "n" ] || [ "$char" == "" ]; then
-						gtts_speak "next color"
-						prev_BLUE=$BLUE
-						prev_BLUE_BLACK=$BLUE_BLACK
-						lBLUE=$(generate_random_color)
-						color="${lBLUE#"#"}"
-						bred=$((16#${color:0:2}))
-						bgreen=$((16#${color:2:2}))
-						bblue=$((16#${color:4:2}))
-						BLUE="\033[1;38;2;${bred};${bgreen};${bblue}m"
-
-						prev_WHITE=$WHITE
-						prev_WHITE_BLACK=$WHITE_BLACK
-						if [ "$complementary_color" == true ]; then
-							lWHITE=$(generate_complementary_color "$BLUE")
-						else
-							lWHITE=$(generate_random_color)
-						fi
-						color="${lWHITE#"#"}"
-						wred=$((16#${color:0:2}))
-						wgreen=$((16#${color:2:2}))
-						wblue=$((16#${color:4:2}))
-						WHITE="\033[1;38;2;${wred};${wgreen};${wblue}m"
-						WHITE_BLACK="\033[1;38;2;${wred};${wgreen};${wblue}m"
-
-						newBLUE=$(generate_dark_random_color)
-						color="${newBLUE#"#"}"
-						red=$((16#${color:0:2}))
-						green=$((16#${color:2:2}))
-						blue=$((16#${color:4:2}))
-						
-						if [ "$PANELS_ENABLED" == true ]; then
-							WHITE_BLACK="\033[1;38;2;$wred;$wgreen;$wblue;48;2;$red;$green;${blue}m"
-							BLUE_BLACK="\033[1;38;2;$bred;$bgreen;$bblue;48;2;$red;$green;${blue}m"
-						else
-							WHITE_BLACK="$WHITE"
-							BLUE_BLACK="$BLUE"
-						fi
-						prev_COLOR_ACCENT=$COLOR_ACCENT
-						COLOR_ACCENT="\033[1;38;2;$red;$green;${blue}m"
-					elif [ "$char" == "b" ]; then
-						gtts_speak "previous color"
-						BLUE=$prev_BLUE
-						BLUE_BLACK=$prev_BLUE_BLACK
-						WHITE=$prev_WHITE
-						WHITE_BLACK=$prev_WHITE_BLACK
-						COLOR_ACCENT=$prev_COLOR_ACCENT
-					elif [ "$char" == "#" ]; then
-						clean_sequence=${BLUE#*\033}
-						clean_sequence=${clean_sequence%m}
-						IFS=';' read -ra color_values <<< "$clean_sequence"
-						r=$(printf "%02x" "${color_values[3]}")
-						g=$(printf "%02x" "${color_values[4]}")
-						b=$(printf "%02x" "${color_values[5]}")
-						hex_color="#$r$g$b"
-						_save_setting "COLOR_HIGHLIGHT" "$hex_color"
-						clean_sequence=${WHITE#*\033}
-						clean_sequence=${clean_sequence%m}
-						IFS=';' read -ra color_values <<< "$clean_sequence"
-						r=$(printf "%02x" "${color_values[3]}")
-						g=$(printf "%02x" "${color_values[4]}")
-						b=$(printf "%02x" "${color_values[5]}")
-						hex_color="#$r$g$b"
-						_save_setting "COLOR_UNSELECTED" "$hex_color"
-						if [ "$PANELS_ENABLED" == true ]; then
-							clean_sequence=${BLUE_BLACK#*\033}
-							clean_sequence=${clean_sequence%m}
-							IFS=';' read -ra color_values <<< "$clean_sequence"
-							r=$(printf "%02x" "${color_values[8]}")
-							g=$(printf "%02x" "${color_values[9]}")
-							b=$(printf "%02x" "${color_values[10]}")
-							hex_color="#$r$g$b"
-							_save_setting "COLOR_PANEL" "$hex_color"
-						fi
-						echo -e "$CONFIG" >"$ALETHEIA/config"
-						draw_banner "SAVED"
-						tput el
-						
-						gtts_speak "color saved"
-						sleep $BANNER_WAIT_TIME
-						break
-					elif [ "$char" == "v" ]; then
-						tmpBLUE=$BLUE
-						tmpBLUE_BLACK=$BLUE_BLACK
-						BLUE=$WHITE
-						BLUE_BLACK=$WHITE_BLACK
-						WHITE=$tmpBLUE
-						WHITE_BLACK=$tmpBLUE_BLACK
-					elif [ "$char" == "c" ]; then
-						if [ "$complementary_color" == true ]; then
-							complementary_color=false
-							gtts_speak "random"
-						else
-							gtts_speak "complementary"
-							complementary_color=true
-						fi
-						draw_indicator
-						flaggy=true
-						char="n"
-					fi
-					reset_buffer
-					draw_volume
-					draw_equalizer
-					redraw_buffer
-					draw_banner "COLOR"
-					draw_indicator
-					if [ "$flaggy" != true ]; then
-						read -rsn1 char
-					else
-						flaggy=false
-					fi
-				done
-				RIGHT_BANNER_WIDTH="$((${#POSITION}+${#TOTAL_QUEUE}+3))"
-				if [ "$char" != "q" ]; then
-					draw_banner "WAIT"
-					render_help_screen
-					render_voice_settings_screen
-					render_repeat_help_screen
-					render_scale_help_screen
-				else
-					draw_banner "WAIT"
-					draw_position
-					BLUE=$orig_BLUE
-					BLUE_BLACK=$orig_BLUE_BLACK
-					WHITE=$orig_WHITE
-					WHITE_BLACK=$orig_WHITE_BLACK
-					COLOR_ACCENT=$orig_COLOR_ACCENT
-					reset_buffer
-				fi
-				redraw_screen
+				select_color
+				;;
+			'')
+				toggle_dark_mode
 				;;
 			'')
 				if [ "$DOWNLOAD_POSITION" != "" ]; then
