@@ -6152,6 +6152,10 @@ toggle_dark_mode() {
 		WHITE_BLACK="$WHITE"
 		BLUE_BLACK="$BLUE"
 	fi
+	render_help_screen
+	render_voice_settings_screen
+	render_repeat_help_screen
+	render_scale_help_screen
 }
 
 toggle_colors() {
