@@ -9775,6 +9775,7 @@ main() {
 				;;
 			'')
 				toggle_dark_mode
+				redraw_screen
 				;;
 			'')
 				if [ "$DOWNLOAD_POSITION" != "" ]; then
