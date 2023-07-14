@@ -3195,6 +3195,7 @@ main_menu() {
 						else
 							even=false
 						fi
+						reset_buffer
 						render_help_screen
 						render_repeat_help_screen
 						render_voice_settings_screen
@@ -3803,7 +3804,6 @@ main_menu() {
 		fi
 		if [ "$z" = "," ]; then
 			if [ "$1" == false ] || [ "$1" == "" ]; then
-				reset_buffer
 				redraw_buffer
 				draw_pitch
 				draw_position
