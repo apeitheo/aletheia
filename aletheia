@@ -74,7 +74,6 @@ LOOP_ON=false
 SAVED_POSITION=""
 CURRENT_POSITION=""
 PANELS_ENABLED=true
-VOLUME_CONTROL_DISABLED=false
 MENTIONED=false
 BANNER_WAIT_TIME=0.6
 MPLAYER_WAIT_TIME=0.1
@@ -206,7 +205,7 @@ get_system_volume() {
 		SYSTEM_VOLUME_RIGHT=$volume_text
 	else
 		clear
-		tput cup $(($LINES-3))
+		tput cup $((LINES-3))
 		echo "NOTE"
 		echo "Aletheia does not currently support audio control using the '8' and '9' keys for adjusting system volume on your OS. Contact the developer for information on how to port to your OS of choice."
 		echo "Do you want to continue [Y/n]? "
@@ -214,7 +213,6 @@ get_system_volume() {
 		if [ "$yn" == "Y" ] || [ "$yn" == "y" ]; then
 			SYSTEM_VOLUME_LEFT=100
 			SYSTEM_VOLUME_RIGHT=100
-			VOLUME_CONTROL_DISABLED=true
 		else
 			exit 0
 		fi
@@ -338,9 +336,7 @@ if [ -e "$ALETHEIA/config" ]; then
 			blue=$((16#${color:4:2}))
 
 			BLUE="\033[1;38;2;${red};${green};${blue}m"
-			ORIG_BLUE=$BLUE
 		fi
-		ORIG_BLUE_BLACK=$BLUE_BLACK
 
 		value="$(read_config "COLOR_UNSELECTED")"
 		if [ "$value" != "" ]; then
@@ -357,8 +353,6 @@ if [ -e "$ALETHEIA/config" ]; then
 			else
 				WHITE_BLACK="\033[1;38;2;${red};${green};${blue}m"
 			fi
-			ORIG_WHITE=$WHITE
-			ORIG_WHITE_BLACK=$WHITE_BLACK
 		fi
 
 		value="$(read_config "COLOR_PANEL")"
@@ -390,23 +384,6 @@ if [ -e "$ALETHEIA/config" ]; then
 				DEFAULT_THEME=true
 			else
 				DEFAULT_THEME=false
-			fi
-		fi
-
-		value="$(read_config "COLOR_SELECTED")"
-		if [ "$value" != "" ]; then
-			COLOR_SELECTED="$value"
-
-			color="${value#"#"}"
-			red=$((16#${color:0:2}))
-			green=$((16#${color:2:2}))
-			blue=$((16#${color:4:2}))
-
-			GREEN="\033[1;38;2;${red};${green};${blue}m"
-			if [ "$PANELS_ENABLED" == true ]; then
-				GREEN_BLACK="\033[1;38;2;${red};${green};${blue};1;40m"
-			else
-				GREEN_BLACK="\033[1;38;2;${red};${green};${blue}m"
 			fi
 		fi
 
@@ -476,7 +453,7 @@ compute() {
 		gtts-cli " $1" -o "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 	else
 		gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
-		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-) >/dev/null 2>/dev/null
+		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed "$(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)" >/dev/null 2>/dev/null
 		rm -f "/tmp/_$2-tmp.mp3"
 	fi
 	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
@@ -554,24 +531,23 @@ vanish() {
 	feedback_enabled=$VOICE_ENABLED
 	inputnew=""
 	display=""
-	escape_pressed=false
 	char_count=0
 	line_count=1
 	word_count=0
 	saved_spot=""
-	width=$(($COLUMNS-((${#char_count}+2+${#word_count}+${#line_count})*2)-(${#PADDING}*2)-20))
+	width=$((COLUMNS-((${#char_count}+2+${#word_count}+${#line_count})*2)-(${#PADDING}*2)-20))
 	tput cup $LINES
 	tput el
 	tput cup $LINES
 	echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE --"
-	LEFTBANNER_WIDTH="$((6+6))"
-	tput cup $LINES $(($COLUMNS/2))
+	LEFTBANNER_WIDTH="12"
+	tput cup $LINES $((COLUMNS/2))
 	echo -ne "${BLUE}_"
 	tput sc
 	visible=true
 	char=""
 	draw_indicator() {
-		tput cup $LINES $(($COLUMNS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
+		tput cup $LINES $((COLUMNS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
 		echo -ne "$BLUE${char_count}$WHITE:$BLUE${word_count}$WHITE:$BLUE${line_count}$PADDING"
 	}
 	draw_indicator
@@ -581,7 +557,7 @@ vanish() {
 	while true; do
 		tput cup $LINES
 		echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE -- "
-		LEFTBANNER_WIDTH="$((6+6))"
+		LEFTBANNER_WIDTH="12"
 		draw_indicator
 		if [ "$tmpflag" == false ]; then
 			IFS=$'\n'
@@ -589,7 +565,7 @@ vanish() {
 			until [ "$char" != "" ]; do
 				read -rsn1 -t 0.6 char
 				if [ "$char" == "" ]; then
-						tput cup $LINES $(($saved_spot+${#newdisplay}))
+						tput cup $LINES $((saved_spot+${#newdisplay}))
 					if [ "$visible" == true ]; then
 						echo -ne "${BLUE} "
 						visible=false
@@ -607,10 +583,10 @@ vanish() {
 		if [[ $char == $'\e' ]]; then
 			tput cup $LINES
 			old_LEFTBANNER_WIDTH=$LEFTBANNER_WIDTH
-			LEFTBANNER_WIDTH="$((3+6))"
+			LEFTBANNER_WIDTH="9"
 
 			if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
-				printf '%*s' $(($old_LEFTBANNER_WIDTH+1))
+				printf '%*s' $((old_LEFTBANNER_WIDTH+1))
 			fi
 			tput cup $LINES
 			gtts_speak "command mode"
@@ -627,15 +603,15 @@ vanish() {
 					quit=true
 					break
 				elif [ "$newchar" == "h" ]; then
-					if [ "$width" -gt "$((($COLUMNS*5)/8))" ]; then
+					if [ "$width" -gt "$(((COLUMNS*5)/8))" ]; then
 						continue
 					fi
-					width="$(($width+2))"
+					width="$((width+2))"
 					newdisplay="$(echo -ne "$display" | tail -c $width)"
-					if [ "${char_count}" -le "$(($width))" ]; then
-						tput cup $LINES $((($COLUMNS/2)-$((${char_count}/2))))
+					if [ "${char_count}" -le "$width" ]; then
+						tput cup $LINES $(((COLUMNS/2)-$((char_count/2))))
 					else
-						tput cup $LINES $((($COLUMNS/2)-($width/2)))
+						tput cup $LINES $(((COLUMNS/2)-(width/2)))
 					fi
 
 					echo -ne "$WHITE${newdisplay}${BLUE}_"
@@ -643,15 +619,15 @@ vanish() {
 					tput el
 					draw_indicator
 				elif [ "$newchar" == "l" ]; then
-					width="$(($width-2))"
+					width="$((width-2))"
 					if [ "$width" -lt "0" ]; then
 						width=0
 					fi
 					newdisplay="$(echo -ne "$display" | tail -c $width)"
-					if [ "${char_count}" -le "$(($width))" ]; then
-						tput cup $LINES $((($COLUMNS/2)-$((${char_count}/2))))
+					if [ "${char_count}" -le "$width" ]; then
+						tput cup $LINES $(((COLUMNS/2)-$((char_count/2))))
 					else
-						tput cup $LINES $((($COLUMNS/2)-($width/2)))
+						tput cup $LINES $(((COLUMNS/2)-(width/2)))
 					fi
 					tput cub1
 					echo -ne " "
@@ -666,10 +642,10 @@ vanish() {
 					echo -ne "\n\n$(date)\n\n$inputnew\n" >>"$HOME/Documents/journal"
 					tput cup $LINES
 					old_LEFTBANNER_WIDTH=$LEFTBANNER_WIDTH
-					LEFTBANNER_WIDTH="$((5+6))"
+					LEFTBANNER_WIDTH="11"
 
 					if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
-						printf '%*s' $(($old_LEFTBANNER_WIDTH+1))
+						printf '%*s' $((old_LEFTBANNER_WIDTH+1))
 					fi
 					tput cup $LINES
 					echo -ne "$PADDING$WHITE-- ${BLUE}SAVED$WHITE --"
@@ -698,10 +674,10 @@ vanish() {
 					gtts_speak "insert mode"
 					tput cup $LINES
 					old_LEFTBANNER_WIDTH=$LEFTBANNER_WIDTH
-					LEFTBANNER_WIDTH="$((6+6))"
+					LEFTBANNER_WIDTH="12"
 
 					if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
-						printf '%*s' $(($old_LEFTBANNER_WIDTH+1))
+						printf '%*s' $((old_LEFTBANNER_WIDTH+1))
 					fi
 					tput cup $LINES
 					echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE -- "
@@ -723,7 +699,7 @@ vanish() {
 				if [ "$newchar" == " " ]; then
 					if [ "$inword" == true ]; then
 						inword=false
-						word_count=$(($word_count-1))
+						word_count=$((word_count-1))
 						draw_indicator
 					fi
 					preword=true
@@ -735,13 +711,13 @@ vanish() {
 			fi
 			inputnew="$(echo -ne "$inputnew" | rev | cut -c2- | rev)"
 			display="$(echo -ne "$display" | rev | cut -c2- | rev)"
-			char_count=$(($char_count-1))
+			char_count=$((char_count-1))
 			draw_indicator
 			if [ "$word" != "" ]; then
 				word="$(echo -ne "$word" | rev | cut -c2- | rev)"
 			fi
-			if [ "${char_count}" -lt "$(($width))" ]; then
-				saved_spot=$((($COLUMNS/2)-$((${char_count}/2))-1))
+			if [ "${char_count}" -lt "$width" ]; then
+				saved_spot=$(((COLUMNS/2)-(char_count/2)-1))
 				tput cup $LINES $saved_spot
 				echo -ne " "
 			fi
@@ -754,7 +730,7 @@ vanish() {
 			killall espeak-ng >/dev/null 2>/dev/null
 			killall play >/dev/null 2>/dev/null
 		else
-			char_count=$(($char_count+1))
+			char_count=$((char_count+1))
 			if [ "$char" == " " ]; then
 				preword=false
 				inputnew="${inputnew} "
@@ -763,7 +739,7 @@ vanish() {
 					espeak-ng -v en-us+m1 "$word" &
 				fi
 				if [ "$inspace" == false ]; then
-					word_count=$(($word_count+1))
+					word_count=$((word_count+1))
 				fi
 				inspace=true
 				word=""
@@ -779,7 +755,7 @@ vanish() {
 					if [ "$feedback_enabled" == true ]; then
 						espeak-ng -v en-us+m1 "$word" &
 					fi
-					word_count=$(($word_count+1))
+					word_count=$((word_count+1))
 					inword=false
 					word=""
 				else
@@ -789,11 +765,11 @@ vanish() {
 		fi
 		newdisplay="$(echo -ne "$display" | tail -c $width)"
 		tput sc
-		if [ "${char_count}" -le "$(($width))" ]; then
-			saved_spot=$((($COLUMNS/2)-$((${char_count}/2))))
+		if [ "${char_count}" -le "$width" ]; then
+			saved_spot=$(((COLUMNS/2)-(char_count/2)))
 			tput cup $LINES $saved_spot
 		else
-			saved_spot=$((($COLUMNS/2)-($width/2)))
+			saved_spot=$(((COLUMNS/2)-(width/2)))
 			tput cup $LINES $saved_spot
 		fi
 		echo -ne "$WHITE${newdisplay}${BLUE}_ \b"
@@ -1039,11 +1015,11 @@ draw_banner() {
 				length="$RIGHT_BANNER_WIDTH"
 			fi
 		fi
-		if [ "$((${#1} + 6 + $RIGHT_BANNER_WIDTH + (${#PADDING}*2)))" -lt "$COLUMNS" ]; then
-			printf '%*s' $(($COLUMNS - ${#1} - 7 - (${#PADDING}*2) - $length))
+		if [ "$((${#1} + 6 + RIGHT_BANNER_WIDTH + (${#PADDING}*2)))" -lt "$COLUMNS" ]; then
+			printf '%*s' $((COLUMNS - ${#1} - 7 - (${#PADDING}*2) - length))
 		fi
 	else
-		tput cup $LINES $(($COLUMNS - ${#1} - 8))
+		tput cup $LINES $((COLUMNS - ${#1} - 8))
 		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}$1$COLOR1 --$COLOR1 "
 		RIGHT_BANNER_WIDTH=$((${#1}+6))
 	fi
@@ -1142,7 +1118,7 @@ set_only_locked() {
 				for i in $(find "$MUSICDIR" -iname "*.locked" | shuf); do
 					if [ "$(echo -ne "$i" | grep '.repeat.')" == "" ]; then
 						queue_array[$index]="$(echo -ne "$i" | rev | cut -d'.' -f2- | rev)"
-						index=$(($index+1))
+						index=$((index+1))
 					fi
 				done
 				unset IFS
@@ -1164,12 +1140,12 @@ set_only_locked() {
 				for i in $(printf '%s\n' "${queue_array[@]}"); do
 					if [ -e "$i.locked" ]; then
 						new_queue_array[$index]="$i"
-						index=$(($index+1))
+						index=$((index+1))
 					fi
 				done
 				unset IFS
 				queue_array=("${new_queue_array[@]}")
-				TOTAL_QUEUE=$(($index-1))
+				TOTAL_QUEUE=$((index-1))
 			fi
 			if [ -e "$FILENAME.locked" ]; then
 				new_list=""
@@ -1178,7 +1154,7 @@ set_only_locked() {
 				o_list="$FILENAME$IFS"
 				for i in $(seq 1 $TOTAL_QUEUE); do
 					if [ "$i" != "$POSITION" ]; then
-						new_list="$new_list${queue_array[$(($i-1-$minusone))]}$IFS"
+						new_list="$new_list${queue_array[$((i-1-minusone))]}$IFS"
 					else
 						minusone=1
 					fi
@@ -1188,7 +1164,7 @@ set_only_locked() {
 				index=0
 				for i in $(echo -ne "$o_list"); do
 					queue_array[$index]="$i"
-					index=$(($index+1))
+					index=$((index+1))
 				done
 				unset IFS
 				POSITION=1
@@ -1282,13 +1258,13 @@ track_toggle() {
 about() {
 	echo -ne "$NOCOLOR"
 	draw_banner "ABOUT"
-	tput cup $LINES $(($COLUMNS-${#PADDING}))
+	tput cup $LINES $((COLUMNS-${#PADDING}))
 	echo -ne "$BLUE_BLACK${PADDING}"
 	empty_pane
-	lines_divided=$(($LINES/2))
-	cols_divided=$(($COLUMNS/2))
+	lines_divided=$((LINES/2))
+	cols_divided=$((COLUMNS/2))
 
-	if [ "$(($COLUMNS%2))" == "0" ]; then
+	if [ "$((COLUMNS%2))" == "0" ]; then
 		even=true
 		pad="_"
 	else
@@ -1296,26 +1272,26 @@ about() {
 		pad=""
 	fi
 	if [ "$even" == true ]; then
-		tput cup $(($lines_divided-2)) $(( ($COLUMNS/2) - 4))
+		tput cup $((lines_divided-2)) $(((COLUMNS/2) - 4))
 	else
-		tput cup $(($lines_divided-2)) $(( ($COLUMNS/2) - 3))
+		tput cup $((lines_divided-2)) $(((COLUMNS/2) - 3))
 	fi
 	echo -ne "${WHITE}aletheia${BLUE}_"
 	tput sc
 
-	tput cup $lines_divided $(( ($COLUMNS/2) - 7))
+	tput cup $lines_divided $(((COLUMNS/2) - 7))
 	if [ "$even" == true ]; then
 		echo -ne "${WHITE}GPL${BLUE}3 ${WHITE}2021${BLUE}-${WHITE}2023"
-		tput cup $(($lines_divided+2)) $(( $cols_divided - 3))
+		tput cup $((lines_divided+2)) $((cols_divided - 3))
 	else
 		echo -ne "${WHITE}GPL ${BLUE}3 ${WHITE}2021${BLUE}-${WHITE}2023"
-		tput cup $(($lines_divided+2)) $(( $cols_divided - 2))
+		tput cup $((lines_divided+2)) $((cols_divided - 2))
 	fi
 	if [ "$even" == true ]; then
 		echo -ne "${BLUE}v"
 	fi
 	echo -ne "$(echo -ne "$WHITE$VERSION" | sed "s/\./$(echo -ne "$BLUE").$(echo -ne "$WHITE")/g")"
-	tput cup $(($lines_divided-2)) $(( $cols_divided - 4))
+	tput cup $((lines_divided-2)) $((cols_divided - 4))
 }
 
 set_scale_speed() {
@@ -1361,8 +1337,8 @@ less_precise() {
 		MUTE=false
 	fi
 	while [ "$EDO" -gt "$LOCKED_EDO" ]; do
-		INTERVAL="$(($INTERVAL/2))"
-		EDO="$(($EDO/2))"
+		INTERVAL="$((INTERVAL/2))"
+		EDO="$((EDO/2))"
 		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		draw_pitch
 		sleep 0.01
@@ -1382,8 +1358,8 @@ more_precise() {
 	fi
 	while [ "$EDO" -lt "$EDO_LIMIT" ]; do
 		if [ "$INTERVAL" -lt "$EDO_LIMIT" ]; then
-			INTERVAL="$(($INTERVAL*2))"
-			EDO="$(($EDO*2))"
+			INTERVAL="$((INTERVAL*2))"
+			EDO="$((EDO*2))"
 			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			draw_pitch
 			sleep 0.01
@@ -1426,7 +1402,7 @@ zero_interval_jump() {
 }
 
 draw_loop() {
-	tput cup $LINES $(($COLUMNS-$RIGHT_BANNER_WIDTH-${#PADDING}))
+	tput cup $LINES $((COLUMNS-RIGHT_BANNER_WIDTH-${#PADDING}))
 	echo -ne "$BLUE_BLACK$START_MARKER$WHITE_BLACK:$BLUE_BLACK$END_MARKER$WHITE_BLACK:$BLUE_BLACK$space$PADDING"
 }
 
@@ -1543,9 +1519,9 @@ repeat() {
 						old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
 						if [ "$skip" == false ]; then
 							if [ "$scale_down" == true ]; then
-								INTERVAL=$(($INTERVAL-1))
+								INTERVAL=$((INTERVAL-1))
 							elif [ "$scale_down" == false ]; then
-								INTERVAL=$(($INTERVAL+1))
+								INTERVAL=$((INTERVAL+1))
 							fi
 						fi
 						old_time_before=$time_before
@@ -1629,7 +1605,7 @@ repeat() {
 								skip=true
 							fi
 						fi
-						num=$(($num-1))
+						num=$((num-1))
 					done
 				else
 					if [ "$(echo "$time <= 0" | bc)" == "1" ]; then
@@ -1841,7 +1817,7 @@ repeat() {
 				else
 					REP=""
 				fi
-				tput cup $(($LOCKING_POS+2)) $((1))
+				tput cup $((LOCKING_POS+2)) 1
 				if [ -e "$FILENAME.locked" ]; then
 					if [ -e "$FILENAME.repeats" ]; then
 						echo -ne "${WHITE_BLACK}${REP}#"
@@ -1925,7 +1901,7 @@ repeat() {
 				toggle_pause true
 				RIGHT_BANNER_WIDTH="$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))"
 				draw_banner "HELP" false false true
-				tput cup $LINES $(($COLUMNS-12))
+				tput cup $LINES $((COLUMNS-12))
 				echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
 				loop_help_screen
 				killall espeak-ng >/dev/null 2>/dev/null
@@ -1962,7 +1938,7 @@ repeat() {
 					MUTE=false
 				fi
 				orig_orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
-				INTERVAL="$((-($INTERVAL)))"
+				INTERVAL="$((-(INTERVAL)))"
 				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 				orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
 				draw_pitch
@@ -1992,7 +1968,7 @@ repeat() {
 				flagged=true
 			elif [ "$input_char" == "," ]; then
 				if [ "$space" -gt "0" ]; then
-					space=$(($space-1))
+					space=$((space-1))
 				fi
 				gtts_speak "$space"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
@@ -2015,7 +1991,7 @@ repeat() {
 				fi
 				flagged=false
 			elif [ "$input_char" == "." ]; then
-				space=$(($space+1))
+				space=$((space+1))
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				gtts_speak "$space"
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -2054,28 +2030,28 @@ repeat() {
 				time_before=$(date +%s.%N)
 				if [ "$input_char" == "2" ]; then
 					if [ "$VOLUME" -le "95" ]; then
-						VOLUME=$(($VOLUME+5))
+						VOLUME=$((VOLUME+5))
 						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					gtts_speak "$VOLUME"
 				elif [ "$input_char" == "1" ]; then
 					if [ "$VOLUME" -ge "5" ]; then
-						VOLUME=$(($VOLUME-5))
+						VOLUME=$((VOLUME-5))
 						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					gtts_speak "$VOLUME"
 				elif [ "$input_char" == "@" ]; then
 					if [ "$VOLUME" -le "99" ]; then
-						VOLUME=$(($VOLUME+1))
+						VOLUME=$((VOLUME+1))
 						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
 					gtts_speak "$VOLUME"
 				elif [ "$input_char" == "!" ]; then
 					if [ "$VOLUME" -ge "1" ]; then
-						VOLUME=$(($VOLUME-1))
+						VOLUME=$((VOLUME-1))
 						echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 						draw_volume
 					fi
@@ -2122,7 +2098,7 @@ repeat() {
 					gtts_speak "no more loops"
 				else
 					if [ "$REPEATS" != "" ]; then
-						REPEAT_CURRENT=$(($REPEAT_CURRENT+1))
+						REPEAT_CURRENT=$((REPEAT_CURRENT+1))
 						if [ "$REPEAT_CURRENT" -gt "$REPEAT_TOTAL" ]; then
 							REPEAT_CURRENT=1
 						fi
@@ -2248,7 +2224,7 @@ repeat() {
 						index=0
 						for i in $(find "$MUSICDIR" -iname "*.mp3.locked" -o -iname "*.flac.locked" | shuf); do
 							queue_array[$index]="$(echo -ne "$i" | rev | cut -d'.' -f2- | rev)"
-							index=$(($index+1))
+							index=$((index+1))
 						done
 						unset IFS
 						gtts_speak "only locked"
@@ -2258,7 +2234,7 @@ repeat() {
 						index=0
 						for i in $(find "$MUSICDIR" -iname "*.mp3" -o -iname "*.flac" | shuf); do
 							queue_array[$index]="$i"
-							index=$(($index+1))
+							index=$((index+1))
 						done
 						unset IFS
 						gtts_speak "all"
@@ -2357,7 +2333,7 @@ repeat() {
 				else
 					REP=""
 				fi
-				tput cup $(($LOCKING_POS+2)) $((1))
+				tput cup $((LOCKING_POS+2)) 1
 				if [ -e "$FILENAME.locked" ]; then
 					rm -f "$FILENAME".locked
 					LOCKED=false
@@ -2403,12 +2379,12 @@ repeat() {
 					else
 						sed -i "${REPEAT_CURRENT}d" "$FILENAME.repeats"
 						REPEATS="$(echo -ne "$REPEATS" | sed "${REPEAT_CURRENT}d")"
-						REPEAT_TOTAL=$(($REPEAT_TOTAL-1))
-						REPEAT_CURRENT=$(($REPEAT_CURRENT-1))
+						REPEAT_TOTAL=$((REPEAT_TOTAL-1))
+						REPEAT_CURRENT=$((REPEAT_CURRENT-1))
 					fi
 
 					if [ "$REPEAT_TOTAL" == "0" ]; then
-						tput cup $(($LOCKING_POS+2)) $((1))
+						tput cup $((LOCKING_POS+2)) 1
 						if [ -e "$FILENAME.locked" ]; then
 							echo -ne "${WHITE}$"
 						else
@@ -2459,10 +2435,10 @@ repeat() {
 				if [ "$REPEATS" != "" ]; then
 					echo "$START_MARKER/$END_MARKER/$space" >>"$FILENAME.repeats"
 					REPEATS="$REPEATS\n$START_MARKER/$END_MARKER/$space"
-					REPEAT_CURRENT=$(($REPEAT_CURRENT+1))
-					REPEAT_TOTAL=$(($REPEAT_TOTAL+1))
+					REPEAT_CURRENT=$((REPEAT_CURRENT+1))
+					REPEAT_TOTAL=$((REPEAT_TOTAL+1))
 					gtts_speak "locked $REPEAT_TOTAL"
-					tput cup $(($LOCKING_POS+2)) $((1))
+					tput cup $((LOCKING_POS+2)) 1
 					if [ -e "$FILENAME.locked" ]; then
 						echo -ne "${WHITE_BLACK}#"
 					else
@@ -2472,14 +2448,14 @@ repeat() {
 					REPEATS="$START_MARKER/$END_MARKER/$space$(echo -ne "\n")"
 					echo "$START_MARKER/$END_MARKER/$space" >"$FILENAME.repeats"
 					gtts_speak "locked"
-					tput cup $(($LOCKING_POS+2)) $((1))
+					tput cup $((LOCKING_POS+2)) 1
 					if [ -e "$FILENAME.locked" ]; then
 						echo -ne "${WHITE_BLACK}#"
 					else
 						echo -ne "${WHITE_BLACK}&"
 					fi
 					REPEAT_CURRENT=1
-					REPEAT_TOTAL=$(($REPEAT_TOTAL+1))
+					REPEAT_TOTAL=$((REPEAT_TOTAL+1))
 				fi
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOCKED $REPEAT_TOTAL"
@@ -2644,8 +2620,8 @@ zero_interval() {
 				draw_pitch
 				break
 			elif [ "$c" == "" ]; then
-				old_int="$(($old_int-1))"
-				INTERVAL="$(($INTERVAL-1))"
+				old_int="$((old_int-1))"
+				INTERVAL="$((INTERVAL-1))"
 				echo -e "speed_set $(calc "2^($old_int/$old_edo)")" >"$ALETHEIA/pipe$$" &
 			fi
 			draw_pitch 1
@@ -2688,8 +2664,8 @@ zero_interval() {
 				draw_pitch
 				break
 			elif [ "$c" == "" ]; then
-				old_int="$(($old_int+1))"
-				INTERVAL="$(($INTERVAL+1))"
+				old_int="$((old_int+1))"
+				INTERVAL="$((INTERVAL+1))"
 				echo -e "speed_set $(calc "2^($old_int/$old_edo)")" >"$ALETHEIA/pipe$$" &
 				draw_pitch 1
 			fi
@@ -2723,7 +2699,7 @@ scale_edo() {
 		gtts_speak "scaling"
 		downwards=true
 		time=2.5
-		edo_change="$(($EDO-1))"
+		edo_change="$((EDO-1))"
 	elif [ "$edo_change" = "K" ]; then
 		if [ "$EDO" -ge "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
 			gtts_speak "scale closed"
@@ -2735,17 +2711,17 @@ scale_edo() {
 		gtts_speak "scaling"
 		downwards=false
 		time=2.5
-		edo_change="$(($EDO+1))"
+		edo_change="$((EDO+1))"
 	elif [ "$edo_change" == "j" ]; then
 		gtts_speak "scaling"
 		downwards=true
 		time=$SCALE_SPEED
-		edo_change="$(($EDO-1))"
+		edo_change="$((EDO-1))"
 	elif [ "$edo_change" == "k" ]; then
 		gtts_speak "scaling"
 		downwards=false
 		time=$SCALE_SPEED
-		edo_change="$(($EDO+1))"
+		edo_change="$((EDO+1))"
 	elif [ "$edo_change" == "d" ]; then
 		toggle_voice
 		draw_pitch
@@ -2778,7 +2754,7 @@ scale_edo() {
 			stopat=$tmp
 			downwards=true
 			time=$SCALE_SPEED
-			edo_change="$(($EDO-1))"
+			edo_change="$((EDO-1))"
 		elif [ "$tmp" -gt "$EDO" ]; then
 			if [ "$tmp" -ge "2000000" ]; then
 				gtts_speak "scale closed"
@@ -2791,7 +2767,7 @@ scale_edo() {
 			stopat=$tmp
 			downwards=false
 			time=$SCALE_SPEED
-			edo_change="$(($EDO+1))"
+			edo_change="$((EDO+1))"
 		else
 			gtts_speak "scale closed"
 			RIGHT_BANNER_WIDTH=0
@@ -2837,7 +2813,7 @@ scale_edo() {
 					downwards=false
 					sleep $SCALE_SPEED
 					gtts_speak "order reversed"
-					edo_change="$(((2000000)))"
+					edo_change="2000000"
 					flaggy=false
 				elif [ "$c" == "j" ]; then
 					orig_interval=$INTERVAL
@@ -2857,8 +2833,8 @@ scale_edo() {
 				elif [ "$c" == "" ]; then
 					original_edo="$EDO"
 					old_EDO=$EDO
-					EDO="$(($EDO-1))"
-					edo_change="$(($edo_change-1))"
+					EDO="$((EDO-1))"
+					edo_change="$((edo_change-1))"
 					INTERVAL_LIMIT=$(calc "$EDO * 2.6")
 					INTERVAL_UPPER_LIMIT=$(calc "$EDO * 2.1")
 					if [ "$flaggy" == false ]; then
@@ -2917,8 +2893,8 @@ scale_edo() {
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then	
 					original_edo=$EDO
-					EDO="$(($EDO+1))"
-					edo_change=$(($edo_change+1))
+					EDO="$((EDO+1))"
+					edo_change=$((edo_change+1))
 
 					INTERVAL_LIMIT=$(calc "$EDO * 2.6")
 					INTERVAL_UPPER_LIMIT=$(calc "$EDO * 2.1")
@@ -2951,7 +2927,7 @@ scale_edo() {
 }
 
 draw_menu() {
-	tput cup $first $(($COLUMNS/2-5-$moveleft))
+	tput cup $first $((COLUMNS/2-5-moveleft))
 		menu_buf="$PADDING$COLOR_ACCENT$TOP_BAR_MENU$(tput el)"
 	if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 		menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk${LINE_CHAR_END}$(tput el)"
@@ -2964,7 +2940,7 @@ draw_menu() {
 		temp="${#OPT[$i]}"
 		while [ "$temp" -le "$pad_" ]; do
 			pad="$pad "
-			temp="$(($temp+1))"
+			temp="$((temp+1))"
 		done
 		if [ "${OPT[$i]}" == "Music" ]; then #|| [ "${OPT[$i]}" == "Sound" ] || [ "${OPT[$i]}" == "Video" ]; then
 			arrow=" ›"
@@ -2978,7 +2954,7 @@ draw_menu() {
 			else
 				pad=""
 			fi
-			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$(tput cuf $(($COLUMNS/2-5-$moveleft)))$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
+			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$(tput cuf $((COLUMNS/2-5-moveleft)))$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$SELECTION" == "1" ]; then
 					if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -3046,7 +3022,7 @@ draw_menu() {
 			else
 				pad=""
 			fi
-			menu_buf="$menu_buf\n$PADDING$(tput cuf $(($COLUMNS/2-5-$moveleft)))$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
+			menu_buf="$menu_buf\n$PADDING$(tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$SELECTION" == "1" ]; then
 					if [ "$i" -ge "2" ]; then
@@ -3060,10 +3036,10 @@ draw_menu() {
 			fi
 			if [ "$SOUND_RIGHT_WINDOW" == true ]; then
 				if [[ ( "$SELECTION" == "2" || "$SELECTION" == "3" ) && ( "$i" == "2" || "$i" == "3" ) ]]; then
-					if [ "$SOUND_SELECTION" == "$(($i-1))" ]; then
-						menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$(($i-1))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
-					elif [ "$(($i-1))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-						menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-1))]} $COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
+					if [ "$SOUND_SELECTION" == "$((i-1))" ]; then
+						menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$((i-1))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
+					elif [ "$((i-1))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$((i-1))]} $COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
 					fi
 				elif [ "$i" == "1" ]; then
 					menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqk$LINE_CHAR_END$(tput el)"
@@ -3072,10 +3048,10 @@ draw_menu() {
 
 			if [ "$VIDEO_RIGHT_WINDOW" == true ]; then
 				if [ "$SELECTION" == "3" ] && [ "$i" == "4" ]; then
-					if [ "$VIDEO_SELECTION" == "$(($i-2))" ]; then
-						menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$(($i-2))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
-					elif [ "$(($i-2))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-						menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$(($i-2))]} $COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
+					if [ "$VIDEO_SELECTION" == "$((i-2))" ]; then
+						menu_buf="${menu_buf}$BLUE_BLACK ${OPT_MUSIC_SUBMENU[$((i-2))]} $NOCOLOR$COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
+					elif [ "$((i-2))" -le "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						menu_buf="${menu_buf}$WHITE ${OPT_MUSIC_SUBMENU[$((i-2))]} $COLOR_ACCENT$BAR$NOCOLOR$(tput el)"
 					fi
 				elif [ "$i" == "2" ]; then
 					menu_buf="$menu_buf\b${LINE_CHAR}tqqqqqqqk$LINE_CHAR_END$(tput el)"
@@ -3094,9 +3070,9 @@ draw_menu() {
 		fi
 	done
 
-	menu_buf="$menu_buf\n$PADDING$(tput cuf $(($COLUMNS/2-5-$moveleft)))$COLOR_ACCENT$BOTTOM_BAR_MENU$(tput el)"
+	menu_buf="$menu_buf\n$PADDING$(tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$BOTTOM_BAR_MENU$(tput el)"
 
-	tput cup $((($LINES/2) - ($TOTAL_OPTS/2)-1)) $(($COLUMNS/2-5-$moveleft))
+	tput cup $(((LINES/2) - ($TOTAL_OPTS/2)-1)) $((COLUMNS/2-5-moveleft))
 
 	echo -ne "$menu_buf"
 }
@@ -3118,7 +3094,7 @@ main_menu() {
 	local initial_screen=$1
 	tagged=false
 
-	if [ "$(($COLUMNS%2))" == "0" ]; then
+	if [ "$((COLUMNS%2))" == "0" ]; then
 		even=true
 	else
 		even=false
@@ -3149,8 +3125,8 @@ main_menu() {
 	flag=false
 	menu_start_over=true
 
-	first=$((($LINES/2) - ($TOTAL_OPTS/2)-1))
-	last=$(($first + $TOTAL_OPTS - 1))
+	first=$(((LINES/2) - (TOTAL_OPTS/2)-1))
+	last=$((first + TOTAL_OPTS - 1))
 
 	empty_pane
 	
@@ -3173,7 +3149,7 @@ main_menu() {
 				echo -ne "$NOCOLOR"
 			fi
 
-			if [ "$(($COLUMNS%2))" == "0" ]; then
+			if [ "$((COLUMNS%2))" == "0" ]; then
 				moveleft=1
 			else
 				moveleft=0
@@ -3193,7 +3169,7 @@ main_menu() {
 					if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
 						clear
 						draw_wait
-						if [ "$(($COLUMNS%2))" == "0" ]; then
+						if [ "$((COLUMNS%2))" == "0" ]; then
 							even=true
 						else
 							even=false
@@ -3230,19 +3206,19 @@ main_menu() {
 		if [ "$z" == "j" ]; then
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$MUSIC_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-					MUSIC_SELECTION=$(($MUSIC_SELECTION+1))
+					MUSIC_SELECTION=$((MUSIC_SELECTION+1))
 				fi
 			elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
 				if [ "$SOUND_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-					SOUND_SELECTION=$(($SOUND_SELECTION+1))
+					SOUND_SELECTION=$((SOUND_SELECTION+1))
 				fi
 			elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
 				if [ "$VIDEO_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
-					VIDEO_SELECTION=$(($VIDEO_SELECTION+1))
+					VIDEO_SELECTION=$((VIDEO_SELECTION+1))
 				fi
 			else
 				if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
-					SELECTION="$(($SELECTION+1))"
+					SELECTION="$((SELECTION+1))"
 				else
 					SELECTION="1"
 				fi
@@ -3254,19 +3230,19 @@ main_menu() {
 		elif [ "$z" == "k" ]; then
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$MUSIC_SELECTION" != "1" ]; then
-					MUSIC_SELECTION=$(($MUSIC_SELECTION-1))
+					MUSIC_SELECTION=$((MUSIC_SELECTION-1))
 				fi
 			elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
 				if [ "$SOUND_SELECTION" != "1" ]; then
-					SOUND_SELECTION=$(($SOUND_SELECTION-1))
+					SOUND_SELECTION=$((SOUND_SELECTION-1))
 				fi
 			elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
 				if [ "$VIDEO_SELECTION" != "1" ]; then
-					VIDEO_SELECTION=$(($VIDEO_SELECTION-1))
+					VIDEO_SELECTION=$((VIDEO_SELECTION-1))
 				fi
 			else
 				if [ "$SELECTION" -gt "1" ]; then
-					SELECTION="$(($SELECTION-1))"
+					SELECTION="$((SELECTION-1))"
 				else
 					SELECTION="$TOTAL_OPTS"
 				fi
@@ -3414,7 +3390,7 @@ main_menu() {
 				fi
 			else
 				if [ "$VOLUME" -ge "5" ]; then
-					VOLUME=$(($VOLUME-5))
+					VOLUME=$((VOLUME-5))
 					gtts_speak "$VOLUME"
 				fi
 				draw_volume
@@ -3432,7 +3408,7 @@ main_menu() {
 				fi
 			else
 				if [ "$VOLUME" -le "95" ]; then
-					VOLUME=$(($VOLUME+5))
+					VOLUME=$((VOLUME+5))
 					gtts_speak "$VOLUME"
 				fi
 				draw_volume
@@ -3450,7 +3426,7 @@ main_menu() {
 				fi
 			else
 				if [ "$VOLUME" -ge "1" ]; then
-					VOLUME=$(($VOLUME-1))
+					VOLUME=$((VOLUME-1))
 					gtts_speak "$VOLUME"
 				fi
 				draw_volume
@@ -3468,7 +3444,7 @@ main_menu() {
 				fi
 			else
 				if [ "$VOLUME" -le "99" ]; then
-					VOLUME=$(($VOLUME+1))
+					VOLUME=$((VOLUME+1))
 					gtts_speak "$VOLUME"
 				fi
 				draw_volume
@@ -3506,7 +3482,7 @@ main_menu() {
 		elif [ "$z" == ":" ]; then
 			tput cup 1
 			tput el
-			tput cup $(($LINES-2))
+			tput cup $((LINES-2))
 			tput el
 			voice_settings_screen true
 			if [ "$initial_screen" == true ]; then
@@ -3520,7 +3496,7 @@ main_menu() {
 		elif [ "$z" == "?" ]; then
 			tput cup 1
 			tput el
-			tput cup $(($LINES-2))
+			tput cup $((LINES-2))
 			tput el
 			if [ "$initial_screen" == true ]; then
 				help_screen true
@@ -3556,7 +3532,7 @@ main_menu() {
 				index=0
 				for i in $(find "$MUSICDIR" -iname "*.mp3" -o -iname "*.flac" | sort); do
 					queue_array[$index]="$i"
-					index=$(($index+1))
+					index=$((index+1))
 				done
 				unset IFS
 				TOTAL_QUEUE=$index
@@ -3599,7 +3575,7 @@ main_menu() {
 			case $key in
 			'[B')
 				if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
-					SELECTION="$(($SELECTION+1))"
+					SELECTION="$((SELECTION+1))"
 				fi
 				tagged=false
 				flag=true
@@ -3608,7 +3584,7 @@ main_menu() {
 				;;
 			'[A')
 				if [ "$SELECTION" -gt "1" ]; then
-					SELECTION="$(($SELECTION-1))"
+					SELECTION="$((SELECTION-1))"
 				fi
 				tagged=false
 				flag=true
@@ -3619,7 +3595,7 @@ main_menu() {
 				if [ "$initial_screen" == true ]; then
 					exit 0
 				else
-					tput cup $(($LINES-2))
+					tput cup $((LINES-2))
 					tput el
 					z=","
 				fi
@@ -3689,7 +3665,7 @@ main_menu() {
 					index=0
 					for i in $(find "$MUSICDIR" \( -iname "*.mp3" -o -iname "*.flac" \) -and -not -iname "*\.repeat\.*" | shuf); do
 						queue_array[$index]="$i"
-						index=$(($index+1))
+						index=$((index+1))
 					done
 					unset IFS
 					SHUFFLED=true
@@ -3717,7 +3693,7 @@ main_menu() {
 					index=0
 					for i in $(find "$SOUNDDIR" -iname "*.mp3" -o -iname "*.flac" | shuf); do
 						queue_array[$index]="$i"
-						index=$(($index+1))
+						index=$((index+1))
 					done
 					unset IFS
 					SHUFFLED=true
@@ -3747,10 +3723,10 @@ main_menu() {
 					index=0
 					for i in $(find "$VIDEODIR" -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.webm" | shuf); do
 						queue_array[$index]="$i"
-						index=$(($index+1))
+						index=$((index+1))
 					done
 					unset IFS
-					TOTAL_QUEUE=$(($index))
+					TOTAL_QUEUE=$index
 					if [ "$TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO VIDEOS"
 						gtts_speak "no videos" true
@@ -3780,7 +3756,7 @@ main_menu() {
 				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
 					tput cup 1
 					tput el
-					tput cup $(($LINES-2))
+					tput cup $((LINES-2))
 					tput el
 					voice_settings_screen true
 					#if [ "$initial_screen" == true ]; then
@@ -3792,7 +3768,7 @@ main_menu() {
 				elif [ "${OPT[$SELECTION]}" == "Help" ]; then
 					tput cup 1
 					tput el
-					tput cup $(($LINES-2))
+					tput cup $((LINES-2))
 					tput el
 					if [ "$initial_screen" == true ]; then
 						help_screen true
@@ -3848,7 +3824,7 @@ scale() {
 		gtts_speak "scaling"
 		backwards=true
 		time=2.5
-		interval_change="$(($INTERVAL-$EDO))"
+		interval_change="$((INTERVAL-EDO))"
 	elif [ "$interval_change" = "K" ]; then
 		if [ "$INTERVAL" -ge "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
 			gtts_speak "scale closed"
@@ -3860,7 +3836,7 @@ scale() {
 		gtts_speak "scaling"
 		backwards=false
 		time=2.5
-		interval_change="$(($INTERVAL+$EDO))"
+		interval_change="$((INTERVAL+EDO))"
 	elif [ "$interval_change" == "j" ]; then
 		if [ "$INTERVAL" -le "-$(echo -n $INTERVAL_LIMIT | cut -d'.' -f1)" ]; then
 			gtts_speak "scale closed"
@@ -3872,7 +3848,7 @@ scale() {
 		gtts_speak "scaling"
 		backwards=true
 		time=$SCALE_SPEED
-		interval_change="$(($INTERVAL-$EDO))"
+		interval_change="$((INTERVAL-EDO))"
 	elif [ "$interval_change" == "k" ]; then
 		if [ "$INTERVAL" -ge "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
 			gtts_speak "scale closed"
@@ -3884,7 +3860,7 @@ scale() {
 		gtts_speak "scaling"
 		backwards=false
 		time=$SCALE_SPEED
-		interval_change="$(($INTERVAL+$EDO))"
+		interval_change="$((INTERVAL+EDO))"
 	elif [ "$interval_change" == "d" ]; then
 		toggle_voice
 		draw_pitch
@@ -3926,7 +3902,7 @@ scale() {
 			stopat=$tmp
 			backwards=true
 			time=$SCALE_SPEED
-			interval_change="$(($INTERVAL-$EDO))"
+			interval_change="$((INTERVAL-EDO))"
 		elif [ "$tmp" -gt "$INTERVAL" ]; then
 			if [ "$tmp" -ge "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
 				gtts_speak "scale closed"
@@ -3939,7 +3915,7 @@ scale() {
 			stopat=$tmp
 			backwards=false
 			time=$SCALE_SPEED
-			interval_change="$(($INTERVAL+$EDO))"
+			interval_change="$((INTERVAL+EDO))"
 		elif [ "$c" == "d" ]; then
 			toggle_voice
 			draw_banner "SCALE" false true
@@ -3992,14 +3968,14 @@ scale() {
 						gtts_speak "order reversed"
 					fi
 					if [ "$backwards" == true ] && [ "$c" != "c" ]; then
-						INTERVAL="$(($INTERVAL-1))"
+						INTERVAL="$((INTERVAL-1))"
 					elif [ "$backwards" == true ] && [ "$c" == "c" ]; then
 						backwards=false
-						interval_change="$(($interval_change * -1))"
+						interval_change="$((interval_change * -1))"
 					else 
 						backwards=true
-						interval_change="$(($interval_change*-1))"
-						INTERVAL="$(($INTERVAL-1))"
+						interval_change="$((interval_change*-1))"
+						INTERVAL="$((INTERVAL-1))"
 					fi
 				elif [ "$c" == "J" ]; then
 					edo_down
@@ -4016,7 +3992,7 @@ scale() {
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then
 					echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
-					INTERVAL="$(($INTERVAL-1))"
+					INTERVAL="$((INTERVAL-1))"
 					echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 					draw_pitch
 				fi
@@ -4056,14 +4032,14 @@ scale() {
 						gtts_speak "order reversed"
 					fi
 					if [ "$backwards" == true ] && [ "$c" != "c" ]; then
-						INTERVAL="$(($INTERVAL-1))"
+						INTERVAL="$((INTERVAL-1))"
 					elif [ "$backwards" == true ] && [ "$c" == "c" ]; then
 						backwards=false
-						INTERVAL="$(($INTERVAL+1))"
+						INTERVAL="$((INTERVAL+1))"
 					else
 						backwards=true
-						INTERVAL="$(($INTERVAL-1))"
-						interval_change="$(($interval_change*-1))"
+						INTERVAL="$((INTERVAL-1))"
+						interval_change="$((interval_change*-1))"
 					fi
 				elif [ "$c" == "J" ]; then
 					edo_down
@@ -4079,7 +4055,7 @@ scale() {
 					draw_banner "SCALE" false true
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then	
-					INTERVAL="$(($INTERVAL+1))"
+					INTERVAL="$((INTERVAL+1))"
 					echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 					draw_pitch
 				fi
@@ -4111,9 +4087,9 @@ scale_octave() {
 	fi
 	if [ "$1" == "-" ]; then
 		orig_int=$INTERVAL
-		if [ "$(($INTERVAL-$EDO))" -ge "-$(echo -n $INTERVAL_LIMIT | cut -d'.' -f1)" ]; then
+		if [ "$((INTERVAL-EDO))" -ge "-$(echo -n $INTERVAL_LIMIT | cut -d'.' -f1)" ]; then
 			if [ "$2" == true ]; then
-				INTERVAL=$(($INTERVAL-$EDO))
+				INTERVAL=$((INTERVAL-EDO))
 				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 				draw_pitch
 			else
@@ -4134,19 +4110,19 @@ scale_octave() {
 						draw_pitch
 						break
 					elif [ "$c" == "" ]; then
-						INTERVAL="$(($INTERVAL-1))"
+						INTERVAL="$((INTERVAL-1))"
 						echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						draw_pitch
-						x=$(($x+1))
+						x=$((x+1))
 					fi
 				done
 			fi
 		fi
 	elif [ "$1" == "+" ]; then
 		orig_int=$INTERVAL
-		if [ "$(($INTERVAL+$EDO))" -le "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
+		if [ "$((INTERVAL+EDO))" -le "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
 			if [ "$2" == true ]; then
-				INTERVAL=$(($INTERVAL+$EDO))
+				INTERVAL=$((INTERVAL+EDO))
 				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 				draw_pitch
 			else
@@ -4167,10 +4143,10 @@ scale_octave() {
 						draw_pitch
 						break
 					elif [ "$c" == "" ]; then
-						INTERVAL="$(($INTERVAL+1))"
+						INTERVAL="$((INTERVAL+1))"
 						echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						draw_pitch
-						x=$(($x+1))
+						x=$((x+1))
 					fi
 				done
 			fi
@@ -4405,8 +4381,8 @@ set_custom_edo() {
 
 double_precise() {
 	if [ "$EDO" -lt "$EDO_LIMIT" ]; then
-		INTERVAL=$(($INTERVAL * 2))
-		EDO=$(($EDO*2))
+		INTERVAL=$((INTERVAL * 2))
+		EDO=$((EDO*2))
 		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		draw_pitch
 		INTERVAL_LIMIT=$(calc "$EDO * 2.6")
@@ -4419,8 +4395,8 @@ double_precise() {
 
 half_precise() {
 	old="$(calc "($INTERVAL/$EDO)")"
-	if [ "$(($EDO % 2))" = "0" ]; then
-		new_edo="$(($EDO/2))"
+	if [ "$((EDO % 2))" = "0" ]; then
+		new_edo="$((EDO/2))"
 		if [ "$new_edo" -ge "2" ]; then
 			temp="$(calc "$new_edo/$EDO" | cut -d'~' -f2)"
 			INTERVAL="$(echo "$INTERVAL*$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
@@ -4470,7 +4446,7 @@ pitch_down() {
 		fi
 	fi
 	if [ "$INTERVAL" -gt "-$(echo -n $INTERVAL_LIMIT | cut -d'.' -f1)" ]; then
-		INTERVAL=$(($INTERVAL-1))
+		INTERVAL=$((INTERVAL-1))
 		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 
 		LOCKED=false
@@ -4511,7 +4487,7 @@ pitch_up() {
 		fi
 	fi
 	if [ "$INTERVAL" -lt "$(echo -n $INTERVAL_UPPER_LIMIT | cut -d'.' -f1)" ]; then
-		INTERVAL=$(($INTERVAL+1))
+		INTERVAL=$((INTERVAL+1))
 		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 
 		LOCKED=false
@@ -4550,10 +4526,10 @@ edo_down() {
 		draw_pitch
 	fi
 	if [ "$EDO" -gt "1" ]; then
-		EDO=$(($EDO-1))
+		EDO=$((EDO-1))
 		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
-		tmpz=$(($EDO*2))
-		if [ "$INTERVAL" -gt "$tmpz" ] || [ "$INTERVAL" -lt "$((-$tmpz))" ]; then
+		tmpz=$((EDO*2))
+		if [ "$INTERVAL" -gt "$tmpz" ] || [ "$INTERVAL" -lt "$((-tmpz))" ]; then
 			if [ "$INTERVAL" -lt "0" ]; then
 				INTERVAL=-$tmpz
 			else
@@ -4620,7 +4596,7 @@ edo_up() {
 		draw_pitch
 	fi
 	if [ "$EDO" -lt "2000000" ]; then
-		EDO=$(($EDO+1))
+		EDO=$((EDO+1))
 		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 
 		LOCKED=false
@@ -4834,13 +4810,13 @@ oscillate() {
 	gtts_speak "oscillating"
 	if [ "$result" == "" ]; then
 		old_int="$INTERVAL"
-		INTERVAL="$((-($INTERVAL)))"
+		INTERVAL="$((-(INTERVAL)))"
 		if [ "$INTERVAL" -lt "0" ]; then
 			result="$old_int"
 		else
 			result="$INTERVAL"
 		fi
-		result="$(($result*2))"
+		result="$((result*2))"
 		if [ "$old_int" -gt "0" ]; then
 			NEGATIVE=false
 		else
@@ -4865,22 +4841,22 @@ oscillate() {
 		fi
 		#FIXME
 		if [ "$c" == "o" ]; then
-			old_int=$(($old_int*2))
+			old_int=$((old_int*2))
 			if [ "$EDO" -lt "$EDO_LIMIT" ]; then
-				x=$(($x*2))
-				result=$(($result*2))
+				x=$((x*2))
+				result=$((result*2))
 			fi
 		elif [ "$c" == "m" ]; then
 			#old_int=$INTERVAL
-			if [ "$(($EDO % 2))" == "0" ]; then
-				old_int=$(($old_int/2))
-				x=$(($x/2))
-				result=$(($result/2))
+			if [ "$((EDO % 2))" == "0" ]; then
+				old_int=$((old_int/2))
+				x=$((x/2))
+				result=$((result/2))
 			fi
 		fi
 		secondary_scale_func "$c" "OSCILLATE"
 		if [ "$c" == "c" ]; then
-			x=$(($result-$x-2))
+			x=$((result-x-2))
 			if [ "$NEGATIVE" == true ]; then
 				NEGATIVE=false
 			else
@@ -4904,15 +4880,15 @@ oscillate() {
 			break
 		elif [ "$c" == "" ]; then
 			if [ "$NEGATIVE" == false ]; then
-				INTERVAL="$(($old_int-1))"
-				old_int="$(($old_int-1))"
+				INTERVAL="$((old_int-1))"
+				old_int="$((old_int-1))"
 			else
-				INTERVAL="$(($old_int+1))"
-				old_int="$(($old_int+1))"
+				INTERVAL="$((old_int+1))"
+				old_int="$((old_int+1))"
 			fi
 			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			draw_pitch
-			x="$(($x+1))"
+			x="$((x+1))"
 		fi
 
 		if [ "$x" == "$result" ]; then
@@ -4931,21 +4907,21 @@ oscillate() {
 				return
 			fi
 			if [ "$c" == "o" ]; then
-				old_int=$(($old_int*2))
+				old_int=$((old_int*2))
 				if [ "$EDO" -lt "$EDO_LIMIT" ]; then
-					x=$(($x*2))
-					result=$(($result*2))
+					x=$((x*2))
+					result=$((result*2))
 				fi
 			elif [ "$c" == "m" ]; then
-				if [ "$(($EDO % 2))" == "0" ]; then
-					old_int=$(($old_int/2))
-					x=$(($x/2))
-					result=$(($result/2))
+				if [ "$((EDO % 2))" == "0" ]; then
+					old_int=$((old_int/2))
+					x=$((x/2))
+					result=$((result/2))
 				fi
 			fi
 			secondary_scale_func "$c" "OSCILLATE"
 			if [ "$c" == "c" ]; then
-				x=$(($result-$x-2))
+				x=$((result-x-2))
 				if [ "$NEGATIVE" == true ]; then
 					NEGATIVE=false
 				else
@@ -5005,7 +4981,7 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$VOLUME" -ge "5" ]; then
-			VOLUME="$(($VOLUME-5))"
+			VOLUME="$((VOLUME-5))"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -5021,7 +4997,7 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$VOLUME" -le "95" ]; then
-			VOLUME="$(($VOLUME+5))"
+			VOLUME="$((VOLUME+5))"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -5037,7 +5013,7 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$VOLUME" -ge "1" ]; then
-			VOLUME="$(($VOLUME-1))"
+			VOLUME="$((VOLUME-1))"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -5053,7 +5029,7 @@ pcm_volume_change() {
 			draw_pitch
 		fi
 		if [ "$VOLUME" -le "99" ]; then
-			VOLUME="$(($VOLUME+1))"
+			VOLUME="$((VOLUME+1))"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -5097,22 +5073,22 @@ system_volume_change() {
 	num2="$(echo -ne "$1" | cut -b6)"
 	if [ "$dir" == "+" ]; then
 		if (( $leftvolume + 1 <= 100 )) && (( $rightvolume + 1 <= 100 )); then
-			l=$(($leftvolume + $num))
-			r=$(($rightvolume + $num2))
+			l=$((leftvolume + num))
+			r=$((rightvolume + num2))
 			if (( $l > 100 )) && (( $r > 100 )); then
-				set_system_volume "+$((100 - $leftvolume))% +$((100 - $rightvolume))%"
+				set_system_volume "+$((100 - leftvolume))% +$((100 - rightvolume))%"
 			elif (( $l > 100 )); then
-				set_system_volume "+$((100 - $leftvolume))% +$num2%"
+				set_system_volume "+$((100 - leftvolume))% +$num2%"
 			elif (( $r > 100 )); then
-				set_system_volume "+$num% +$((100 - $rightvolume))%"
+				set_system_volume "+$num% +$((100 - rightvolume))%"
 			else
 				set_system_volume "$1"
 			fi
 		fi
 	else
 		if (( $leftvolume - 1 >= 0 )) && (( $rightvolume - 1 >= 0 )); then
-			l=$(($leftvolume - $num))
-			r=$(($rightvolume - $num2))
+			l=$((leftvolume - num))
+			r=$((rightvolume - num2))
 			if [ "$OS" == "Linux" ]; then
 				if (( $l < 0 )) && (( $r < 0 )); then
 					set_system_volume "-$leftvolume% -$rightvolume%"
@@ -5176,13 +5152,13 @@ fade_volume() {
 				draw_pitch
 				return
 			fi
-			VOLUME="$(($VOLUME+1))"
+			VOLUME="$((VOLUME+1))"
 		elif [ "$down" == true ]; then
 			if [ "$VOLUME" == "0" ]; then
 				draw_pitch
 				return
 			fi
-			VOLUME="$(($VOLUME-1))"
+			VOLUME="$((VOLUME-1))"
 		fi
 		echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		draw_volume
@@ -5216,7 +5192,7 @@ fade_volume() {
 			draw_banner "FADING"
 			redraw_screen false 1 1 0 1
 		fi
-		x=$(($x+1))
+		x=$((x+1))
 	done
 	draw_pitch
 	redraw_buffer
@@ -5231,7 +5207,7 @@ sleep_countdown() {
 	fi
 	if [ "$tmp" != "" ]; then
 		gtts_speak "sleep canceled"
-		tput cup $(($LINES-3))
+		tput cup $((LINES-3))
 		tput el
 		echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
 		echo -ne "${PADDING}${WHITE}Sleep canceled"
@@ -5241,11 +5217,11 @@ sleep_countdown() {
 	if [ "$SLEEPING" == true ]; then
 		SLEEPING=false
 		empty_pane
-		tput cup $(($LINES-3))
+		tput cup $((LINES-3))
 		echo -ne "${PADDING}${WHITE}Sleeping now..."
 		x="$VOLUME"
 		while [ "$x" -ge "0" ] && [ "$VOLUME" -gt "0" ]; do
-			VOLUME="$(($VOLUME-1))"
+			VOLUME="$((VOLUME-1))"
 			echo "volume $x 1" >"$ALETHEIA/pipe$$" &
 			draw_volume
 			if [ "$WEB_CLIENT" == "0" ]; then
@@ -5257,7 +5233,7 @@ sleep_countdown() {
 				echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
 				return
 			fi
-			x=$(($x-1))
+			x=$((x-1))
 		done
 
 		kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -5273,7 +5249,7 @@ set_sleep() {
 		empty_pane
 		draw_banner "SLEEP"
 		gtts_speak "sleep"
-		tput cup $(($LINES-3))
+		tput cup $((LINES-3))
 		echo -ne "$NOCOLOR${PADDING}${WHITE}How many minutes$BLUE? "
 		answer="$(read_line)"
 	else
@@ -5285,7 +5261,7 @@ set_sleep() {
 			SLEEPING=true
 			if [ "$WEB_CLIENT" == "0" ]; then
 				empty_pane
-				tput cup $(($LINES-3))
+				tput cup $((LINES-3))
 				gtts_speak "suspend?"
 				echo -ne "${PADDING}${WHITE}Do you want to suspend$BLUE? "
 				read -rsn1 suspend
@@ -5298,7 +5274,7 @@ set_sleep() {
 			else
 				SUSPEND=false
 			fi
-			tput cup $(($LINES-3))
+			tput cup $((LINES-3))
 			tput el
 			if [ "$VOICE_ENABLED" == true ]; then
 				if [ "$answer" != "1" ]; then
@@ -5428,7 +5404,7 @@ read_number() {
 					echo -ne "\b" >/dev/stderr
 					tput el >/dev/stderr
 				done
-				number="$(($number-1))"
+				number="$((number-1))"
 				echo -ne $number >/dev/stderr
 				gtts_speak " $number"
 			fi
@@ -5438,7 +5414,7 @@ read_number() {
 					echo -ne "\b" >/dev/stderr
 					tput el >/dev/stderr
 				done
-				number="$(($number+1))"
+				number="$((number+1))"
 				echo -ne $number >/dev/stderr
 				gtts_speak " $number"
 			fi
@@ -5530,26 +5506,26 @@ redraw_screen() {
 	redraw_buffer
 	tput cup 1
 	tput el
-	tput cup $(($LINES-2))
+	tput cup $((LINES-2))
 	tput el
 }
 
 reset_buffer() {
-	number_per_page="$(($LINES-4))"
+	number_per_page="$((LINES-4))"
 	original_number_per_page="$number_per_page"
 
 	BUFFER=""
 	UNCOLORED_BUFFER=""
 
-	HALF="$(($POSITION % $number_per_page + $(($number_per_page/2 + 1))))"
+	HALF="$((POSITION % number_per_page + (number_per_page/2 + 1)))"
 
 	if [ "$POSITION" -lt "$number_per_page" ]; then
 		HALF="1"
 	elif [ "$number_per_page" -lt "$original_number_per_page" ]; then
-		HALF="$(($TOTAL_QUEUE-$original_number_per_page+1))"
+		HALF="$((TOTAL_QUEUE-original_number_per_page+1))"
 		number_per_page="$original_number_per_page"
-	elif [ "$POSITION" -gt "$(($number_per_page*2 - 1))" ]; then
-		HALF="$(($POSITION-$original_number_per_page/2))"
+	elif [ "$POSITION" -gt "$((number_per_page*2 - 1))" ]; then
+		HALF="$((POSITION-original_number_per_page/2))"
 	fi
 
 	if [ "$TOTAL_QUEUE" -le "$number_per_page" ]; then
@@ -5557,37 +5533,37 @@ reset_buffer() {
 		FLAGGED=true
 	fi
 
-	half_page="$(($number_per_page/2))"
+	half_page="$((number_per_page/2))"
 
 	if [ "$POSITION" -gt "$half_page" ]; then
-		if [ "$(($number_per_page % 2))" != "" ]; then
-			HALF=$((($POSITION - ($half_page))))
+		if [ "$((number_per_page % 2))" != "" ]; then
+			HALF=$(((POSITION - (half_page))))
 		else
-			HALF=$((1+($POSITION - ($half_page))))
+			HALF=$((1+(POSITION - (half_page))))
 		fi
 
-		if [ "$(($HALF+$number_per_page))" -gt "$TOTAL_QUEUE" ]; then
-			HALF="$(($TOTAL_QUEUE-$number_per_page+1))"
+		if [ "$((HALF+number_per_page))" -gt "$TOTAL_QUEUE" ]; then
+			HALF="$((TOTAL_QUEUE-number_per_page+1))"
 		fi
 	fi
 
 	HALF_OFFSET="0"
 	if [ "$HALF" -lt "1" ]; then
-		HALF_OFFSET="$(($HALF*-1)) - 1"
+		HALF_OFFSET="$((HALF*-1)) - 1"
 		HALF="1"
 	fi
 
 	pos_on_page=0
-	_last=$(($HALF+($number_per_page)-$HALF_OFFSET))
-	diff=$(($_last-$HALF))
+	_last=$((HALF+(number_per_page)-HALF_OFFSET))
+	diff=$((_last-HALF))
 	if [ "$TOTAL_QUEUE" -lt "$diff" ]; then
 		diff="$TOTAL_QUEUE"
 	fi
 
 	for i in $(seq 1 $diff); do
-		line="$(echo -ne "${queue_array[$(($i+$HALF-2))]}")"
+		line="$(echo -ne "${queue_array[$((i+HALF-2))]}")"
 		new_line="$line"
-		pos=$(($i-1+$HALF))
+		pos=$((i-1+HALF))
 		orig_line="$line"
 		# Too slow. Needs an option to cache all at once
 		USE_ID_TAGS=0
@@ -5637,15 +5613,15 @@ reset_buffer() {
 			display_pad=""
 		fi
 
-		pos_on_page=$(($pos_on_page+1))
+		pos_on_page=$((pos_on_page+1))
 		
 		if [ "$pos" == "$POSITION" ]; then
-			offset="$(($COLUMNS - 11 - ${#pos} - ${#pad}))"
+			offset="$((COLUMNS - 11 - ${#pos} - ${#pad}))"
 		else
-			offset="$(($COLUMNS - 5 - ${#pos} - ${#pad}))"
+			offset="$((COLUMNS - 5 - ${#pos} - ${#pad}))"
 		fi
 		if [ "${#line}" -gt "$offset" ]; then
-			line="$(echo -ne "$line" | sed -e 's/^ .*//g' | cut -b 1-$(($offset-1)))…"
+			line="$(echo -ne "$line" | sed -e 's/^ .*//g' | cut -b 1-$((offset-1)))…"
 		fi
 		if [ "$(echo -ne "$line" | grep --text " - ")" != "" ]; then
 			first_part="$(echo -ne "$line" | sed "s/ - //" | cut -d'' -f1)"
@@ -5668,25 +5644,25 @@ reset_buffer() {
 			fi
 			IFS=':' read hours minutes seconds <<< "$SONG_LENGTH"
 			if [ "$hours" != "00" ]; then
-				buf_space="$(printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-8)))"
+				buf_space="$(printf '%*s' $((COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-8)))"
 				APPEND_BLACK="${BLUE_BLACK}$hours${WHITE_BLACK}:${BLUE_BLACK}"
 				APPEND="${BLUE}$hours${WHITE}:$BLUE"
 			else
-				buf_space="$(printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5)))"
+				buf_space="$(printf '%*s' $((COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5)))"
 				APPEND=""
 				APPEND_BLACK=""
 			fi
 		else
-			buf_space="$(printf '%*s' $(($COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3)))"
+			buf_space="$(printf '%*s' $((COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3)))"
 		fi
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
 			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$APPEND_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING$(tput sgr0)\n"
-			LOCKING_POS="$(($i-1))"
+			LOCKING_POS="$((i-1))"
 		else
 			if [ "$PANELS_ENABLED" == false ]; then
 				if [ "$pos" == "$POSITION" ]; then
 					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$APPEND$BLUE$minutes$WHITE:$BLUE$seconds$PADDING\n"
-					LOCKING_POS="$(($i-1))"
+					LOCKING_POS="$((i-1))"
 					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$minutes:$seconds$PADDING\n"
 				else
 					BUFFER="$BUFFER$PADDING$WHITE$INDICATOR $BLUE$display_pad$BLUE$pos $WHITE$line$buf_space$PADDING\n"
@@ -5746,7 +5722,7 @@ redraw_buffer() {
 	echo -ne "$NOCOLOR"
 	tput cup 1
 	tput el
-	tput cup $(($LINES-2))
+	tput cup $((LINES-2))
 	tput el
 	tput cup 2
 	echo -ne "$BUFFER"
@@ -5755,17 +5731,17 @@ redraw_buffer() {
 		number_per_page=$TOTAL_QUEUE
 	fi
 
-	if [ "$(($COLUMNS-$TOTAL_QUEUE-4))" -gt "0" ]; then
-		empty_pane $((2+$TOTAL_QUEUE))
+	if [ "$((COLUMNS-TOTAL_QUEUE-4))" -gt "0" ]; then
+		empty_pane $((2+TOTAL_QUEUE))
 	fi
 
-	tput cup $(($LINES-2))
+	tput cup $((LINES-2))
 }
 
 empty_pane() {
 	tput civis
 	lineno=$1
-	pane="$(($LINES-2))"
+	pane="$((LINES-2))"
 
 	if [ "$lineno" == "" ]; then
 		lineno="1"
@@ -5775,11 +5751,11 @@ empty_pane() {
 	while [ "$lineno" -le "$pane" ]; do
 		tput cup $lineno
 		tput el
-		lineno="$(($lineno+1))"
+		lineno="$((lineno+1))"
 	done
 	tput cup 1
 	tput el
-	tput cup $(($LINES-2))
+	tput cup $((LINES-2))
 	tput el
 }
 
@@ -5796,7 +5772,7 @@ draw_volume() {
 		VOLUME="$DEFAULT_VOLUME"
 	fi
 	echo -ne "$BLUE_BLACK$PADDING$VOLUME$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$tmp_volume_left$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$tmp_volume_right"
-	printf '%*s' $(($COLUMNS - (${#CORNER_DIVIDER}*2) - ${#equal} -${#VOLUME} - (${#PADDING}*2) - ${#tmp_volume_left} - ${#tmp_volume_right}))
+	printf '%*s' $((COLUMNS - (${#CORNER_DIVIDER}*2) - ${#equal} -${#VOLUME} - (${#PADDING}*2) - ${#tmp_volume_left} - ${#tmp_volume_right}))
 	echo -ne "$NOCOLOR"
 }
 
@@ -5804,7 +5780,7 @@ draw_position() {
 	local equalizer=$1
 	RIGHT_BANNER_WIDTH=0
 	POSITION_WIDTH=$((${#POSITION} + ${#TOTAL_QUEUE} + 1 + (${#CORNER_DIVIDER}*2)))
-	tput cup $LINES $(($COLUMNS-${#POSITION} - ${#TOTAL_QUEUE} - 1 - (${#CORNER_DIVIDER}*2) - ${#PADDING}))
+	tput cup $LINES $((COLUMNS-${#POSITION} - ${#TOTAL_QUEUE} - 1 - (${#CORNER_DIVIDER}*2) - ${#PADDING}))
 	if [ "$LOOP" == true ]; then
 		center="1"
 	elif [ "$LOOP_ARTIST" == true ]; then
@@ -5882,8 +5858,6 @@ toggle_panels() {
 			GREEN_BLACK='\033[1;32m'
 			RED_BLACK='\033[1;31m'
 			CYAN_BLACK='\033[1;36m'
-			#BLUE_BLACK=$ORIG_BLUE_BLACK
-			#WHITE_BLACK=$ORIG_WHITE_BLACK
 			BLUE_BLACK="${BLUE}"
 			WHITE_BLACK="${WHITE}"
 		fi
@@ -5920,8 +5894,8 @@ toggle_panels() {
 
 draw_select_color_indicator() {
 	RIGHT_BANNER_WIDTH="29"
-	if [ "$(($COLUMNS-$RIGHT_BANNER_WIDTH-$LEFT_BANNER_WIDTH-2-(${#PADDING}*2)))" -gt "1" ]; then
-		tput cup $LINES $(($COLUMNS-${#PADDING}-$RIGHT_BANNER_WIDTH))
+	if [ "$((COLUMNS-RIGHT_BANNER_WIDTH-LEFT_BANNER_WIDTH-2-(${#PADDING}*2)))" -gt "1" ]; then
+		tput cup $LINES $((COLUMNS-${#PADDING}-RIGHT_BANNER_WIDTH))
 		echo -ne "${BLUE_BLACK}v:${WHITE_BLACK}invert ${BLUE_BLACK}#:${WHITE_BLACK}save ${BLUE_BLACK}n:${WHITE_BLACK}next ${BLUE_BLACK}b:${WHITE_BLACK}back$PADDING"
 		echo -ne "$COLOR_TEXT"
 	else
@@ -6253,7 +6227,7 @@ draw_wait() {
 		echo -ne "$NOCOLOR"
 		clear
 	fi
-	tput cup $(($LINES/2)) $((($COLUMNS/2)-5))
+	tput cup $((LINES/2)) $(((COLUMNS/2)-5))
 	echo -ne "$NOCOLOR${WHITE}-- ${BLUE}WAIT ${WHITE}--$NOCOLOR"
 	gtts_speak "wait" false true
 }
@@ -6265,15 +6239,15 @@ web_client_func() {
 
 		BUFFER=""
 
-		HALF="$(($POSITION % $number_per_page + $(($number_per_page/2 + 1))))"
+		HALF="$((POSITION % number_per_page + (number_per_page/2 + 1)))"
 
 		if [ "$POSITION" -lt "$number_per_page" ]; then
 			HALF="1"
 		elif [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			HALF="$(($TOTAL_QUEUE-$original_number_per_page+1))"
+			HALF="$((TOTAL_QUEUE-original_number_per_page+1))"
 			number_per_page="$original_number_per_page"
-		elif [ "$POSITION" -gt "$(($number_per_page*2 - 1))" ]; then
-			HALF="$(($POSITION-$original_number_per_page/2))"
+		elif [ "$POSITION" -gt "$((number_per_page*2 - 1))" ]; then
+			HALF="$((POSITION-original_number_per_page/2))"
 		fi
 
 		if [ "$TOTAL_QUEUE" -le "$number_per_page" ]; then
@@ -6281,41 +6255,41 @@ web_client_func() {
 			FLAGGED=true
 		fi
 
-		half_page="$(($number_per_page/2))"
+		half_page="$((number_per_page/2))"
 
 		if [ "$POSITION" -gt "$half_page" ]; then
-			if [ "$(($number_per_page % 2))" != "" ]; then
-				HALF=$((($POSITION - ($half_page))))
+			if [ "$((number_per_page % 2))" != "" ]; then
+				HALF=$(((POSITION - (half_page))))
 			else
-				HALF=$((1+($POSITION - ($half_page))))
+				HALF=$((1+(POSITION - (half_page))))
 			fi
 
-			if [ "$(($HALF+$number_per_page))" -gt "$TOTAL_QUEUE" ]; then
-				HALF="$(($TOTAL_QUEUE-$number_per_page+1))"
+			if [ "$((HALF+number_per_page))" -gt "$TOTAL_QUEUE" ]; then
+				HALF="$((TOTAL_QUEUE-number_per_page+1))"
 			fi
 		fi
 
 		HALF_OFFSET="0"
 		if [ "$HALF" -lt "1" ]; then
-			HALF_OFFSET="$(($HALF*-1)) - 1"
+			HALF_OFFSET="$((HALF * -1)) - 1"
 			HALF="1"
 		fi
 
 		COLOR2="$BLUE"
 
 		pos_on_page=0
-		_last=$(($HALF+($number_per_page)-$HALF_OFFSET))
-		if [ "$(($_last-$HALF))" -lt "5" ] && [ "$TOTAL_QUEUE" -ge "5" ]; then
-			if [ "$POSITION" == "$TOTAL_QUEUE" ] || [ "$POSITION" == "$(($TOTAL_QUEUE-1))" ]; then
-				HALF=$(($_last-5))
+		_last=$((HALF+number_per_page-HALF_OFFSET))
+		if [ "$((_last-HALF))" -lt "5" ] && [ "$TOTAL_QUEUE" -ge "5" ]; then
+			if [ "$POSITION" == "$TOTAL_QUEUE" ] || [ "$POSITION" == "$((TOTAL_QUEUE-1))" ]; then
+				HALF=$((_last-5))
 			fi
 		fi
 		if [ "$HALF" == "1" ]; then
 			HALF=2
-			_last=$((${_last}+1))
+			_last=$((_last+1))
 		fi
-		lines="$(printf '%s\n' "${queue_array[@]}" | sed -n "$(($HALF-1)),$((${_last}-1))p")"
-		diff=$(($_last-$HALF))
+		lines="$(printf '%s\n' "${queue_array[@]}" | sed -n "$((HALF-1)),$((_last-1))p")"
+		diff=$((_last-HALF))
 		if [ "$POSITION" -lt "3" ]; then
 			pos=$POSITION
 		else
@@ -6323,13 +6297,13 @@ web_client_func() {
 		fi
 		echo -ne "$lines" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | sed -e "s/\n/<br\/>/g" >"$ALETHEIA/current_queue"
 		if [ "$POSITION" -lt "3" ]; then
-			pos=$(($pos-1))
-		elif [ "$POSITION" -gt "$(($TOTAL_QUEUE-1))" ]; then
-			pos=$(($pos+1))
+			pos=$((pos-1))
+		elif [ "$POSITION" -gt "$((TOTAL_QUEUE-1))" ]; then
+			pos=$((pos+1))
 		fi
 		if [ "$POSITION" == "$TOTAL_QUEUE" ] && [ "$TOTAL_QUEUE" -ge "5" ]; then
 			pos=4
-		elif [ "$POSITION" == "$(($TOTAL_QUEUE-1))" ] && [ "$TOTAL_QUEUE" -ge "5" ]; then
+		elif [ "$POSITION" == "$((TOTAL_QUEUE-1))" ] && [ "$TOTAL_QUEUE" -ge "5" ]; then
 			pos=3
 		fi
 		echo -ne "$pos" >"$ALETHEIA/current_pos"
@@ -6425,7 +6399,7 @@ load_only_loops() {
 				var1="$(echo -ne "$i" | rev | cut -d'.' -f2- | rev)"
 				if [ -e "$var1.repeats" ]; then
 					queue_array[$index]="$var1"
-					index=$(($index+1))
+					index=$((index+1))
 				fi
 			done
 			unset IFS
@@ -6437,7 +6411,7 @@ load_only_loops() {
 			for i in $(find "$MUSICDIR" -iname "*\.repeats" | shuf | sed -e "s/\.repeats$//g"); do
 				if [ -e "$i" ]; then
 					queue_array[$index]="$i"
-					index=$(($index+1))
+					index=$((index+1))
 				fi
 			done
 			unset IFS
@@ -6461,7 +6435,7 @@ load_only_loops() {
 		index=0
 		for i in $(find "$MUSICDIR" -iname "*.mp3" -o -iname "*.flac" | shuf); do
 			queue_array[$index]="$i"
-			index=$(($index+1))
+			index=$((index+1))
 		done
 		unset IFS
 		SHUFFLED=true
@@ -6531,9 +6505,9 @@ generate_complementary_color() {
 	local g=$(hex_to_decimal "$green")
 	local b=$(hex_to_decimal "${blue%m}")
 
-	local comp_r=$((255 - $r))
-	local comp_g=$((255 - $g))
-	local comp_b=$((255 - $b))
+	local comp_r=$((255 - r))
+	local comp_g=$((255 - g))
+	local comp_b=$((255 - b))
 
 	printf "#%02x%02x%02x\n" $comp_r $comp_g $comp_b
 }
@@ -6640,7 +6614,7 @@ invert_int() {
 		echo "mute" >"$ALETHEIA/pipe$$" &
 		MUTE=false
 	fi
-	INTERVAL="$((-($INTERVAL)))"
+	INTERVAL="$((-(INTERVAL)))"
 	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	espeak_say " $INTERVAL $EDO"
 	VOICE_ENABLED=false
@@ -6673,9 +6647,9 @@ draw_pitch() {
 
 	POSITION_WIDTH="$((${#POSITION}+${#TOTAL_QUEUE}+1+(${#CORNER_DIVIDER}*2)))"
 	if [ "$POSITION_WIDTH" -lt "$RIGHT_BANNER_WIDTH" ]; then
-		printf '%*s' $(($COLUMNS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $RIGHT_BANNER_WIDTH))
+		printf '%*s' $((COLUMNS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - RIGHT_BANNER_WIDTH))
 	else
-		printf '%*s' $(($COLUMNS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - $POSITION_WIDTH))
+		printf '%*s' $((COLUMNS - ${#toggle} - (${#CORNER_DIVIDER}*4) - ${#INTERVAL} - ${#EDO} - POSITION_WIDTH))
 	fi
 	echo -ne "$NOCOLOR"
 }
@@ -6684,7 +6658,7 @@ draw_equalizer() {
 	stty -echo
 	IFS=':' read bass _ _ _ mid _ _ treble _ _ _ <<< "$EQUALIZER"
 	equal="$bass:$mid:$treble"
-	tput cup 0 $(($COLUMNS-${#bass}-${#mid}-${#treble}-(${#CORNER_DIVIDER}*2)-${#PADDING}))
+	tput cup 0 $((COLUMNS-${#bass}-${#mid}-${#treble}-(${#CORNER_DIVIDER}*2)-${#PADDING}))
 	echo -ne "$BLUE_BLACK$bass$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$mid$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$treble$PADDING$NOCOLOR"
 }
 
@@ -6712,7 +6686,7 @@ queue_help_screen() {
 	gtts_speak "queue controls"
 	local flagged=false
 	original_number_per_page="$number_per_page"
-	number_per_page="$(($LINES-4))"
+	number_per_page="$((LINES-4))"
 
 	FLAGGED=false
 	if [ "$QUEUE_HELP_LENGTH" -le "$number_per_page" ]; then
@@ -6724,14 +6698,14 @@ queue_help_screen() {
 	while [ "$pos" -le "$QUEUE_HELP_LENGTH" ]; do
 		buf=""
 		tput cup 0
-		if [ "$(($QUEUE_HELP_LENGTH-$pos))" -lt $number_per_page ]; then
-			number_per_page=$(($QUEUE_HELP_LENGTH-$pos+1))
+		if [ "$((QUEUE_HELP_LENGTH-pos))" -lt $number_per_page ]; then
+			number_per_page=$((QUEUE_HELP_LENGTH-pos+1))
 			FLAGGED=true
 		fi
 		if [ "$pos" -gt "$QUEUE_HELP_LENGTH" ]; then
 			return
 		fi
-		for i in $(seq $pos $(($pos + $(($number_per_page-1))))); do
+		for i in $(seq $pos $((pos + (number_per_page-1)))); do
 			line="$(echo -e "$QUEUE_HELP" | sed -n ${i}p)"
 			if [ "$(echo "$line" | cut -b2)" != " " ]; then
 				tmp1="$BLUE$line"
@@ -6749,7 +6723,7 @@ queue_help_screen() {
 		echo -ne "$NOCOLOR$buf"
 
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($number_per_page + 2))"
+			empty_pane "$((number_per_page + 2))"
 		fi
 
 		read -rsn1 inputchar
@@ -6758,9 +6732,9 @@ queue_help_screen() {
 			if [ "$FLAGGED" == true ]; then
 				continue
 			fi
-			pos="$(($pos+$number_per_page))"
+			pos="$((pos+number_per_page))"
 			if [ "$pos" -gt "$QUEUE_HELP_LENGTH" ]; then
-				pos="$(($QUEUE_HELP_LENGTH-$number_per_page-1))"
+				pos="$((QUEUE_HELP_LENGTH-number_per_page-1))"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
@@ -6772,12 +6746,12 @@ queue_help_screen() {
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				number_per_page="$original_number_per_page"
 			fi
-			pos="$(($pos-$number_per_page))"
+			pos="$((pos-number_per_page))"
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
 		elif [ "$inputchar" == "d" ]; then
-			echo -e "$QUEUE_HELP" | sed -n "$pos,$(($pos+$number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
+			echo -e "$QUEUE_HELP" | sed -n "$pos,$((pos+number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 & >/dev/null 2>/dev/null
 		else
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "closed" true
@@ -6787,7 +6761,7 @@ queue_help_screen() {
 			draw_pitch
 			draw_position
 			redraw_buffer
-			empty_pane $(($number_per_page+2))
+			empty_pane $((number_per_page+2))
 			return
 		fi
 	done
@@ -6799,7 +6773,7 @@ scale_help_screen() {
 	local initial_screen=$1
 
 	width="$(echo -ne "$SCALE_HELP" | wc -L)"
-	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
 		TWO_COLUMN=true
 	else
 		TWO_COLUMN=false
@@ -6807,7 +6781,7 @@ scale_help_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#SCALE_HELP_BUFFER[@]}" ]; do
-		number_per_page=$(($LINES-4))
+		number_per_page=$((LINES-4))
 		original_number_per_page=$number_per_page
 
 		tput cup 2
@@ -6815,24 +6789,24 @@ scale_help_screen() {
 
 		helpbuflines=$(echo -ne "${SCALE_HELP_BUFFER[$page]}" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($helpbuflines+2))"
+			empty_pane "$((helpbuflines+2))"
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
 			if [ "$page" == "0" ]; then
 				_first=1
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			else
-				_first=$((($page*$number_per_page*2)+1))
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				_first=$(((page*number_per_page*2)+1))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
 				_first=1
-				last=$((($page*$number_per_page)+$number_per_page))
+				last=$(((page*number_per_page)+number_per_page))
 			else
-				_first=$((($page*$number_per_page)+1))
-				last=$((($page*$number_per_page)+$number_per_page))
+				_first=$(((page*number_per_page)+1))
+				last=$(((page*number_per_page)+number_per_page))
 			fi
 		fi
 
@@ -6840,15 +6814,15 @@ scale_help_screen() {
 		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
-			if [ "$(($page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
-				page=$(($page+1))
+			if [ "$((page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
+				page=$((page+1))
 				gtts_speak "page down"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
-				page=$(($page-1))
+				page=$((page-1))
 				gtts_speak "page up"
 			fi
 		elif [ "$inputchar" == "d" ]; then
@@ -6875,13 +6849,13 @@ scale_help_screen() {
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$(($page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
-					page=$(($page+1))
+				if [ "$((page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
+					page=$((page+1))
 				fi
 				;;
 			'[A')
 				if [ "$page" -gt "0" ]; then
-					page=$(($page-1))
+					page=$((page-1))
 				fi
 				;;
 			*)
@@ -6905,12 +6879,12 @@ add_downloaded() {
 	list=$(find "$MUSICDIR" -cnewer $SCRIPT_PATH -iname "*.mp3" -o -cnewer $SCRIPT_PATH -iname "*.flac")
 	if [ "$list" != "" ]; then
 		for i in $list; do
-			queue_array[$(($index+$TOTAL_QUEUE))]="$i"
-			index=$(($index+1))
+			queue_array[$((index+TOTAL_QUEUE))]="$i"
+			index=$((index+1))
 		done
 		unset IFS
-		DOWNLOAD_POSITION="$(($TOTAL_QUEUE+1))"
-		TOTAL_QUEUE="$(($index+$TOTAL_QUEUE))"
+		DOWNLOAD_POSITION="$((TOTAL_QUEUE+1))"
+		TOTAL_QUEUE="$((index+TOTAL_QUEUE))"
 		if [ "$1" == false ] || [ "$1" == "" ]; then
 			gtts_speak "queued downloads"
 		fi
@@ -7027,12 +7001,12 @@ shuffle_queue() {
 }
 
 render_voice_settings_screen() {
-	render $(($VOICE_HELP_LENGTH+1)) "$(echo -ne "$VOICE_HELP" | wc -L)" "$VOICE_HELP"
+	render $((VOICE_HELP_LENGTH+1)) "$(echo -ne "$VOICE_HELP" | wc -L)" "$VOICE_HELP"
 	VOICE_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
 render_scale_help_screen() {
-	render $(($SCALE_HELP_LENGTH+1)) "$(echo -ne "$SCALE_HELP" | wc -L)" "$SCALE_HELP"
+	render $((SCALE_HELP_LENGTH+1)) "$(echo -ne "$SCALE_HELP" | wc -L)" "$SCALE_HELP"
 	SCALE_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
@@ -7042,7 +7016,7 @@ voice_settings_screen() {
 	flagged=false
 
 	width="$(echo -ne "$VOICE_HELP" | wc -L)"
-	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
 		TWO_COLUMN=true
 	else
 		TWO_COLUMN=false
@@ -7050,7 +7024,7 @@ voice_settings_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#VOICE_HELP_BUFFER[@]}" ]; do
-		number_per_page=$(($LINES-4))
+		number_per_page=$((LINES-4))
 		original_number_per_page=$number_per_page
 		draw_banner "VOICE"
 		tput cup 2
@@ -7058,42 +7032,42 @@ voice_settings_screen() {
 
 		helpbuflines=$(echo -ne "${VOICE_HELP_BUFFER[$page]}" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($helpbuflines+2))"
+			empty_pane "$((helpbuflines+2))"
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
 			if [ "$page" == "0" ]; then
 				first=1
-				last=$(($number_per_page*2))
+				last=$((number_per_page*2))
 			else
-				first=$((($page*$number_per_page*2)+1))
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				first=$(((page*number_per_page*2)+1))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
 				first=1
 				last=$number_per_page
 			else
-				first=$((($page*$number_per_page)+1))
-				last=$((($page*$number_per_page)+$number_per_page))
+				first=$(((page*number_per_page)+1))
+				last=$(((page*number_per_page)+number_per_page))
 			fi
 		fi
 
 		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
-			if [ "$(($page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
-				page=$(($page+1))
+			if [ "$((page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
+				page=$((page+1))
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$page" -gt "0" ]; then
-				page=$(($page-1))
+				page=$((page-1))
 			fi
 		elif [ "$inputchar" == "J" ]; then
 			kill $PLAY_PID >/dev/null 2>/dev/null
 			if [ "$VOICE_PITCH" -gt "-30" ]; then
-				VOICE_PITCH="$(($VOICE_PITCH-1))"
+				VOICE_PITCH="$((VOICE_PITCH-1))"
 			fi
 			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
 				draw_banner "WAIT"
@@ -7108,7 +7082,7 @@ voice_settings_screen() {
 		elif [ "$inputchar" == "K" ]; then
 			kill $PLAY_PID >/dev/null 2>/dev/null
 			if [ "$VOICE_PITCH" -lt "30" ]; then
-				VOICE_PITCH="$(($VOICE_PITCH+1))"
+				VOICE_PITCH="$((VOICE_PITCH+1))"
 			fi
 			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
 				draw_banner "WAIT"
@@ -7142,19 +7116,19 @@ voice_settings_screen() {
 			draw_equalizer
 			draw_banner "VOICE"
 			draw_position
-			number_per_page="$(($LINES-4))"
+			number_per_page="$((LINES-4))"
 			original_number_per_page="$number_per_page"
 		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$(($page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
-					page=$(($page+1))
+				if [ "$((page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
+					page=$((page+1))
 				fi
 				;;
 			'[A')
 				if [ "$page" -gt "0" ]; then
-					page=$(($page-1))
+					page=$((page-1))
 				fi
 				;;
 			*)
@@ -7195,7 +7169,7 @@ render() {
 	local width="$2"
 	local text="$3"
 	loading_chars=0
-	number_per_page="$(($LINES-4))"
+	number_per_page="$((LINES-4))"
 	original_number_per_page="$number_per_page"
 
 	FLAGGED=false
@@ -7205,7 +7179,7 @@ render() {
 		FLAGGED=true
 	fi
 	
-	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
 		if [ "$FLAGGED" == true ]; then
 			TWO_COLUMN=false
 			d=1
@@ -7221,27 +7195,27 @@ render() {
 	pos=1
 	while [ "$pos" -lt "$length" ]; do
 		buf=""
-		if [ "$(($length-$pos))" -lt $number_per_page ]; then
-			number_per_page=$(($length-$pos+1))
+		if [ "$((length-pos))" -lt $number_per_page ]; then
+			number_per_page=$((length-pos+1))
 			FLAGGED=true
 		fi
 		if [ "$pos" -gt "$length" ]; then
 			return
 		fi
 		x=0
-		for i in $(seq $pos $(($pos + $(($number_per_page-1))))); do
+		for i in $(seq $pos $(($pos + $((number_per_page-1))))); do
 			line="$(echo -e "$text" | sed -n ${i}p)"
 			if [ "$TWO_COLUMN" == false ]; then
 				pmt_line=""
 			else
-				pmt_line="$(echo -e "$text" | sed -n $(($i+$number_per_page))p)"
+				pmt_line="$(echo -e "$text" | sed -n $((i+number_per_page))p)"
 			fi
 			if [ "$(echo "$line" | cut -b3)" != " " ]; then
 				tmp1="$BLUE$line"
 				tmp2=""
 
 				if [ "$TWO_COLUMN" == true ]; then
-					if [ "$(($i+$number_per_page-2))" -lt "$(echo -n "$text" | wc -l)" ]; then
+					if [ "$((i+number_per_page-2))" -lt "$(echo -n "$text" | wc -l)" ]; then
 						if [ "$(echo "$pmt_line" | cut -b3)" != " " ]; then
 							pmt1="$BLUE$pmt_line"
 							pmt2=""
@@ -7261,7 +7235,7 @@ render() {
 				tmp2="$WHITE$(echo "$line" | cut -d' ' -f3-)"
 
 				if [ "$TWO_COLUMN" == true ]; then
-					if [ "$(($i+$number_per_page-2))" -lt "$(echo -n "$text" | wc -l)" ]; then
+					if [ "$((i+number_per_page-2))" -lt "$(echo -n "$text" | wc -l)" ]; then
 						pmt1="$BLUE $(echo "$pmt_line" | cut -b1-2)"
 						pmt2="$WHITE$(echo "$pmt_line" | cut -d' ' -f3-)"
 					else
@@ -7279,28 +7253,28 @@ render() {
 			fi
 
 			if [ "$TWO_COLUMN" == true ]; then
-				difference=$(( (($COLUMNS/2) - $width + 2) / 2))
+				difference=$((((COLUMNS/2) - width + 2) / 2))
 			else
-				difference=$(( (($COLUMNS - $width + 2) / 2 ) ))
+				difference=$(((COLUMNS - width + 2) / 2 ))
 			fi
 
 			if [ "$pmt_line" != "" ] && [ "$line" != "" ]; then
-				buf="$buf$(printf '%*s' $difference)$tmp1 $tmp2$(tput el)$(tput cup $(($x+2)) $((($COLUMNS/2+1))))$(printf '%*s' $(($difference-1)))$pmt1 $pmt2$(tput el)\n"
+				buf="$buf$(printf '%*s' $difference)$tmp1 $tmp2$(tput el)$(tput cup $((x+2)) $(((COLUMNS/2+1))))$(printf '%*s' $((difference-1)))$pmt1 $pmt2$(tput el)\n"
 			else
 				buf="$buf$(printf '%*s' $difference)$tmp1 $tmp2$(tput el)\n"
 			fi
 
-			x=$(($x+1))
+			x=$((x+1))
 
 		done
 
 		TMP_BUFFER+=("$buf")
 
 		if [ "$TWO_COLUMN" == false ]; then
-			pos="$(($pos+$number_per_page))"
+			pos="$((pos+number_per_page))"
 		else
-			if [ "$(($pos+($number_per_page*2)))" -lt "$length" ]; then
-				pos="$(($pos+($number_per_page*2)))"
+			if [ "$((pos+(number_per_page*2)))" -lt "$length" ]; then
+				pos="$((pos+(number_per_page*2)))"
 			else
 				return
 			fi
@@ -7309,7 +7283,7 @@ render() {
 }
 
 render_repeat_help_screen() {
-	render $(($REPEAT_HELP_LENGTH+1)) "$(echo -ne "$REPEAT_HELP" | wc -L)" "$REPEAT_HELP"
+	render $((REPEAT_HELP_LENGTH+1)) "$(echo -ne "$REPEAT_HELP" | wc -L)" "$REPEAT_HELP"
 	REPEAT_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
@@ -7318,7 +7292,7 @@ loop_help_screen() {
 	local initial_screen=$1
 
 	width="$(echo -ne "$REPEAT_HELP" | wc -L)"
-	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
 		TWO_COLUMN=true
 	else
 		TWO_COLUMN=false
@@ -7326,7 +7300,7 @@ loop_help_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#REPEAT_HELP_BUFFER[@]}" ]; do
-		number_per_page=$(($LINES-4))
+		number_per_page=$((LINES-4))
 		original_number_per_page=$number_per_page
 
 		tput cup 2
@@ -7334,24 +7308,24 @@ loop_help_screen() {
 
 		helpbuflines=$(echo -ne "${REPEAT_HELP_BUFFER[$page]}" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($helpbuflines+2))"
+			empty_pane "$((helpbuflines+2))"
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
 			if [ "$page" == "0" ]; then
 				_first=1
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			else
-				_first=$((($page*$number_per_page*2)+1))
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				_first=$(((page*number_per_page*2)+1))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
 				_first=1
-				last=$((($page*$number_per_page)+$number_per_page))
+				last=$(((page*number_per_page)+number_per_page))
 			else
-				_first=$((($page*$number_per_page)+1))
-				last=$((($page*$number_per_page)+$number_per_page))
+				_first=$(((page*number_per_page)+1))
+				last=$(((page*number_per_page)+number_per_page))
 			fi
 		fi
 
@@ -7359,15 +7333,15 @@ loop_help_screen() {
 		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
-			if [ "$(($page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
-				page=$(($page+1))
+			if [ "$((page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
+				page=$((page+1))
 				gtts_speak "page down"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
-				page=$(($page-1))
+				page=$((page-1))
 				gtts_speak "page up"
 			fi
 		elif [ "$inputchar" == "d" ]; then
@@ -7381,7 +7355,7 @@ loop_help_screen() {
 			draw_equalizer
 			empty_pane
 			draw_banner "HELP" false false true
-			tput cup $LINES $(($COLUMNS-12))
+			tput cup $LINES $((COLUMNS-12))
 			echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
@@ -7393,13 +7367,13 @@ loop_help_screen() {
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$(($page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
-					page=$(($page+1))
+				if [ "$((page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
+					page=$((page+1))
 				fi
 				;;
 			'[A')
 				if [ "$page" -gt "0" ]; then
-					page=$(($page-1))
+					page=$((page-1))
 				fi
 				;;
 			*)
@@ -7418,7 +7392,7 @@ loop_help_screen() {
 }
 
 render_help_screen() {
-	render $(($HELP_LENGTH+1)) "$(echo -ne "$HELP" | wc -L)" "$HELP"
+	render $((HELP_LENGTH+1)) "$(echo -ne "$HELP" | wc -L)" "$HELP"
 	tput rc
 	HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
@@ -7428,7 +7402,7 @@ help_screen() {
 	local initial_screen=$1
 
 	width="$(echo -ne "$HELP" | wc -L)"
-	if [ "$COLUMNS" -ge "$((($width*2)+3))" ]; then
+	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
 		TWO_COLUMN=true
 	else
 		TWO_COLUMN=false
@@ -7436,17 +7410,17 @@ help_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#HELP_BUFFER[@]}" ]; do
-		number_per_page=$(($LINES-4))
+		number_per_page=$((LINES-4))
 		original_number_per_page=$number_per_page
 
 		tput cup 0
 		echo -ne "$BLUE_BLACK${PADDING}PCM${WHITE_BLACK}:${BLUE_BLACK}LEF${WHITE_BLACK}:${BLUE_BLACK}RIG"
-		printf '%*s' $(($COLUMNS - 24))
+		printf '%*s' $((COLUMNS - 24))
 		echo -ne "${BLUE_BLACK}BAS${WHITE_BLACK}:${BLUE_BLACK}MID${WHITE_BLACK}:${BLUE_BLACK}TRE$PADDING$NOCOLOR"
 
 		tput cup $LINES
 		echo -ne "${BLUE_BLACK}${PADDING}INT${WHITE_BLACK}:${BLUE_BLACK}EDO${WHITE_BLACK}:${BLUE_BLACK}TOG"
-		printf '%*s' $(($COLUMNS - 24))
+		printf '%*s' $((COLUMNS - 24))
 		echo -ne "${BLUE_BLACK}POS${WHITE_BLACK}:${BLUE_BLACK}QUE${WHITE_BLACK}:${BLUE_BLACK}TOG$PADDING$NOCOLOR"
 
 		tput cup 2
@@ -7454,24 +7428,24 @@ help_screen() {
 
 		helpbuflines=$(echo -ne "${HELP_BUFFER[$page]}" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($helpbuflines+2))"
+			empty_pane "$((helpbuflines+2))"
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
 			if [ "$page" == "0" ]; then
 				_first=1
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			else
-				_first=$((($page*$number_per_page*2)+1))
-				last=$((($page*$number_per_page*2)+($number_per_page*2)))
+				_first=$(((page*number_per_page*2)+1))
+				last=$(((page*number_per_page*2)+(number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
 				_first=1
-				last=$((($page*$number_per_page)+$number_per_page))
+				last=$(((page*number_per_page)+number_per_page))
 			else
-				_first=$((($page*$number_per_page)+1))
-				last=$((($page*$number_per_page)+$number_per_page))
+				_first=$(((page*number_per_page)+1))
+				last=$(((page*number_per_page)+number_per_page))
 			fi
 		fi
 
@@ -7479,15 +7453,15 @@ help_screen() {
 		if [ "$inputchar" = "j" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page down"
-			if [ "$(($page+1))" -lt "${#HELP_BUFFER[@]}" ]; then
-				page=$(($page+1))
+			if [ "$((page+1))" -lt "${#HELP_BUFFER[@]}" ]; then
+				page=$((page+1))
 				gtts_speak "page down"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
-				page=$(($page-1))
+				page=$((page-1))
 				gtts_speak "page up"
 			fi
 		elif [ "$inputchar" == "d" ]; then
@@ -7517,13 +7491,13 @@ help_screen() {
 			read -n2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$(($page+1))" -lt "${#HELP_BUFFER[@]}" ]; then
-					page=$(($page+1))
+				if [ "$((page+1))" -lt "${#HELP_BUFFER[@]}" ]; then
+					page=$((page+1))
 				fi
 				;;
 			'[A')
 				if [ "$page" -gt "0" ]; then
-					page=$(($page-1))
+					page=$((page-1))
 				fi
 				;;
 			*)
@@ -7651,7 +7625,7 @@ new_playlist() {
 			for i in $matches; do
 				ind="$(echo -n "$i" | cut -d':' -f1)"
 				queue_array[$index]="$(echo -n "$file_list" | sed -n "${ind}p")"
-				index=$(($index+1))
+				index=$((index+1))
 			done
 			unset IFS
 			if [ "$index" == "$TOTAL_QUEUE" ]; then
@@ -7665,7 +7639,7 @@ new_playlist() {
 			for i in $matches; do
 				ind="$(echo -n "$i" | cut -d':' -f1)"
 				queue_array[$index]="$(echo -n "$file_list" | sed -n "${ind}p")"
-				index=$(($index+1))
+				index=$((index+1))
 			done
 			unset IFS
 			if [ "$index" == "0" ]; then
@@ -7689,7 +7663,7 @@ new_playlist() {
 
 search_queue() {
 	local total="$(echo -e "$SEARCHBUFFER"| wc -l)"
-	local number_per_page="$(($LINES-4))"
+	local number_per_page="$((LINES-4))"
 	local original_number_per_page="$number_per_page"
 
 	local FLAGGED=false
@@ -7705,19 +7679,19 @@ search_queue() {
 	while [ "$pos" -le "$total" ] || [ "$FLAGGED" == false ]; do
 		BUFFER=""
 		tput cup 0
-		if [ "$(($total-$pos))" -lt "$number_per_page" ]; then
-			number_per_page=$(($total-$pos+1))
+		if [ "$((total-pos))" -lt "$number_per_page" ]; then
+			number_per_page=$((total-pos+1))
 			FLAGGED=true
 		fi
 		if [ "$pos" -gt "$total" ]; then
 			return
 		fi
 		tmp_buf=""
-		_last=$(($pos+$number_per_page))
+		_last=$((pos+number_per_page))
 		_lines="$(echo -e "$SEARCHBUFFER" | sed -n "$pos,${_last}p")"
-		diff=$(($_last-$pos))
+		diff=$((_last-pos))
 		for i in $(seq 1 $diff); do
-			truepos=$(($i))
+			truepos=$i
 			line="$(echo -ne "$_lines" | sed -n "${truepos}p")"
 			m="$(echo -ne "$line" | cut -d':' -f1)"
 			if [ "$m" == "" ]; then
@@ -7746,7 +7720,7 @@ search_queue() {
 				pad=""
 			fi
 
-			offset="$(($COLUMNS - ${#m} - 4 - ${#pad}))"
+			offset="$((COLUMNS - ${#m} - 4 - ${#pad}))"
 
 
 			line="$(echo "$line" | cut -b 1-$offset)"
@@ -7756,10 +7730,10 @@ search_queue() {
 		echo -ne "$NOCOLOR$BUFFER"
 		
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($number_per_page+2))"
+			empty_pane "$((number_per_page+2))"
 		fi
 		draw_banner "SEARCH"
-		printf '%*s' $(($COLUMNS - 14))
+		printf '%*s' $((COLUMNS - 14))
 		tput rc
 
 		if [ "$WEB_CLIENT" == "0" ]; then
@@ -7778,9 +7752,9 @@ search_queue() {
 			if [ "$FLAGGED" == true ]; then
 				continue
 			fi
-			pos="$(($pos+$number_per_page))"
+			pos="$((pos+number_per_page))"
 			if [ "$pos" -ge "$total" ]; then
-				pos="$(($pos-$number_per_page))"
+				pos="$((pos-number_per_page))"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall play >/dev/null 2>/dev/null
@@ -7794,7 +7768,7 @@ search_queue() {
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				number_per_page="$original_number_per_page"
 			fi
-			pos="$(($pos-$number_per_page))"
+			pos="$((pos-number_per_page))"
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
@@ -7855,7 +7829,7 @@ search_queue() {
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			reset_dimensions
-			number_per_page="$(($LINES-4))"
+			number_per_page="$((LINES-4))"
 			original_number_per_page="$number_per_page"
 			REDRAWN=true
 			clear
@@ -7874,9 +7848,9 @@ search_queue() {
 				if [ "$FLAGGED" == true ]; then
 					continue
 				fi
-				pos="$(($pos+$number_per_page))"
+				pos="$((pos+number_per_page))"
 				if [ "$pos" -gt "$total" ]; then
-					pos="$(($total-$number_per_page-1))"
+					pos="$((total-number_per_page-1))"
 				fi
 				;;
 			'[A')
@@ -7888,7 +7862,7 @@ search_queue() {
 				if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 					number_per_page="$original_number_per_page"
 				fi
-				pos="$(($pos-$number_per_page))"
+				pos="$((pos-number_per_page))"
 				if [ "$pos" -le "0" ]; then
 					pos=1
 				fi
@@ -7916,7 +7890,7 @@ queue_controls() {
 	gtts_speak "select queue"
 	SEARCHBUFFER="$(ls -1 "$ALETHEIA/playlists/")"
 	local total="$(echo -e "$SEARCHBUFFER" | wc -l)"
-	local number_per_page="$(($LINES-4))"
+	local number_per_page="$((LINES-4))"
 	local original_number_per_page="$number_per_page"
 	local FLAGGED=false
 	local REDRAWN=false
@@ -7929,7 +7903,7 @@ queue_controls() {
 	local BUFFER_BACKUP="$BUFFER"
 
 	local pos=1
-	while [ "$(($pos-1))" -le "$total" ]; do
+	while [ "$((pos-1))" -le "$total" ]; do
 		if [ "$total" == "0" ]; then
 			SEARCHBUFFER="\n"
 			local total="$(echo -e "$SEARCHBUFFER" | wc -l)"
@@ -7939,15 +7913,15 @@ queue_controls() {
 		fi
 		BUFFER=""
 		tput cup 0
-		if [ "$(($total-$pos))" -lt "$number_per_page" ]; then
-			number_per_page=$(($total-$pos+1))
+		if [ "$((total-pos))" -lt "$number_per_page" ]; then
+			number_per_page=$((total-pos+1))
 			FLAGGED=true
 		fi
 		if [ "$pos" -gt "$total" ]; then
 			return
 		fi
 		tmp_buf=""
-		for i in $(seq $pos $(($pos + $(($number_per_page-1))))); do
+		for i in $(seq $pos $((pos + (number_per_page-1)))); do
 			line="$(echo -e "$SEARCHBUFFER" | sed -n ${i}p)"
 
 			if [ "$i" -lt "10" ]; then
@@ -7956,7 +7930,7 @@ queue_controls() {
 				pad=""
 			fi
 
-			offset="$(($COLUMNS-${#i} - 3))"
+			offset="$((COLUMNS-${#i} - 3))"
 
 			line="$(echo "$line" | cut -b 1-$offset)"
 
@@ -7971,7 +7945,7 @@ queue_controls() {
 		echo -ne "$NOCOLOR$BUFFER"
 
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			empty_pane "$(($number_per_page+2))"
+			empty_pane "$((number_per_page+2))"
 		fi
 		draw_banner "QUEUE"
 
@@ -7982,9 +7956,9 @@ queue_controls() {
 			if [ "$FLAGGED" == true ]; then
 				continue
 			fi
-			pos="$(($pos+$number_per_page))"
+			pos="$((pos+number_per_page))"
 			if [ "$pos" -gt "$total" ]; then
-				pos="$(($total-$number_per_page-1))"
+				pos="$((total-number_per_page-1))"
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
@@ -7996,7 +7970,7 @@ queue_controls() {
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				number_per_page="$original_number_per_page"
 			fi
-			pos="$(($pos-$number_per_page))"
+			pos="$((pos-number_per_page))"
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
@@ -8016,10 +7990,10 @@ queue_controls() {
 						index=0
 						for i in $(cat "$ALETHEIA/playlists/$PICK"); do
 							queue_array[$index]="$i"
-							index=$(($index+1))
+							index=$((index+1))
 						done
 						unset IFS
-						TOTAL_QUEUE=$(($index-1))
+						TOTAL_QUEUE=$((index-1))
 						JUMP="1"
 						kill $MPLAYER_PID >/dev/null 2>/dev/null
 						return $RETURN_JUMP
@@ -8067,10 +8041,10 @@ queue_controls() {
 				index=0
 				for i in $(cat "$ALETHEIA/playlists/$PICK"); do
 					queue_array[$index]="$i"
-					index=$(($index+1))
+					index=$((index+1))
 				done
 				unset IFS
-				TOTAL_QUEUE=$(($index-1))
+				TOTAL_QUEUE=$((index-1))
 				JUMP="1"
 				kill $MPLAYER_PID >/dev/null 2>/dev/null
 				return $RETURN_JUMP
@@ -8116,7 +8090,7 @@ queue_controls() {
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait
 			reset_dimensions
-			number_per_page="$(($LINES-4))"
+			number_per_page="$((LINES-4))"
 			original_number_per_page="$number_per_page"
 			REDRAWN=true
 			clear
@@ -8136,9 +8110,9 @@ queue_controls() {
 				if [ "$FLAGGED" == true ]; then
 					continue
 				fi
-				pos="$(($pos+$number_per_page))"
+				pos="$((pos+number_per_page))"
 				if [ "$pos" -gt "$total" ]; then
-					pos="$(($total-$number_per_page-1))"
+					pos="$((total-number_per_page-1))"
 				fi
 				;;
 			'[A')
@@ -8151,7 +8125,7 @@ queue_controls() {
 				if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 					number_per_page="$original_number_per_page"
 				fi
-				pos="$(($pos-$number_per_page))"
+				pos="$((pos-number_per_page))"
 				if [ "$pos" -le "0" ]; then
 					pos=1
 				fi
@@ -8181,7 +8155,7 @@ set_equalizer() {
 
 	empty_pane
 
-	tput cup $(($LINES-5))
+	tput cup $((LINES-5))
 	echo -ne "$PADDING${WHITE}Bass$BLUE? "
 	gtts_speak "bass"
 	bass="$(read_number)"
@@ -8192,7 +8166,7 @@ set_equalizer() {
 		fi
 		return
 	fi
-	tput cup $(($LINES-4))
+	tput cup $((LINES-4))
 	echo -ne "$PADDING${WHITE}Mid$BLUE? "
 	gtts_speak "mid"
 	mid="$(read_number)"
@@ -8203,7 +8177,7 @@ set_equalizer() {
 		fi
 		return
 	fi
-	tput cup $(($LINES-3))
+	tput cup $((LINES-3))
 	echo -ne "$PADDING${WHITE}Treble$BLUE? "
 	gtts_speak "treble"
 	treble="$(read_number)"
@@ -8251,7 +8225,7 @@ print_queue() {
 	current=$POSITION
 	BUFFER_BACKUP="$BUFFER"
 
-	number_per_page="$(($LINES-4))"
+	number_per_page="$((LINES-4))"
 
 	original_number_per_page="$number_per_page"
 
@@ -8263,7 +8237,7 @@ print_queue() {
 	CHANGED=false
 
 	stty -echo
-	HALF="$(($POSITION % $number_per_page + ($number_per_page/2) + 1))"
+	HALF="$((POSITION % number_per_page + (number_per_page/2) + 1))"
 
 	if [ "$POSITION" -lt "$number_per_page" ]; then
 		if [ "$TOTAL_QUEUE" -lt "$number_per_page" ]; then
@@ -8274,36 +8248,36 @@ print_queue() {
 			HALF="1"
 		fi
 	elif [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			HALF="$(($TOTAL_QUEUE-$original_number_per_page+1))"
+			HALF="$((TOTAL_QUEUE-original_number_per_page+1))"
 			number_per_page="$original_number_per_page"
-	elif [ "$POSITION" -gt "$(($original_number_per_page*2 - 1))" ]; then
-		HALF="$(($POSITION-($original_number_per_page/2)))"
+	elif [ "$POSITION" -gt "$((original_number_per_page*2 - 1))" ]; then
+		HALF="$((POSITION-(original_number_per_page/2)))"
 	fi
 
-	if [ "$(($TOTAL_QUEUE-$POSITION))" -lt "$number_per_page" ]; then
-		HALF="$(($TOTAL_QUEUE-$original_number_per_page+3))"
+	if [ "$((TOTAL_QUEUE-POSITION))" -lt "$number_per_page" ]; then
+		HALF="$((TOTAL_QUEUE-original_number_per_page+3))"
 	fi
-	if [ "$(($HALF+$original_number_per_page))" -gt "$TOTAL_QUEUE" ] && [ "$number_per_page" != "1" ]; then
-		HALF="$(($TOTAL_QUEUE-$original_number_per_page))"
+	if [ "$((HALF+original_number_per_page))" -gt "$TOTAL_QUEUE" ] && [ "$number_per_page" != "1" ]; then
+		HALF="$((TOTAL_QUEUE-original_number_per_page))"
 		number_per_page="$original_number_per_page"
 	fi
 
-	half_page="$(($number_per_page/2))"
+	half_page="$((number_per_page/2))"
 	if [ "$POSITION" -gt "$half_page" ]; then
-		result="$(($POSITION-$half_page))"
-		if [ "$(($number_per_page % 2))" != "" ]; then
+		result="$((POSITION-half_page))"
+		if [ "$((number_per_page % 2))" != "" ]; then
 			HALF="$result"
 		else
-			HALF=$((1+$result))
+			HALF=$((1+result))
 		fi
 
-		if [ "$(($HALF+$number_per_page))" -gt "$TOTAL_QUEUE" ]; then
-			HALF="$(($TOTAL_QUEUE-$number_per_page+1))"
+		if [ "$((HALF+number_per_page))" -gt "$TOTAL_QUEUE" ]; then
+			HALF="$((TOTAL_QUEUE-number_per_page+1))"
 		fi
 	fi
 
-	if [ "$HALF" -gt "$(($TOTAL_QUEUE-$number_per_page))" ]; then
-		HALF="$(($TOTAL_QUEUE-$number_per_page+1))"
+	if [ "$HALF" -gt "$((TOTAL_QUEUE-number_per_page))" ]; then
+		HALF="$((TOTAL_QUEUE-number_per_page+1))"
 	fi
 	if [ "$HALF" -lt "1" ]; then
 		HALF=1
@@ -8313,11 +8287,11 @@ print_queue() {
 	while [ "$pos" -le "$TOTAL_QUEUE" ]; do
 		stty -echo
 		echo -ne "$NOCOLOR"
-		if [ "$(($TOTAL_QUEUE-$pos))" -lt $number_per_page ] && [ "$pos" -lt "$number_per_page" ]; then
+		if [ "$((TOTAL_QUEUE-pos))" -lt $number_per_page ] && [ "$pos" -lt "$number_per_page" ]; then
 			number_per_page="$TOTAL_QUEUE"
 			FLAGGED=true
 		fi
-		if [ "$(($pos+$number_per_page))" -gt "$TOTAL_QUEUE" ] && [ "$number_per_page" != "1" ]; then
+		if [ "$((pos+number_per_page))" -gt "$TOTAL_QUEUE" ] && [ "$number_per_page" != "1" ]; then
 			number_per_page="$original_number_per_page"
 		fi
 		if [ "$pos" -gt "$TOTAL_QUEUE" ]; then
@@ -8328,28 +8302,28 @@ print_queue() {
 		fi
 		flaggy=false
 		tmpbuf=""
-		if [ "$pos" -le $POSITION ] && [ "$(($pos + $(($number_per_page-1))))" -ge "$POSITION" ] || [ $CHANGED == true ] ; then
+		if [ "$pos" -le $POSITION ] && [ "$((pos + (number_per_page-1)))" -ge "$POSITION" ] || [ $CHANGED == true ] ; then
 			if [ "$pos" == "$TOTAL_QUEUE" ] && [ "$TOTAL_QUEUE" != "1" ]; then
 				number_per_page="$original_number_per_page"
-				pos="$(($pos-$number_per_page))"
+				pos="$((pos-number_per_page))"
 			fi
 			x=0
-			end=$(($number_per_page-1))
-			_last=$(($pos+$end))
-			diff=$(($_last-$pos+1))
-			truepos=$(($i-1+$pos))
+			end=$((number_per_page-1))
+			_last=$((pos+end))
+			diff=$((_last-pos+1))
+			truepos=$((i-1+pos))
 			tput cup 2
 			m=$pos
 			new_buf=""
 			for i in $(seq 1 $number_per_page); do
-				if [ -e "${queue_array[$(($m-1))]}.locked" ]; then
-					if [ -e "${queue_array[$(($m-1))]}.repeats" ]; then
+				if [ -e "${queue_array[$((m-1))]}.locked" ]; then
+					if [ -e "${queue_array[$((m-1))]}.repeats" ]; then
 						INDICATOR="$BLUE$REPLACE${WHITE}#"
 					else
 						INDICATOR="$BLUE${REPLACE}${WHITE}$"
 					fi
 				else
-					if [ -e "${queue_array[$(($m-1))]}.repeats" ]; then
+					if [ -e "${queue_array[$((m-1))]}.repeats" ]; then
 						INDICATOR="$BLUE$REPLACE${WHITE}&"
 					else
 						INDICATOR="${BLUE} "
@@ -8369,22 +8343,22 @@ print_queue() {
 					rep="$BLUE"
 				fi
 				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
-					nline="$(echo -ne "${queue_array[$(($m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad})))"
-					padd="$(printf '%*s' $(($COLUMNS-(${#PADDING}*2)-3-${#m}-${#nline}-${#display_pad})))"
+					nline="$(echo -ne "${queue_array[$((m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad})))"
+					padd="$(printf '%*s' $((COLUMNS-(${#PADDING}*2)-3-${#m}-${#nline}-${#display_pad})))"
 					new_buf="$new_buf$BLUE_BLACK${PADDING}$INDICATOR$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$nline$padd$PADDING$NOCOLOR\n"
 				else
-					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$(echo -ne "${queue_array[$(($m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$(($COLUMNS-(${#PADDING}*2)-3-${#m})))$(tput el)\n"
+					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$(echo -ne "${queue_array[$((m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$((COLUMNS-(${#PADDING}*2)-3-${#m})))$(tput el)\n"
 				fi
-				m=$(($m+1))
+				m=$((m+1))
 			done
 
 			echo -ne "$new_buf"
 
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-				empty_pane "$(($number_per_page+2))"
+				empty_pane "$((number_per_page+2))"
 			fi
 		else
-			pos="$(($pos+$number_per_page))"
+			pos="$((pos+number_per_page))"
 			continue
 		fi
 
@@ -8401,11 +8375,11 @@ print_queue() {
 			if [ "$FLAGGED" == true ]; then
 				continue
 			fi
-			if [ "$(($pos+$number_per_page))" -le "$TOTAL_QUEUE" ]; then
-				if [ "$(($pos+($number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
-					pos="$(($TOTAL_QUEUE-$number_per_page+1))"
+			if [ "$((pos+number_per_page))" -le "$TOTAL_QUEUE" ]; then
+				if [ "$((pos+(number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
+					pos="$((TOTAL_QUEUE-number_per_page+1))"
 				else
-					pos="$(($pos+$number_per_page))"
+					pos="$((pos+number_per_page))"
 				fi
 			fi
 			if [ "$current" -le "$truepos" ]; then
@@ -8423,7 +8397,7 @@ print_queue() {
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				number_per_page="$original_number_per_page"
 			fi
-			pos="$(($pos-$number_per_page))"
+			pos="$((pos-number_per_page))"
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
@@ -8432,7 +8406,7 @@ print_queue() {
 			if [ "$current" == "$TOTAL_QUEUE" ]; then
 				continue
 			fi
-			current=$(($current+1))
+			current=$((current+1))
 			if [ "$current" -gt "$truepos" ]; then
 				killall espeak-ng >/dev/null 2>/dev/null
 				gtts_speak "page down"
@@ -8440,11 +8414,11 @@ print_queue() {
 				if [ "$FLAGGED" == true ]; then
 					continue
 				fi
-				if [ "$(($pos+$number_per_page))" -le "$TOTAL_QUEUE" ]; then
-					if [ "$(($pos+($number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
-						pos="$(($TOTAL_QUEUE-$number_per_page+1))"
+				if [ "$((pos+number_per_page))" -le "$TOTAL_QUEUE" ]; then
+					if [ "$((pos+(number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
+						pos="$((TOTAL_QUEUE-number_per_page+1))"
 					else
-						pos="$(($pos+$number_per_page))"
+						pos="$((pos+number_per_page))"
 					fi
 				fi
 			fi
@@ -8454,8 +8428,8 @@ print_queue() {
 			if [ "$current" == "1" ]; then
 				continue
 			fi
-			current=$(($current-1))
-			if [ "$current" -lt "$(($truepos-$number_per_page+1))" ]; then
+			current=$((current-1))
+			if [ "$current" -lt "$((truepos-number_per_page+1))" ]; then
 				killall espeak-ng >/dev/null 2>/dev/null
 				gtts_speak "page up"
 				CHANGED=true
@@ -8467,7 +8441,7 @@ print_queue() {
 				if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 					number_per_page="$original_number_per_page"
 				fi
-				pos="$(($pos-$number_per_page))"
+				pos="$((pos-number_per_page))"
 				if [ "$pos" -le "0" ]; then
 					pos=1
 				fi
@@ -8475,7 +8449,7 @@ print_queue() {
 
 			skip=true
 		elif [ "$inputchar" == "," ]; then
-			gtts_speak "$(echo -ne "${queue_array[$(($current-1))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
+			gtts_speak "$(echo -ne "${queue_array[$((current-1))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 		elif [ "$(isnum "$inputchar")" != "0" ]; then
 			up_down="$(read_line "$inputchar")"
 			if [ "$(isnum "$up_down")" != "0" ]; then
@@ -8541,7 +8515,7 @@ print_queue() {
 			pos=1
 			clear
 			reset_dimensions
-			number_per_page=$(($LINES-4))
+			number_per_page=$((LINES-4))
 			original_number_per_page=$number_per_page
 			draw_volume
 			draw_equalizer
@@ -8556,42 +8530,42 @@ print_queue() {
 			if [ "$TOTAL_QUEUE" == "1" ]; then
 				continue
 			fi
-			for (( i=$(($current-1)); i < ${#queue_array[@]}; i++ )); do
-				queue_array[$i]="${queue_array[$(($i+1))]}"
+			for (( i=$((current-1)); i < ${#queue_array[@]}; i++ )); do
+				queue_array[$i]="${queue_array[$((i+1))]}"
 			done
 			unset queue_array[$i]
-			TOTAL_QUEUE=$(($TOTAL_QUEUE-1))
+			TOTAL_QUEUE=$((TOTAL_QUEUE-1))
 			draw_position
 			if [ "$TOTAL_QUEUE" -lt "$number_per_page" ]; then
 				number_per_page=$TOTAL_QUEUE
 			fi
-			if [ "$(($pos+$number_per_page))" -gt "$TOTAL_QUEUE" ]; then
+			if [ "$((pos+number_per_page))" -gt "$TOTAL_QUEUE" ]; then
 				if [ "$pos" -gt 1 ]; then
-					pos=$(($pos-1))
+					pos=$((pos-1))
 				fi
 			fi
-			if [ "$(($current-1))" == "$TOTAL_QUEUE" ]; then
-				current=$(($current-1))
+			if [ "$((current-1))" == "$TOTAL_QUEUE" ]; then
+				current=$((current-1))
 			fi
 			if [ "$current" == "$POSITION" ]; then
 				kill $MPLAYER_PID >/dev/null 2>/dev/null
 				#JUMP="$POSITION"
 				#return $RETURN_JUMP
-				POSITION=$(($POSITION-1))
+				POSITION=$((POSITION-1))
 			elif [ "$current" -lt "$POSITION" ]; then
-				POSITION=$(($POSITION-1))
+				POSITION=$((POSITION-1))
 			fi
 		elif [ "$inputchar" == "<" ]; then
 			if [ "$current" -lt "$TOTAL_QUEUE" ]; then
 				if [ "$current" == "$POSITION" ]; then
-					POSITION=$(($POSITION+1))
-				elif [ "$(($current+1))" == "$POSITION" ]; then
-					POSITION=$(($POSITION-1))
+					POSITION=$((POSITION+1))
+				elif [ "$((current+1))" == "$POSITION" ]; then
+					POSITION=$((POSITION-1))
 				fi
 				tmp="${queue_array[$current]}"
-				queue_array[$current]="${queue_array[$(($current-1))]}"
-				queue_array[$(($current-1))]="$tmp"
-				current=$(($current+1))
+				queue_array[$current]="${queue_array[$((current-1))]}"
+				queue_array[$((current-1))]="$tmp"
+				current=$((current+1))
 				if [ "$current" -gt "$truepos" ]; then
 					killall espeak-ng >/dev/null 2>/dev/null
 					gtts_speak "page down"
@@ -8599,11 +8573,11 @@ print_queue() {
 					if [ "$FLAGGED" == true ]; then
 						continue
 					fi
-					if [ "$(($pos+$number_per_page))" -le "$TOTAL_QUEUE" ]; then
-						if [ "$(($pos+($number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
-							pos="$(($TOTAL_QUEUE-$number_per_page+1))"
+					if [ "$((pos+number_per_page))" -le "$TOTAL_QUEUE" ]; then
+						if [ "$((pos+(number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
+							pos="$((TOTAL_QUEUE-number_per_page+1))"
 						else
-							pos="$(($pos+$number_per_page))"
+							pos="$((pos+number_per_page))"
 						fi
 					fi
 				fi
@@ -8611,15 +8585,15 @@ print_queue() {
 		elif [ "$inputchar" == ">" ]; then
 			if [ "$current" -gt "1" ]; then
 				if [ "$current" == "$POSITION" ]; then
-					POSITION=$(($POSITION-1))
-				elif [ "$(($current-1))" == "$POSITION" ]; then
-					POSITION=$(($POSITION+1))
+					POSITION=$((POSITION-1))
+				elif [ "$((current-1))" == "$POSITION" ]; then
+					POSITION=$((POSITION+1))
 				fi
-				tmp="${queue_array[$(($current-2))]}"
-				queue_array[$(($current-2))]="${queue_array[$(($current-1))]}"
-				queue_array[$(($current-1))]="$tmp"
-				current=$(($current-1))
-				if [ "$current" -lt "$(($truepos-$number_per_page+1))" ]; then
+				tmp="${queue_array[$((current-2))]}"
+				queue_array[$((current-2))]="${queue_array[$((current-1))]}"
+				queue_array[$((current-1))]="$tmp"
+				current=$((current-1))
+				if [ "$current" -lt "$((truepos-number_per_page+1))" ]; then
 					killall espeak-ng >/dev/null 2>/dev/null
 					gtts_speak "page up"
 					CHANGED=true
@@ -8631,7 +8605,7 @@ print_queue() {
 					if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 						number_per_page="$original_number_per_page"
 					fi
-					pos="$(($pos-$number_per_page))"
+					pos="$((pos-number_per_page))"
 					if [ "$pos" -le "0" ]; then
 						pos=1
 					fi
@@ -8649,9 +8623,9 @@ print_queue() {
 		elif [ "$inputchar" == "d" ]; then
 			killall espeak-ng >/dev/null 2>/dev/null
 			if [ "$CHANGED" != false ]; then
-				espeak_say " $pos of $(($pos+$number_per_page-1)). $tmpbuf."
+				espeak_say " $pos of $((pos+number_per_page-1)). $tmpbuf."
 			else
-				espeak_say " $pos of $(($pos+$number_per_page-1)). $tmpbuf."
+				espeak_say " $pos of $((pos+number_per_page-1)). $tmpbuf."
 			fi
 		elif [ "$inputchar" == $'\e' ]; then
 			read -n2 -t 0.03 key
@@ -8661,11 +8635,11 @@ print_queue() {
 				if [ "$FLAGGED" == true ]; then
 					continue
 				fi
-				if [ "$(($pos+$number_per_page))" -le "$TOTAL_QUEUE" ]; then
-					if [ "$(($pos+($number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
-						pos="$(($TOTAL_QUEUE-$number_per_page+1))"
+				if [ "$((pos+number_per_page))" -le "$TOTAL_QUEUE" ]; then
+					if [ "$((pos+(number_per_page*2)))" -gt "$TOTAL_QUEUE" ]; then
+						pos="$((TOTAL_QUEUE-number_per_page+1))"
 					else
-						pos="$(($pos+$number_per_page))"
+						pos="$((pos+number_per_page))"
 					fi
 				fi
 				;;
@@ -8679,7 +8653,7 @@ print_queue() {
 				if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 					number_per_page="$original_number_per_page"
 				fi
-				pos="$(($pos-$number_per_page))"
+				pos="$((pos-number_per_page))"
 				if [ "$pos" -le "0" ]; then
 					pos=1
 				fi
@@ -9133,9 +9107,9 @@ main() {
 						percent=1
 					fi
 					if [ "$hours" == "00" ]; then
-						total_=$(($COLUMNS-(${#PADDING}*2)-14))
+						total_=$((COLUMNS-(${#PADDING}*2)-14))
 					else
-						total_=$(($COLUMNS-(${#PADDING}*2)-17))
+						total_=$((COLUMNS-(${#PADDING}*2)-17))
 					fi
 					PAUSE=false
 					tput cup $LINES
@@ -9147,7 +9121,7 @@ main() {
 					fi
 					gtts_speak "progress bar"
 					printf '%*s' $percent | tr " " "="
-					printf '%*s' $(($total_ - $percent))
+					printf '%*s' $((total_ - percent))
 					echo -ne "$BLUE_BLACK] "
 					if [ "$hours" == "00" ]; then
 						echo -ne "$BLUE_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING"
@@ -9160,8 +9134,8 @@ main() {
 					if [ "$(echo -ne "$seconds" | cut -c 1)" == "0" ]; then
 						seconds="$(echo -ne "$seconds" | cut -c 2)"
 					fi
-					total_seconds_tt=$(($minutes * 60 + $seconds))
-					tput cup $LINES $((1+7))
+					total_seconds_tt=$((minutes * 60 + seconds))
+					tput cup $LINES 8
 					l=0
 					input_char=""
 					until [ "$input_char" != "" ]; do
@@ -9197,7 +9171,7 @@ main() {
 						fi
 						echo -ne "$BLUE$(echo -ne "$dateo" | cut -d':' -f1)$WHITE:$BLUE$(echo -ne "$dateo" | cut -d':' -f2)"
 						if [ "$skip2" == false ]; then
-							tput cup $LINES $(($COLUMNS-6))
+							tput cup $LINES $((COLUMNS-6))
 							if [ "$INTERVAL" -lt "0" ]; then
 								int="$(echo -ne "$INTERVAL" | cut -c 2-)"
 								neg=true
@@ -9214,15 +9188,15 @@ main() {
 									total_seconds_dateo="$(calc "$total_seconds_tt * (2 * $int / $EDO)" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1)"
 								else
 									total_seconds_dateo="$(calc "$total_seconds_tt * (($int / $EDO)/2)" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1)"
-									total_seconds_dateo=$(($total_seconds_tt-$total_seconds_dateo))
+									total_seconds_dateo=$((total_seconds_tt-total_seconds_dateo))
 								fi
-								new_minutes=$(($total_seconds_dateo / 60))
-								new_seconds=$(($total_seconds_dateo % 60))
+								new_minutes=$((total_seconds_dateo / 60))
+								new_seconds=$((total_seconds_dateo % 60))
 							else
 								new_minutes=$minutes
 								new_seconds=$seconds
 							fi
-							tput cup $LINES $(($COLUMNS-6))
+							tput cup $LINES $((COLUMNS-6))
 							new_minutes="$(printf '%02d' $new_minutes)"
 							new_seconds="$(printf '%02d' $new_seconds)"
 							echo -ne "$BLUE$new_minutes$WHITE:$BLUE$new_seconds"
@@ -9234,10 +9208,10 @@ main() {
 								percent="$total_"
 							fi
 							
-							tput cup $LINES $((1+7))
+							tput cup $LINES 8
 							echo -ne "$WHITE_BLACK"
 							printf '%*s' $percent | tr " " "="
-							printf '%*s' $(($total_ - $percent))
+							printf '%*s' $((total_ - percent))
 						fi
 						read -n1 -t 1 input_char
 						if [ "$input_char" == "l" ]; then
@@ -9324,7 +9298,7 @@ main() {
 					SAVED_POSITION[1]="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
 					CURRENT_POSITION=1
 				else
-					SAVED_TOTAL=$(($SAVED_TOTAL+1))
+					SAVED_TOTAL=$((SAVED_TOTAL+1))
 					SAVED_POSITION[$SAVED_TOTAL]="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
 				fi
 					
@@ -9347,7 +9321,7 @@ main() {
 					echo -e "$command" >"$ALETHEIA/pipe$$" &
 					sleep $MPLAYER_WAIT_TIME
 					empty_pane
-					tput cup $(($LINES-3))
+					tput cup $((LINES-3))
 					echo -ne "$PADDING$CYAN$(tail -1 "$ALETHEIA/mplayer_output")"
 					tput el
 					read -n1 input_char
@@ -9390,7 +9364,7 @@ main() {
 			'%')
 				rm -f "$FILENAME.repeats" >/dev/null 2>/dev/null
 				gtts_speak "unlocked"
-				tput cup $(($LOCKING_POS+2)) $((1))
+				tput cup $((LOCKING_POS+2)) 1
 				if [ -e "$FILENAME.locked" ]; then
 					INDICATOR="${WHITE_BLACK}&"
 				else
@@ -9456,15 +9430,15 @@ main() {
 				flaggy=false
 				while [ "$tmp_volume_left" != "$tmp_volume_right" ]; do
 					if [ "$tmp_volume_left" -lt "$total" ]; then
-						tmp_volume_left=$(($tmp_volume_left+1))
+						tmp_volume_left=$((tmp_volume_left+1))
 					elif [ "$tmp_volume_left" -gt "$total" ]; then
-						tmp_volume_left=$(($tmp_volume_left-1))
+						tmp_volume_left=$((tmp_volume_left-1))
 					fi
 
 					if [ "$tmp_volume_right" -lt "$total" ]; then
-						tmp_volume_right=$(($tmp_volume_right+1))
+						tmp_volume_right=$((tmp_volume_right+1))
 					elif [ "$tmp_volume_right" -gt "$total" ]; then
-						tmp_volume_right=$(($tmp_volume_right-1))
+						tmp_volume_right=$((tmp_volume_right-1))
 					fi
 
 					get_system_volume
@@ -9526,14 +9500,14 @@ main() {
 				fi
 				draw_banner "INVERT" false true
 				old_int="$INTERVAL"
-				INTERVAL="$((-($INTERVAL)))"
+				INTERVAL="$((-(INTERVAL)))"
 				gtts_speak "scaling"
 				if [ "$INTERVAL" -lt "0" ]; then
 					result="$old_int"
 				else
 					result="$INTERVAL"
 				fi
-				result="$(($result*2))"
+				result="$((result*2))"
 				x=0
 				if [ "$old_int" -gt "0" ]; then
 					NEGATIVE=false
@@ -9551,7 +9525,7 @@ main() {
 					fi
 					secondary_scale_func "$c" "INVERT"
 					if [ "$c" == "c" ]; then
-						x=$(($result-$x))
+						x=$((result-x))
 						if [ "$NEGATIVE" == true ]; then
 							NEGATIVE=false
 						else
@@ -9559,7 +9533,7 @@ main() {
 						fi
 					#FIXME
 					elif [ "$c" == "o" ]; then
-						old_int=$(($old_int*2))
+						old_int=$((old_int*2))
 					elif [ "$c" == "m" ]; then
 						old_int=$INTERVAL
 					elif [ "$c" == "z" ]; then
@@ -9577,15 +9551,15 @@ main() {
 						break
 					elif [ "$c" == "" ]; then
 						if [ "$NEGATIVE" == false ]; then
-							INTERVAL="$(($old_int-1))"
-							old_int="$(($old_int-1))"
+							INTERVAL="$((old_int-1))"
+							old_int="$((old_int-1))"
 						else
-							INTERVAL="$(($old_int+1))"
-							old_int="$(($old_int+1))"
+							INTERVAL="$((old_int+1))"
+							old_int="$((old_int+1))"
 						fi
 						echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						draw_pitch
-						x="$(($x+1))"
+						x="$((x+1))"
 					fi
 
 				done
@@ -9697,7 +9671,7 @@ main() {
 				else
 					REP=""
 				fi
-				tput cup $(($LOCKING_POS+2)) $((1))
+				tput cup $((LOCKING_POS+2)) 1
 				if [ -e "$FILENAME.locked" ]; then
 					rm -f "$FILENAME".locked
 					LOCKED=false
@@ -9733,7 +9707,7 @@ main() {
 				;;
 			'')
 				if [ "$CURRENT_POSITION" != "" ]; then
-					CURRENT_POSITION=$(($CURRENT_POSITION+1))
+					CURRENT_POSITION=$((CURRENT_POSITION+1))
 					if [ "$CURRENT_POSITION" -gt "$SAVED_TOTAL" ]; then
 						CURRENT_POSITION=1
 					fi
@@ -9896,7 +9870,7 @@ main() {
 					index=0
 					for i in $(cat "$ALETHEIA/queue"); do
 						queue_array[$index]="$i"
-						index=$(($index+1))
+						index=$((index+1))
 					done
 					unset IFS
 					TOTAL_QUEUE=$index
@@ -9975,8 +9949,8 @@ main() {
 					return 0
 				fi
 
-				for i in $(seq $POSITION $(($TOTAL_QUEUE-1))); do
-					queue_array[$(($i-1))]=${queue_array[$i]}
+				for i in $(seq $POSITION $((TOTAL_QUEUE-1))); do
+					queue_array[$((i-1))]=${queue_array[$i]}
 				done
 
 				kill $MPLAYER_PID >/dev/null 2>/dev/null
@@ -9984,10 +9958,10 @@ main() {
 					JUMP="1"
 					POSITION="1"
 					draw_position
-					TOTAL_QUEUE="$(($TOTAL_QUEUE-1))"
+					TOTAL_QUEUE="$((TOTAL_QUEUE-1))"
 					return $RETURN_JUMP
 				else
-					TOTAL_QUEUE="$(($TOTAL_QUEUE-1))"
+					TOTAL_QUEUE="$((TOTAL_QUEUE-1))"
 					return $RETURN_RESTART
 				fi
 				;;
@@ -10005,12 +9979,12 @@ main() {
 				;;
 			'N')
 				if [ "$SHUFFLED" == false ]; then
-					last="$(echo -ne "${queue_array[$(($TOTAL_QUEUE-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | sed -e "s/ - //" | cut -d'' -f1)"
+					last="$(echo -ne "${queue_array[$((TOTAL_QUEUE-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | sed -e "s/ - //" | cut -d'' -f1)"
 					if [ "$artist" != "$last" ]; then
 						IFS=$'\n'
 						tmpq="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$artist \- " | tail -1 | cut -d':' -f1)"
 						unset IFS
-						JUMP="$(($tmpq+1))"
+						JUMP="$((tmpq+1))"
 						unset tmpq
 						kill $MPLAYER_PID >/dev/null 2>/dev/null
 						return $RETURN_JUMP
@@ -10022,7 +9996,7 @@ main() {
 					IFS=$'\n'
 					tmpq="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$artist \- " | head -1 | cut -d':' -f1)"
 					if [ "$tmpq" -gt "1" ]; then
-						last_artist="$(echo -ne "${queue_array[$(($tmpq-2))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev | sed -e "s/ - //" | cut -d'' -f1)"
+						last_artist="$(echo -ne "${queue_array[$((tmpq-2))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev | sed -e "s/ - //" | cut -d'' -f1)"
 						JUMP="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$last_artist \- " | head -1 | cut -d':' -f1)"
 					fi
 					unset IFS
@@ -10073,7 +10047,7 @@ main() {
 					gtts_speak "enter the new title"
 					tput rc
 					echo -ne "$WHITE_BLACK"
-					printf '%*s' $(($COLUMNS - 14))
+					printf '%*s' $((COLUMNS - 14))
 					tput rc
 					echo -ne "$WHITE_BLACK"
 					newname="$(read_line)"
@@ -10101,7 +10075,7 @@ main() {
 
 					export TITLE="$newname"
 					export FILENAME="${path}/$newname.$ext" >/dev/null 2>/dev/null
-					queue_array[$(($POSITION-1))]="$FILENAME"
+					queue_array[$((POSITION-1))]="$FILENAME"
 
 					reset_buffer
 					draw_volume
@@ -10132,7 +10106,7 @@ main() {
 					draw_pitch
 				fi
 				if [ "$VOLUME" -ge "1" ]; then
-					VOLUME="$(($VOLUME-1))"
+					VOLUME="$((VOLUME-1))"
 					echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 					gtts_speak "$VOLUME"
 					draw_equalizer
@@ -10363,7 +10337,7 @@ if [ "$1" == "--music" ]; then
 		index=0
 		for i in $(find "$MUSICDIR" -iregex ".*${KEYWORD}mp3" -o -iregex ".*${KEYWORD}flac" | shuf); do
 			queue_array[$index]="$i"
-			index=$(($index+1))
+			index=$((index+1))
 		done
 		unset IFS
 		TOTAL_QUEUE=$index
@@ -10379,7 +10353,7 @@ if [ "$1" == "--music" ]; then
 		index=0
 		for i in $(find "$MUSICDIR" -iname "*.mp3" -o -iname "*.flac" | shuf); do
 			queue_array[$index]="$i"
-			index=$(($index+1))
+			index=$((index+1))
 		done
 		unset IFS
 		TOTAL_QUEUE=$index
@@ -10403,7 +10377,7 @@ elif [ "$1" == "--sound" ] || [ "$WEB_CLIENT" == "1" ]; then
 			index=0
 			for i in $(find "$SOUNDDIR" -iregex ".*${KEYWORD}mp3" -o -iregex ".*${KEYWORD}flac" | shuf); do
 				queue_array[$index]="$i"
-				index=$(($index+1))
+				index=$((index+1))
 			done
 			unset IFS
 			SHUFFLED=true
@@ -10421,7 +10395,7 @@ elif [ "$1" == "--sound" ] || [ "$WEB_CLIENT" == "1" ]; then
 			index=0
 			for i in $(find "$SOUNDDIR" -iname "*.mp3" -o -iname "*.flac" | sort); do
 				queue_array[$index]="$i"
-				index=$(($index+1))
+				index=$((index+1))
 			done
 			unset IFS
 			SHUFFLED=false
@@ -10453,10 +10427,10 @@ elif [ "$1" == "--video" ]; then
 		index=0
 		for i in $(find "$VIDEODIR" -iregex ".*${KEYWORD}mkv" -o -iregex ".*${KEYWORD}mp4" -o -iregex ".*${KEYWORD}webm" | shuf); do
 			queue_array[$index]="$i"
-			index=$(($index+1))
+			index=$((index+1))
 		done
 		unset IFS
-		TOTAL_QUEUE=$(($index))
+		TOTAL_QUEUE=$index
 	else
 		unset queue_array
 
@@ -10464,7 +10438,7 @@ elif [ "$1" == "--video" ]; then
 		index=0
 		for i in $(find "$VIDEODIR" -iname "*.mkv" -o -iname "*.mp4" -o -iname "*.webm" | shuf); do
 			queue_array[$index]="$i"
-			index=$(($index+1))
+			index=$((index+1))
 		done
 		unset IFS
 	fi
@@ -10485,7 +10459,7 @@ elif [ "$1" == "--directory" ]; then
 			index=0
 			for i in $(find "$2" -iname "*.mp3" -o -iname "*.flac" -o -iname "*.mkv" -o -iname "*.mp4" | shuf); do
 				queue_array[$index]="$i"
-				index=$(($index+1))
+				index=$((index+1))
 			done
 			unset IFS
 			SHUFFLED=true
@@ -10532,7 +10506,7 @@ elif [ "$1" == "--playlist" ]; then
 		index=0
 		for i in $(cat "$2"); do
 			queue_array[$index]="$i"
-			index=$(($index+1))
+			index=$((index+1))
 		done
 		unset IFS
 		TOTAL_QUEUE="$index"
@@ -10602,7 +10576,7 @@ POSITION=$start_at_pos
 RUNTHROUGH=false
 
 while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
-	FILENAME="${queue_array[$(($POSITION-1))]}"
+	FILENAME="${queue_array[$((POSITION-1))]}"
 	TITLE="$(echo -ne "$FILENAME" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 	line="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev)"
 
@@ -10688,7 +10662,7 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 		if [ "$POSITION" == "1" ]; then
 			POSITION=$TOTAL_QUEUE
 		else
-			POSITION=$(($POSITION - 1))
+			POSITION=$((POSITION - 1))
 		fi
 		TRACK_RANDOM=false
 	elif [ "$RETURN" == "$RETURN_RESTART" ]; then
@@ -10700,30 +10674,30 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 	elif [ "$RETURN" == "$RETURN_LOOP_ARTIST" ]; then
 		new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "1,${POSITION}d" | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
 		if [ "$new_POSITION" != "" ]; then
-			POSITION="$(($new_POSITION+$POSITION))"
+			POSITION="$((new_POSITION+POSITION))"
 		else
 			POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
 		fi
 	elif [ "$RETURN" == "$RETURN_LOOP_ARTIST_BACK" ]; then
 		new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "${POSITION},${TOTAL_QUEUE}d" | tac | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
 		if [ "$new_POSITION" != "" ]; then
-			POSITION="$(($POSITION-$new_POSITION))"
+			POSITION="$((POSITION-new_POSITION))"
 		else
 			POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | tail -1 | cut -d':' -f1)"
 		fi
 	elif [ "$RETURN" == "$RETURN_TRACK_RANDOM" ]; then
-		POSITION="$((1 + $RANDOM % $TOTAL_QUEUE))"
+		POSITION="$((1 + RANDOM % TOTAL_QUEUE))"
 	elif [ "$RETURN" == "$RETURN_TRACK_RANDOM_BACK" ]; then
-		POSITION="$((1 + $RANDOM % $TOTAL_QUEUE))"
+		POSITION="$((1 + RANDOM % TOTAL_QUEUE))"
 	elif [ "$RETURN" == "$RETURN_ONLY_LOCKED_BACK" ]; then
-		POSITION="$(($POSITION-1))"
+		POSITION="$((POSITION-1))"
 		if [ "$POSITION" == "0" ]; then
 			POSITION="$TOTAL_QUEUE"
 		elif [ "$POSITION" == "$TOTAL_QUEUE" ]; then
 			POSITION=0
 		fi
 	else
-		POSITION="$(($POSITION+1))"
+		POSITION="$((POSITION+1))"
 	fi
 done
 
