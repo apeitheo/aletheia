@@ -7069,6 +7069,7 @@ render_scale_help_screen() {
 }
 
 voice_settings_screen() {
+	local PLAY_PID=""
 	gtts_speak "voice settings"
 	flagged=false
 
@@ -7098,7 +7099,7 @@ voice_settings_screen() {
 				last=$(($number_per_page*2))
 			else
 				first=$((($page*$number_per_page*2)+1))
-				last=$((($page*number_per_page*2)+($number_per_page*2)))
+				last=$((($page*$number_per_page*2)+($number_per_page*2)))
 			fi
 		else
 			if [ "$page" == "0" ]; then
@@ -7122,17 +7123,22 @@ voice_settings_screen() {
 				page=$(($page-1))
 			fi
 		elif [ "$inputchar" == "J" ]; then
+			kill $PLAY_PID >/dev/null 2>/dev/null
 			if [ "$VOICE_PITCH" -gt "-30" ]; then
 				VOICE_PITCH="$(($VOICE_PITCH-1))"
 			fi
 			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
-				gtts-cli " $VOICE_PITCH" -o /tmp/voice-pitch${VOICE_PITCH}.mp3
-				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)
+				draw_banner "WAIT"
+				gtts-cli " $VOICE_PITCH" -o /tmp/voice-pitch${VOICE_PITCH}.mp3 >/dev/null 2>/dev/null
+				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed $(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-) >/dev/null 2>/dev/null
 				rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
+				draw_banner "VOICE"
+				draw_position
 			fi
 			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
-			flagged=true
+			PLAY_PID="$!"
 		elif [ "$inputchar" == "K" ]; then
+			kill $PLAY_PID >/dev/null 2>/dev/null
 			if [ "$VOICE_PITCH" -lt "30" ]; then
 				VOICE_PITCH="$(($VOICE_PITCH+1))"
 			fi
@@ -7143,7 +7149,7 @@ voice_settings_screen() {
 
 			fi
 			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
-			flagged=true
+			PLAY_PID="$!"
 		elif [ "$inputchar" == "8" ]; then
 			if [ "`echo -e \"$VOICE_VOLUME > 0.05\" | bc`" == "1" ]; then
 				VOICE_VOLUME="`echo \"$VOICE_VOLUME-0.05\" | bc`"
