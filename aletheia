@@ -6714,14 +6714,10 @@ draw_pitch() {
 
 draw_equalizer() {
 	stty -echo
-	equal1="`echo $EQUALIZER | cut -d':' -f1`"
-	equal2="`echo $EQUALIZER | cut -d':' -f4`"
-	equal3="`echo $EQUALIZER | cut -d':' -f8`"
-	equal="`echo $EQUALIZER | cut -d':' -f1`"
-	equal="$equal:`echo $EQUALIZER | cut -d':' -f4`"
-	equal="$equal:`echo $EQUALIZER | cut -d':' -f8`"
-	tput cup 0 $(($COLUMNS-${#equal1}-${#equal2}-${#equal3}-(${#CORNER_DIVIDER}*2)-${#PADDING}))
-	echo -ne "$BLUE_BLACK$equal1$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$equal2$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$equal3$PADDING$NOCOLOR"
+	IFS=':' read bass _ _ _ mid _ _ treble _ _ _ <<< "$EQUALIZER"
+	equal="$bass:$mid:$treble"
+	tput cup 0 $(($COLUMNS-${#bass}-${#mid}-${#treble}-(${#CORNER_DIVIDER}*2)-${#PADDING}))
+	echo -ne "$BLUE_BLACK$bass$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$mid$WHITE_BLACK$CORNER_DIVIDER$BLUE_BLACK$treble$PADDING$NOCOLOR"
 }
 
 toggle_voice() {
