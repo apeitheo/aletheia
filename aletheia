@@ -2203,66 +2203,39 @@ repeat() {
 				flagged=false
 			elif [ "$input_char" == "n" ]; then
 				RIGHT_BANNER_WIDTH=0
-				if ! ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null; then
-					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-					if [ "$TRACK_RANDOM" == true ]; then
-						return $RETURN_TRACK_RANDOM
-					elif [ "$LOOP_ARTIST" == true ]; then
-						return $RETURN_LOOP_ARTIST
-					else
-						return $RETURN_NEXT
-					fi
+				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+				if [ "$TRACK_RANDOM" == true ]; then
+					return $RETURN_TRACK_RANDOM
+				elif [ "$LOOP_ARTIST" == true ]; then
+					return $RETURN_LOOP_ARTIST
+				else
+					return $RETURN_NEXT
 				fi
 			elif [ "$input_char" == "" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				if [ "$REPEAT_ONLY" == false ]; then
+					text="LOOP MODE"
 					REPEAT_ONLY=true
-					draw_loop
+					RIGHT_BANNER_WIDTH="${#text}"
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$text" false true
+					gtts_speak "loop mode"
+					sleep $BANNER_WAIT_TIME
+					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
+					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_loop
 				else
+					text="OFF"
 					REPEAT_ONLY=false
-					if [ "$ONLY_LOCKED" == true ]; then
-						regex=".*\.\(${AUDIO_FORMATS//,/\.locked\\|}\.locked\)$"
-						unset queue_array
-						IFS=$'\n'
-						index=0
-						for i in $(find "$MUSICDIR" -type f -regex "$regex" | shuf); do
-							queue_array[$index]="$(echo -ne "$i" | rev | cut -d'.' -f2- | rev)"
-							index=$((index+1))
-						done
-						unset IFS
-						gtts_speak "only locked"
-					else
-						regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-						unset queue_array
-						IFS=$'\n'
-						index=0
-						for i in $(find "$MUSICDIR" -type f -regex "$regex" | shuf); do
-							queue_array[$index]="$i"
-							index=$((index+1))
-						done
-						unset IFS
-						gtts_speak "all"
-					fi
-					SHUFFLED=true
-					TOTAL_QUEUE=$index
-					tmp="$(printf '%s\n' "${queue_array[@]}" | grep -n "$FILENAME$" | cut -d':' -f1)"
-					if [ "$tmp" != "" ]; then
-						POSITION="$tmp"
-					else
-						POSITION=1
-					fi
-					reset_buffer
-					redraw_screen
-					RIGHT_BANNER_WIDTH=$((${#POSITION}+${#TOTAL_QUEUE}+1+(${#CORNER_DIVIDER}*2)))
-					POSITION_WIDTH=$RIGHT_BANNER_WIDTH
-					draw_pitch
-					draw_position
-					if [ "$LOOP" == false ]; then
-						echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
-					fi
-					break
+					RIGHT_BANNER_WIDTH="${#text}"
+					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$text" false true
+					gtts_speak "off"
+					sleep $BANNER_WAIT_TIME
+					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
+					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_loop
 				fi
 				flagged=true
 			elif [ "$input_char" == "b" ]; then
@@ -4765,7 +4738,6 @@ oscillate() {
 			draw_position
 			return
 		fi
-		#FIXME
 		if [ "$c" == "o" ]; then
 			old_int=$((old_int*2))
 			if [ "$EDO" -lt "$EDO_LIMIT" ]; then
@@ -4773,7 +4745,6 @@ oscillate() {
 				result=$((result*2))
 			fi
 		elif [ "$c" == "m" ]; then
-			#old_int=$INTERVAL
 			if [ "$((EDO % 2))" == "0" ]; then
 				old_int=$((old_int/2))
 				x=$((x/2))
@@ -4788,11 +4759,6 @@ oscillate() {
 			else
 				NEGATIVE=true
 			fi
-		# FIXME
-		elif [ "$c" == "H" ]; then
-			old_int=$INTERVAL
-		elif [ "$c" == "L" ]; then
-			old_int=$INTERVAL
 		elif [ "$c" == "z" ]; then
 			draw_wait false
 			reset_dimensions
@@ -4967,7 +4933,6 @@ pcm_volume_change() {
 
 set_system_volume() {
 	if [ "$OS" == "Linux" ]; then
-		# FIXME
 		# shellcheck disable=SC2086
 		pactl set-sink-volume @DEFAULT_SINK@ $1
 	elif [ "$OS" == "Darwin" ]; then
@@ -5504,7 +5469,6 @@ reset_buffer() {
 
 		if [ -e "$orig_line.locked" ]; then
 			if [ -e "$orig_line.repeats" ]; then
-				
 				INDICATOR="${WHITE}$REP#"
 			else
 				INDICATOR="${WHITE}$"
@@ -7967,7 +7931,7 @@ queue_controls() {
 				draw_position
 			fi
 			gtts_speak "closed" true
-			return
+			return 200 
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
 			reset_dimensions
@@ -8023,11 +7987,10 @@ queue_controls() {
 					draw_pitch
 					draw_position
 				fi
-				return
+				return 200
 				;;
 			esac
 		fi
-		
 	done
 }
 
@@ -8362,25 +8325,14 @@ print_queue() {
 			else
 				return $RETURN_BACK
 			fi
-		#FIXME
 		elif [ "$inputchar" == "n" ]; then
-			if ! ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null; then
-				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-				if [ "$TRACK_RANDOM" == true ]; then
-					return $RETURN_TRACK_RANDOM
-				elif [ "$LOOP_ARTIST" == true ]; then
-					return $RETURN_LOOP_ARTIST
-				else
-					if [ "$POSITION" == "$TOTAL_QUEUE" ]; then
-						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-						JUMP="1"
-						POSITION="1"
-						draw_position
-						return $RETURN_JUMP
-					else
-						return 0
-					fi
-				fi
+			kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+			if [ "$TRACK_RANDOM" == true ]; then
+				return $RETURN_TRACK_RANDOM
+			elif [ "$LOOP_ARTIST" == true ]; then
+				return $RETURN_LOOP_ARTIST
+			else
+				return $RETURN_NEXT
 			fi
 		elif [ "$inputchar" == "s" ]; then
 			start_search
@@ -8901,8 +8853,9 @@ main() {
 			';')
 				BUFFER_BACKUP="$BUFFER"
 				print_queue
-				if [ "$?" == "$RETURN_JUMP" ]; then
-					return $RETURN_JUMP
+				ret="$?"
+				if [ "$ret" != 200 ]; then
+					return $ret
 				fi
 				;;
 			'?')
@@ -10032,18 +9985,13 @@ main() {
 			'')
 				load_loop_file
 				;;
-			#'')
-			#	if [ "$REPEAT_ONLY" == false ]; then
-			#		REPEAT_ONLY=true
-			#		gtts_speak "playing all loops"
-			#		JUMP="$POSITION"
-			#		kill "$MPLAYER_PID"
-			#		return $RETURN_JUMP
-			#	else
-			#		REPEAT_ONLY=false
-			#		gtts_speak "off"
-			#	fi
-			#	;;
+			'')
+				REPEAT_ONLY=true
+				gtts_speak "loop mode"
+				JUMP="$POSITION"
+				kill "$MPLAYER_PID"
+				return $RETURN_JUMP
+				;;
 			'E')
 				set_loop
 				;;
