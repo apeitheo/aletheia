@@ -835,7 +835,6 @@ e  Play Transition
 
 VOICE_HELP="Voice Controls
 d  Toggle Voice
-T  Toggle Title Only
 Voice Volume Settings
 8  Volume Down
 9  Volume Up
@@ -876,7 +875,7 @@ m  Man Page
 q  Quit
 Voice Feedback
 d  Toggle Voice
-T  Only Titles
+T  Feedback Level
 #  Save Settings
 ^K  Read Interval
 I  Read Corner
@@ -1863,7 +1862,12 @@ repeat() {
 				time_before=$(date +%s.%N)
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
-				say_status
+				read_corner
+				if [ "$REPEAT_ONLY" == true ]; then
+					gtts_speak "back. playlist loop mode"
+				else
+					gtts_speak "back. loop editor"
+				fi
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
@@ -2226,7 +2230,7 @@ repeat() {
 					RIGHT_BANNER_WIDTH="${#text}"
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_banner "$text" false true
-					gtts_speak "loop mode"
+					gtts_speak "playlist loop mode"
 					sleep $BANNER_WAIT_TIME
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -2237,7 +2241,7 @@ repeat() {
 					RIGHT_BANNER_WIDTH="${#text}"
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_banner "$text" false true
-					gtts_speak "off"
+					gtts_speak "playlist loop mode off"
 					sleep $BANNER_WAIT_TIME
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -4579,6 +4583,9 @@ secondary_scale_func() {
 		system_volume_change "-1% -1%"
 	elif [ "$1" == "(" ]; then
 		system_volume_change "+1% +1%"
+	elif [ "$1" == "I" ]; then
+		read_corner
+		gtts_speak "scaling"
 	elif [ "$1" == "H" ]; then
 		less_precise
 	elif [ "$1" == "L" ]; then
@@ -6548,13 +6555,13 @@ draw_equalizer() {
 toggle_voice() {
 	if [ "$VOICE_ENABLED" == false ]; then
 		VOICE_ENABLED=true
-		if [ "$2" == false ] || [ "$2" == "" ]; then
+		if [ "$2" != true ]; then
 			gtts_speak "on" false true
 		fi
 	else
-		if [ "$2" == false ] || [ "$2" == "" ]; then
+		if [ "$2" != true ]; then
 			if [ "$ONLY_VOICE_TITLES" == true ]; then
-				gtts_speak "voice only titles, off" false true
+				gtts_speak "reading only artist and title" false true
 			else
 				gtts_speak "off" false true
 			fi
@@ -6798,64 +6805,110 @@ add_downloaded() {
 	touch -m "$SCRIPT_PATH"
 }
 
-say_status() {
-	draw_banner "STATUS" false false true
-	gtts_speak "read from what corner?"
-	read -rn1 x
-	if [ "$x" == "u" ]; then
-		tmp="$(echo "$SYSTEM_VOLUME_LEFT" | cut -d'%' -f1)"
-		tmp2="$(echo "$SYSTEM_VOLUME_RIGHT" | cut -d'%' -f1)"
-		tmp3="$(echo "$VOLUME" | cut -d'%' -f1)"
-		gtts_speak "$tmp3" true false true
-		gtts_speak "$tmp" true false true
-		gtts_speak "$tmp2" true false true
-	elif [ "$x" == "i" ]; then
-			res="$(echo -ne "$equal" | sed -e "s/:/, /g")"
-			if [ "$res" == "0, 0, 0" ]; then
-				gtts_speak "0" true false true
-				gtts_speak "0" true false true
-				gtts_speak "0" true false true
-			else
-				gtts_speak " $bass" true false true
-				gtts_speak " $mid" true false true
-				gtts_speak " $treble" true false true
-			fi
-	elif [ "$x" == "j" ]; then
-			if [ "$LOCKED" == true ]; then 
-				tmp_int="$(cut -d'/' -f1 < "$FILENAME.locked")"
-				gtts_speak "$INTERVAL" true false true
-				gtts_speak "$EDO" true false true
-				gtts_speak "locked" true false true
-				gtts_speak "$tmp_int" true false true
-				if [ "$SCALETEMPO" == true ]; then
-					gtts_speak "tempo" true false true
-				fi
-			else
-				gtts_speak "$INTERVAL" true false true
-				gtts_speak "$EDO" true false true
-				if [ "$SCALETEMPO" == true ]; then
-					gtts_speak "tempo" true false true
-				fi
-			fi
-	elif [ "$x" == "k" ]; then
-		gtts_speak "$POSITION" true false true
-		gtts_speak "of" true false true
-		gtts_speak "$TOTAL_QUEUE" true false true
-		if [ "$LOOP" == true ]; then
-			gtts_speak "loop enabled" true false true
-		elif [ "$LOOP_ARTIST" == true ]; then
-			gtts_speak "playing" true false true
-			gtts_speak "$ARTIST" true false true
-		elif [ "$TRACK_RANDOM" == true ]; then
-			gtts_speak "random mode" true false true
-		elif [ "$ONLY_LOCKED" == true ]; then
-			gtts_speak "only locked" true false true
+read_corner() {
+	pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+	z=""
+	draw_banner "READ" false false true
+	while true; do
+		gtts_speak "read from which corner?"
+		if [ "$z" != "" ]; then
+			x="$z"
+		else
+			read -rn1 x
 		fi
-			
-	elif [ "$x" == "I" ]; then
-		gtts_speak "closed" true false true
-	fi
-	draw_pitch
+		if [ "$x" == "u" ]; then
+			tmp="$(echo "$SYSTEM_VOLUME_LEFT" | cut -d'%' -f1)"
+			tmp2="$(echo "$SYSTEM_VOLUME_RIGHT" | cut -d'%' -f1)"
+			tmp3="$(echo "$VOLUME" | cut -d'%' -f1)"
+			gtts_speak "$tmp3" true false true
+			read -rn1 -t 0.05 z
+			if [ -n "$z" ]; then continue; fi
+			gtts_speak "$tmp" true false true
+			if [ "$SYSTEM_VOLUME_LEFT" != "$SYSTEM_VOLUME_RIGHT" ]; then
+				read -rn1 -t 0.05 z
+				if [ -n "$z" ]; then continue; fi
+				gtts_speak "$tmp2" true false true
+			fi
+		elif [ "$x" == "i" ]; then
+				res="$(echo -ne "$equal" | sed -e "s/:/, /g")"
+				if [ "$res" == "0, 0, 0" ]; then
+					gtts_speak "0" true false true
+				else
+					gtts_speak " $bass" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					gtts_speak " $mid" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					gtts_speak " $treble" true false true
+				fi
+		elif [ "$x" == "j" ]; then
+				if [ "$LOCKED" == true ]; then
+					tmp_int="$(cut -d'/' -f1 < "$FILENAME.locked")"
+					gtts_speak "$INTERVAL" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					gtts_speak "$EDO" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					gtts_speak "locked" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					gtts_speak "$tmp_int" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					if [ "$SCALETEMPO" == true ]; then
+						gtts_speak "tempo" true false true
+					fi
+				else
+					gtts_speak "$INTERVAL" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					gtts_speak "$EDO" true false true
+					read -rn1 -t 0.05 z
+					if [ -n "$z" ]; then continue; fi
+					if [ "$SCALETEMPO" == true ]; then
+						gtts_speak "tempo" true false true
+					fi
+				fi
+		elif [ "$x" == "k" ]; then
+			gtts_speak "$POSITION" true false true
+			read -rn1 -t 0.05 z
+			if [ -n "$z" ]; then continue; fi
+			gtts_speak "of" true false true
+			read -rn1 -t 0.05 z
+			if [ -n "$z" ]; then continue; fi
+			gtts_speak "$TOTAL_QUEUE" true false true
+			read -rn1 -t 0.05 z
+			if [ -n "$z" ]; then continue; fi
+			if [ "$LOOP" == true ]; then
+				gtts_speak "loop enabled" true false true
+			elif [ "$LOOP_ARTIST" == true ]; then
+				gtts_speak "playing" true false true
+				read -rn1 -t 0.05 z
+				if [ -n "$z" ]; then continue; fi
+				gtts_speak "$ARTIST" true false true
+			elif [ "$TRACK_RANDOM" == true ]; then
+				gtts_speak "random mode" true false true
+			elif [ "$ONLY_LOCKED" == true ]; then
+				gtts_speak "only locked" true false true
+			fi
+		elif [ "$x" == "I" ] || [ "$x" == "" ] || [ "$x" == "q" ]; then
+			break
+		else
+			gtts_speak "upper left, 'u' key. upper right, 'i' key. lower left, 'j' key. lower right, 'k' key. 'q' key to exit"
+			z=""
+			while [ -z "$z" ]; do
+				read -rn1 -t 0.1 z
+				if ! ps aux | pgrep -f "^play.*$ALETHEIA/voices.*$" >/dev/null 2>/dev/null; then
+					break
+				fi
+			done
+		fi
+		if [ "$z" == "I" ] || [ "$z" == "" ] || [ "$z" == "q" ]; then
+			break
+		fi
+	done
 }
 
 sort_queue() {
@@ -8735,6 +8788,7 @@ main() {
 	if [ "$REPEAT_ONLY" == true ]; then
 		repeat
 		repeat_tmp=$?
+		gtts_speak "loop editor closed. main screen" true
 		if [ "$repeat_tmp" != "200" ]; then
 			return $repeat_tmp
 		fi
@@ -9241,6 +9295,7 @@ main() {
 			'6')
 				repeat
 				repeat_tmp="$?"
+				gtts_speak "loop editor closed. main screen" true
 				if [ "$repeat_tmp" != "200" ] && [ "$repeat_tmp" != "300" ]; then
 					return $repeat_tmp
 				fi
@@ -9421,7 +9476,10 @@ main() {
 				edo_down
 				;;
 			'I')
-				say_status
+				read_corner
+				gtts_speak "main screen"
+				draw_pitch
+				draw_position
 				;;
 			'K')
 				edo_up
@@ -9637,46 +9695,24 @@ main() {
 				reset_to_locked
 				;;
 			'T')
-				if [ "$ONLY_VOICE_TITLES" == true ]; then
+				if [ "$VOICE_ENABLED" == true ]; then
+					gtts_speak "voice feedback disabled" false false true
+					draw_banner "OFF"
+					VOICE_ENABLED=false
+				elif [ "$ONLY_VOICE_TITLES" == true ]; then
 					ONLY_VOICE_TITLES=false
-					if [ "$VOICE_ENABLED" == true ]; then
-						prev_true=true
-					else
-						prev_true=false
-					fi
 					VOICE_ENABLED=true
-					if [ "$prev_true" == true ]; then
-						gtts_speak "voice on"
-						draw_banner "voice on"
-					else
-						gtts_speak "off"
-						draw_banner "off"
-						VOICE_ENABLED=false
-					fi
-					sleep $BANNER_WAIT_TIME
-					draw_pitch
-					draw_position
+					gtts_speak "general voice feedback" false false true
+					draw_banner "VOICE ON"
 				else
 					ONLY_VOICE_TITLES=true
-					if [ "$VOICE_ENABLED" == true ]; then
-						prev_true=true
-					else
-						prev_true=false
-					fi
-					VOICE_ENABLED=true
-					if [ "$prev_true" == true ]; then
-						VOICE_ENABLED=true
-						gtts_speak "voice on"
-						draw_banner "VOICE ON"
-					else
-						gtts_speak "voice only titles, on"
-						VOICE_ENABLED=false
-						draw_banner "ONLY TITLES"
-					fi
-					sleep $BANNER_WAIT_TIME
-					draw_pitch
-					draw_position
+					gtts_speak "reading only artist and title" false false true
+					VOICE_ENABLED=false
+					draw_banner "ONLY TITLE"
 				fi
+				sleep $BANNER_WAIT_TIME
+				draw_pitch
+				draw_position
 				;;
 			'z')
 				tput civis
@@ -10042,7 +10078,7 @@ main() {
 				;;
 			'')
 				REPEAT_ONLY=true
-				gtts_speak "loop mode"
+				gtts_speak "playlist loop mode" true
 				JUMP="$POSITION"
 				kill "$MPLAYER_PID"
 				return $RETURN_JUMP
@@ -10320,20 +10356,42 @@ elif [ "$1" == "--video" ]; then
 	VIDEO=false
 elif [ "$1" == "--directory" ]; then
 	if [ "$2" != "" ]; then
-		echo -ne "" >"$ALETHEIA/queue"
 		if [ -d "$2" ]; then
 			regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 			regex1=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
-			unset queue_array
-			IFS=$'\n'
-			index=0
-			for i in $(find "$2" -type f -regex "$regex" -o -regex "$regex1" | shuf); do
-				queue_array[$index]="$i"
-				index=$((index+1))
-			done
-			unset IFS
-			SHUFFLED=true
-			TOTAL_QUEUE=$index
+			if [ "$3" == "" ]; then
+				unset queue_array
+				IFS=$'\n'
+				index=0
+				for i in $(find "$2" -type f -regex "$regex" -o -regex "$regex1" | shuf); do
+					queue_array[$index]="$i"
+					index=$((index+1))
+				done
+				unset IFS
+				SHUFFLED=true
+				TOTAL_QUEUE=$index
+			else
+				KEYWORD=".*"
+				for i in "${@:3}"; do
+					KEYWORD+="$i.*"
+				done
+				regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
+				unset queue_array
+				IFS=$'\n'
+				index=0
+				for i in $(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf); do
+					queue_array[$index]="$i"
+					index=$((index+1))
+				done
+				unset IFS
+				TOTAL_QUEUE=$index
+				if [ "$index" -lt "1" ]; then
+					clear
+					tput cup $LINES
+					echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
+					exit 0
+				fi
+			fi
 		else
 			clear
 			tput cup $LINES
@@ -10595,14 +10653,30 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 		if [ "$new_POSITION" != "" ]; then
 			POSITION="$((new_POSITION+POSITION))"
 		else
-			POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
+			if [ "$ARTIST" == "" ]; then
+				LOOP_ARTIST=false
+				if [ "$POSITION" == "$TOTAL_QUEUE" ]; then
+					POSITION=1
+				else
+					POSITION=$((POSITION+1))
+				fi
+			else
+				POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
+			fi
 		fi
 	elif [ "$RETURN" == "$RETURN_LOOP_ARTIST_BACK" ]; then
-		new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "${POSITION},${TOTAL_QUEUE}d" | tac | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
-		if [ "$new_POSITION" != "" ]; then
-			POSITION="$((POSITION-new_POSITION))"
+		if [ "$ARTIST" == "" ]; then
+			LOOP_ARTIST=false
+			if [ "$POSITION" != "1" ]; then
+				POSITION=$((POSITION-1))
+			fi
 		else
-			POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | tail -1 | cut -d':' -f1)"
+			new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "${POSITION},${TOTAL_QUEUE}d" | tac | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
+			if [ "$new_POSITION" != "" ]; then
+				POSITION="$((POSITION-new_POSITION))"
+			else
+				POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | tail -1 | cut -d':' -f1)"
+			fi
 		fi
 	elif [ "$RETURN" == "$RETURN_TRACK_RANDOM" ]; then
 		POSITION="$((1 + RANDOM % TOTAL_QUEUE))"
