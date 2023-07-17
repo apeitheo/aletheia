@@ -878,9 +878,10 @@ Voice Feedback
 d  Toggle Voice
 T  Only Titles
 #  Save Settings
-I  Speak Status
-,  Speak Title
-^S  Speak Lock/Loop
+^K  Read Interval
+I  Read Corner
+,  Read Title
+^S  Read Lock Status
 Volume Controls
 *  1% Down
 (  1% Up
@@ -2211,6 +2212,11 @@ repeat() {
 				else
 					return $RETURN_NEXT
 				fi
+			elif [ "$input_char" == "" ]; then
+				old_time_before=$time_before
+				time_before=$(date +%s.%N)
+				gtts_speak " $INTERVAL" false false true
+				flagged=true
 			elif [ "$input_char" == "" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
@@ -4619,9 +4625,8 @@ secondary_scale_func() {
 
 		toggle_pause
 		draw_banner "$2" false true
-	elif [ "$1" == "T" ]; then
-		set_only_display_song
-		redraw_buffer
+	elif [ "$1" == "" ]; then
+		gtts_speak " $INTERVAL" false false true
 	elif [ "$1" == "\\" ]; then
 		echo "seek 0 2" >"$ALETHEIA/pipe$$" &
 	else
@@ -9552,6 +9557,9 @@ main() {
 			'')
 				toggle_dark_mode
 				redraw_screen
+				;;
+			'')
+				gtts_speak " $INTERVAL" false false true
 				;;
 			'')
 				if [ "$DOWNLOAD_POSITION" != "" ]; then
