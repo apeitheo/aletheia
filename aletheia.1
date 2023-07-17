@@ -5,7 +5,7 @@ Aletheia - command-line media player that allows for easy, real-time adjustment 
 
 .SH SYNOPSIS
 .B aletheia
-[\fI OPTION \fR] [\fI <FILE/DIRECTORY>\fR | \fIKEYWORD \fR]
+[\fIOPTIONS\fR] [\fI<FILE/DIRECTORY>\fR] [--music \fI<KEYWORD> ...\fR] [--sound \fI<KEYWORD> ...\fR] [--video \fI<KEYWORD> ...\fR] [\fI<KEYWORD> ...\fR] 
 
 .SH DESCRIPTION
 Aletheia is a command-line media player with a wide range of features designed to make it easy to adjust pitch and tempo in real-time using customizable intervals, allowing precise control over the playback speed and tonality of media files. It also supports loop creation with customizable start and end points for seamless looping. Aletheia has optional voice feedback and the ability to play videos, import downloads, and export playlists and loops. In addition, it offers various scaling features to smoothly transition between separate intervals.
@@ -14,15 +14,15 @@ Aletheia is a command-line media player with a wide range of features designed t
 The following options are available:
 
 .TP
-.B --music [\fIKEYWORD\fR]
+.B --music [\fIKEYWORD ...\fR]
 Generate random playlist from music found in ~/Music/ that match the optional [KEYWORD].
 
 .TP
-.B --sound [\fIKEYWORD\fR]
+.B --sound [\fIKEYWORD ...\fR]
 Generate sorted playlist from soundscapes found in ~/Sounds/ that match the optional [KEYWORD].
 
 .TP
-.B --video [\fIKEYWORD\fR]
+.B --video [\fIKEYWORD ...\fR]
 Generate sorted playlist from videos found in ~/Videos/ that match the optional [KEYWORD].
 
 .TP
@@ -30,7 +30,7 @@ Generate sorted playlist from videos found in ~/Videos/ that match the optional 
 Generate a playlist with just one file.
 
 .TP
-.B --directory [\fIDIRECTORY\fR]
+.B --directory [\fIDIRECTORY\fR] [\fIKEYWORD ...\fR]
 Generate sorted playlist from media found in specified directory.
 
 .TP
@@ -38,8 +38,12 @@ Generate sorted playlist from media found in specified directory.
 Use a playlist file instead of generating one from available media. \fIFILE\fR should be a simple text file with the full paths of each file.
 
 .TP
+.B --mplayer-path [\fIPATH\fR]
+Specifies a location to search for the mplayer binary. Useful for debugging the latest mplayer development code.
+
+.TP
 .B --server (EXPERIMENTAL)
-Allows for remote control of Aletheia using a yet-to-be-released aletheiactl script and web interface using NodeJS.
+Allows for remote control of Aletheia using a yet-to-be-released aletheiactl script and web interface using NodeJS. Not in working condition at the moment.
 
 .TP
 .B --version
@@ -55,7 +59,7 @@ Display a brief synopsis of available command-line options.
 
 .SS MENU
 
-The main menu is presented initially when loading Aletheia without any options. Use 'j' and 'k' (or arrow keys) to move the selection down or up, and enter to select. The first three options (Music, Sound, Video) scan ~/Music/, ~/Sounds/, or ~/Videos/ by default and generate a playlist based on available media. The next option, Queue, presents the user with available playlists in ~/.aletheia/playlists/. Type the number listed next to the playlist and push enter to select, or simply push enter to select the top playlist. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference.
+The main menu is presented initially when loading Aletheia without any options. Use 'j' and 'k' (or arrow keys) to move the selection down or up, and enter to select. The first three options (Music, Sound, Video) scan ~/Music/, ~/Sounds/, or ~/Videos/ by default and generate a playlist based on available media. The next option, Queue, presents the user with available playlists in ~/.aletheia/playlists/. Type the number listed next to the playlist and push enter to select, or simply push enter to select the top playlist. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference. Press 'd' while in a help screen to read the page aloud.
 
 .RS 7
 .TP
@@ -70,23 +74,27 @@ Voice feedback is disabled by default, but can be toggled via the 'd' key. To sa
 .RS 7
 .TP
 .B d
-Toggle voice feedback. Disabled by default.
+Toggle voice feedback. Disabled by default. Also used to read aloud the help screens using a digital voice.
 
 .TP
 .B T
-Toggle artist/title feedback only. Disabled by default.
+Toggle voice feedback verbosity, allowing for voice feedback of artist/titles without general feedback. Disabled by default.
 
 .TP
-.B I
-Provide voice feedback for one of the four corners of information. Input should be the following: 'u' for PCM and Master volumes (upper left), 'i' for current equalizer settings (upper right), 'j' for interval information (lower left), and 'k' for queue information (lower right). To help remember, these keys form a rhombus on the keyboard meant to indicate which corner.
+.B ^K
+Read aloud the current interval adjustment.
+
+.TP
+.B ^S
+Read locked file information for intervals and loops.
 
 .TP
 .B #
-Saves all settings, including voice interval adjustment, voice volume, panel status, and color theme. Asks for confirmation before saving (y/n).
+Saves all settings, including voice feedback's pitch adjustment, voice feedback volume, whether or not dark mode is enabled, voice feedback verbosity level, whether colors are enabled or not, and finally whether or not the panel is enabled. Asks for confirmation before saving (y/n). Using ^A to pick a randomized color theme saves automatically when a selection is made.
 
 .TP
 .B ,
-Speak the current artist and title of the media or track title if filename is not delineated by ' - '.
+Speak the current artist and title of the media or base filename if filename is not delineated by ' - '. If the filename follows the format of 'artist - * - track title', the program will extract and speak the artist and track title. However, if the filename does not adhere to this format, the program will speak the entire filename (excluding the extension).
 
 .SS MAIN SCREEN 
 
@@ -267,24 +275,23 @@ Jump to the last file of the current artist (the first field of a filename delin
 
 .TP
 .B N
-Jump to the next artist (the first field of a filename delineated by " - ").
-
+Jump to the next artist in a sorted playlist. If the filename follows the format of 'artist - * - track title', the program will extract the artist field and skip to the next artist. However, if the filename does not adhere to this format, the program will skip to the next file that is not identically named. As such, this option doesn't work on shuffled playlists.
 
 .TP
 .B B
-Jump to the previous artist (the first field of a filename delineated by " - ").
+Jump to the previous artist in a sorted playlist. If the filename follows the format of 'artist - * - track title', the program will extract the artist field and skip to the previous artist. However, if the filename does not adhere to this format, the program will skip back to the last file that is not identically named. As such, this option doesn't work on shuffled playlists.
 
 .TP
 .B ^U
-Turn off/on the playback of saved interval changes. If off, everything starts at interval 0, regardless if a file's been locked or not.
+Toggles the playback of saved interval adjustments. When this is turned off, all files will begin playback at their original speed, pitch, and tempo, regardless of whether a file has a locked adjustment.
 
 .TP
 .B e
-Toggle between looping single songs and artists.
+Toggles between different looping modes: looping a single song, looping an entire artist, or turning off looping entirely. An indicator is shown on the lower left of the screen showing whether looping a single file is enabled (1), looping an entire artist (2), and normal chronological playback (0). Looping an artist currently requires that the filename follow the format of 'artist - * - track title'. However, if the filename does not adhere to this format, the program will skip back to the last file that is not identically named. As such, this option doesn't work on shuffled playlists.
 
 .TP
 .B E
-Loop current media.
+Loop current file.
 
 .TP
 .B V
@@ -563,8 +570,8 @@ Format of ~/.aletheia/config is KEY=VALUE separated by newline. Comments are not
 Status of voice feedback. Input: true or false. (Default: false).
 
 .TP
-.B BLACK_BACKGROUND=
-Useful to specify whether to darken light text if terminal background color is light. Input: true or false (Default: true).
+.B DARK_BACKGROUND=
+Specifies whether to use dark (true) or light (false) mode if DEFAULT_THEME is true.
 
 .TP
 .B DEFAULT_EQUALIZER=
@@ -610,9 +617,44 @@ Hex color code for the secondary color (Default: )
 .B COLOR_PANEL=
 Hex color code for the panel color (Default: )
 
+.TP
+.B DEFAULT_THEME=
+Whether to use the default dark or light theme (true), or a randomized color theme (false).
+
+.TP
+.B NO_HELP=
+If true, disables non-essential (not related to voice feedback) help screens to speed up loading time and screen refreshes (when terminal is resized or 'z' is pushed).
+
+.TP
+.B AUDIO_FORMATS=
+A comma-separated list of audio formats to enable, provided they are supported by mplayer.
+
+.TP
+.B VIDEO_FORMATS=
+A comma-separated list of audio formats to enable, provided they are supported by mplayer.
+
+.SH AVAILABLE ENVIRONMENT VARIABLES
+These can preceed the ./aletheia command to adjust things on load and bypass current config settings in '~/.aletheia/config'.
+
+.TP
+.B MAIN_REFRESH_TIME=
+How often (in seconds) to check for new terminal dimensions to refresh the main screen and to check for whether or not mplayer is still running to know to go to the next file. (Default: 0.2)
+
+.TP
+.B ESPEAK_DIGITAL_VOICE=
+If true, uses the faster espeak-ng natural voice engine for all voice feedback instead of having to fetch and process audio from online with gtts-cli.
+
+.TP
+.B MPLAYER_PATH=
+Specifies the location in which to find the mplayer binary to use.
+
+.TP
+.B NO_HELP=
+If true, disables non-essential help screens to help speed up loading and refresh time.
+
 .SH SEE ALSO
 .TP
-.B mplayer(1), aletheiactl(1)
+.B mplayer(1)
 
 .SH AUTHOR
 Brad Hermanson.
