@@ -3267,6 +3267,12 @@ main_menu() {
 		elif [ "$z" == "a" ]; then
 			set_equalizer false true
 			draw_equalizer
+			tput cup $((LINES-5))
+			tput el
+			tput cup $((LINES-4))
+			tput el
+			tput cup $((LINES-3))
+			tput el
 			z=""
 			continue
 		elif [ "$z" == "" ]; then
@@ -3814,12 +3820,12 @@ scale() {
 		draw_pitch
 		draw_position
 		return
-	elif [ "$(isnum "$interval_change")" != "0" ] || [ "$interval_change" == "-" ]; then
+	elif [ "$(isnum "$interval_change")" == "1" ] || [ "$interval_change" == "-" ]; then
 		draw_position
 		draw_banner "SCALE"
-		tmp="$(read_line "$interval_change")"
-		if [ "$(isnum "$tmp")" == "0" ]; then
-			gtts_speak "scale closed"
+		tmp="$(read_line "$interval_change" true)"
+		if [ "$?" == "1" ]; then
+			gtts_speak "invalid number. main screen"
 			RIGHT_BANNER_WIDTH=0
 			draw_pitch
 			draw_position
@@ -4093,13 +4099,19 @@ scale_octave() {
 }
 
 set_custom_int() {
-	gtts_speak "enter interval"
+	gtts_speak "enter interval adjustment"
 	draw_banner "INT"
 	read -rn1 interval_jump
 	if [ "$(isnum "$interval_jump")" == "1" ] || [ "$interval_jump" == "-" ]; then
-		interval_jump="$(read_line "$interval_jump")"
+		interval_jump="$(read_line "$interval_jump" true)"
+		if [ "$?" == "1" ]; then
+			gtts_speak "invalid number. main screen"
+			draw_pitch
+			return
+		fi
+		gtts_speak " $interval_jump"
 	else
-		gtts_speak "closed" true
+		gtts_speak "invalid number. main screen" true
 		draw_pitch
 		redraw_buffer
 		return
@@ -4263,9 +4275,14 @@ set_custom_edo() {
 	gtts_speak "enter e d o"
 	read -rn1 new_edo
 	if [ "$(isnum "$new_edo")" == "1" ]; then
-		new_edo="$(read_line "$new_edo")"
+		new_edo="$(read_line "$new_edo" true)"
+		if [ "$?" == "1" ]; then
+			gtts_speak "invalid number. main screen"
+			draw_pitch
+			return
+		fi
 	else
-		gtts_speak "closed" true
+		gtts_speak "invalid number. main screen"
 		draw_pitch
 		redraw_buffer
 		return
@@ -4280,6 +4297,7 @@ set_custom_edo() {
 	fi
 
 	if [ "$(isnum "$new_edo")" != "0" ]; then
+		gtts_speak "$new_edo" true
 		PAUSE=false
 		if [ "$new_edo" -lt "1" ]; then
 			return
@@ -4307,9 +4325,6 @@ set_custom_edo() {
 		redraw_buffer
 		draw_pitch
 		draw_position
-	else
-		redraw_buffer
-		draw_pitch
 	fi
 }
 
@@ -5199,11 +5214,14 @@ set_sleep() {
 }
 
 read_line() {
-	local h=$1
+	first_char=$1
+	only_numbers=$2
+
 	IFS=$'\n'
 	line=""
 	stty -echo
-	if [ "$h" != "" ]; then
+		
+	if [ "$first_char" != "" ]; then
 		x="$1"
 	else
 		read -rn1 x
@@ -5215,6 +5233,12 @@ read_line() {
 	if [ "$x" == "" ]; then
 		unset IFS
 		return
+	fi
+	if [ "$only_numbers" == true ] && [ "$x" != "" ] && [ "$x" != "-" ]; then
+		if [ "$(isnum "$x")" == "0" ]; then
+			unset IFS
+			return 1
+		fi
 	fi
 
 	echo -ne "$x" >/dev/stderr
@@ -5235,6 +5259,12 @@ read_line() {
 
 	read -rn1 x
 	while [ -n "$x" ]; do
+		if [ "$only_numbers" == true ] && [ "$x" != "" ]; then
+			if [ "$(isnum "$x")" == "0" ]; then
+				unset IFS
+				return 1
+			fi
+		fi
 		if [ "$x" == "" ]; then
 			unset IFS
 			return
@@ -5268,6 +5298,12 @@ read_line() {
 			fi
 		fi
 		read -rn1 x
+		if [ "$only_numbers" == true ] && [ "$x" != "" ]; then
+			if [ "$(isnum "$x")" == "0" ]; then
+				unset IFS
+				return 1
+			fi
+		fi
 	done
 
 	unset IFS
@@ -6759,7 +6795,7 @@ add_downloaded() {
 
 say_status() {
 	draw_banner "STATUS" false false true
-	gtts_speak "which corner?"
+	gtts_speak "read from what corner?"
 	read -rn1 x
 	if [ "$x" == "u" ]; then
 		tmp="$(echo "$SYSTEM_VOLUME_LEFT" | cut -d'%' -f1)"
@@ -7735,7 +7771,7 @@ search_queue() {
 }
 
 queue_controls() {
-	gtts_speak "select queue"
+	gtts_speak "select playlist"
 	SEARCHBUFFER="$(ls -1 "$ALETHEIA/playlists/")"
 	total="$(echo -e "$SEARCHBUFFER" | wc -l)"
 	local number_per_page="$((LINES-4))"
@@ -7822,10 +7858,13 @@ queue_controls() {
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
-		elif [ "$(isnum "$inputchar")" != "0" ]; then
+		elif [ "$(isnum "$inputchar")" == "1" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			up_down="$(read_line "$inputchar")"
-			jumpto="$up_down"
+			jumpto="$(read_line "$inputchar" true)"
+			if [ "$?" == "1" ]; then
+				gtts_speak "invalid number. select playlist"
+				continue
+			fi
 			if [ "$jumpto" -le "$total" ]; then
 				if [ "$jumpto" -gt "0" ]; then
 					PICK="$(echo -ne "$SEARCHBUFFER" | sed -n "${jumpto}p")"
@@ -7851,15 +7890,20 @@ queue_controls() {
 					continue
 				fi
 			else
-				gtts_speak "number not valid"
+				gtts_speak "invalid number. select playlist"
 				continue
 			fi
 			return
 		elif [ "$inputchar" == "D" ]; then
 			draw_banner "DELETE"
-			gtts_speak "number to delete?"
-			c="$(read_line)"
-			if [ "$(isnum "$c")" != "0" ]; then
+			gtts_speak "enter number to delete"
+			read -rn1 c
+			if [ "$(isnum "$c")" == "1" ]; then
+				c="$(read_line "$c" true)"
+				if [ "$?" == "1" ]; then
+					gtts_speak "invalid number. select playlist"
+					continue
+				fi
 				if [ "$c" -gt "0" ] && [ "$c" -le "$total" ]; then
 					draw_banner "DELETE" true
 
@@ -7873,6 +7917,9 @@ queue_controls() {
 						gtts_speak "delete canceled"
 					fi
 				fi
+			else
+				gtts_speak "invalid number. select playlist"
+				continue
 			fi
 		elif [ "$inputchar" == "" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
