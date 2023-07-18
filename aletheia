@@ -1606,16 +1606,16 @@ repeat() {
 								double_precise
 								skip=true
 							elif [ "$input_char" == "8" ]; then
-								system_volume_change "-3% -3%"
+								system_volume_change false 3 3
 								skip=true
 							elif [ "$input_char" == "9" ]; then
-								system_volume_change "+3% +3%"
+								system_volume_change true 3 3
 								skip=true
 							elif [ "$input_char" == "*" ]; then
-								system_volume_change "-1% -1%"
+								system_volume_change false 1 1
 								skip=true
 							elif [ "$input_char" == "(" ]; then
-								system_volume_change "+1% +1%"
+								system_volume_change true 1 1
 								skip=true
 							fi
 						fi
@@ -2080,7 +2080,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					system_volume_change "-3% -3%"
+					system_volume_change false 3 3
 				elif [ "$input_char" == "9" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
@@ -2088,7 +2088,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					system_volume_change "+3% +3%"
+					system_volume_change true 3 3
 				elif [ "$input_char" == "*" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
@@ -2096,7 +2096,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					system_volume_change "-1% -1%"
+					system_volume_change false 1 1
 				elif [ "$input_char" == "(" ]; then
 					PAUSE=false
 					if [ "$MUTE" == true ]; then
@@ -2104,7 +2104,7 @@ repeat() {
 						MUTE=false
 						draw_pitch
 					fi
-					system_volume_change "+1% +1%"
+					system_volume_change true 1 1
 				fi
 				flagged=true
 			elif [ "$input_char" == "6" ]; then
@@ -3340,22 +3340,22 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "8" ]; then
-			system_volume_change "-3% -3%"
+			system_volume_change false 3 3
 			tagged=true
 			z=""
 			continue
 		elif [ "$z" == "9" ]; then
-			system_volume_change "+3% +3%"
+			system_volume_change true 3 3
 			tagged=true
 			z=""
 			continue
 		elif [ "$z" == "*" ]; then
-			system_volume_change "-1% -1%"
+			system_volume_change false 1 1
 			tagged=true
 			z=""
 			continue
 		elif [ "$z" == "(" ]; then
-			system_volume_change "+1% +1%"
+			system_volume_change true 1 1
 			tagged=true
 			z=""
 			continue
@@ -4576,13 +4576,13 @@ secondary_scale_func() {
 		gtts_speak "backward"
 		echo "seek -5%" >"$ALETHEIA/pipe$$" &
 	elif [ "$1" == "8" ]; then
-		system_volume_change "-3% -3%"
+		system_volume_change false 3 3
 	elif [ "$1" == "9" ]; then
-		system_volume_change "+3% +3%"
+		system_volume_change true 3 3
 	elif [ "$1" == "*" ]; then
-		system_volume_change "-1% -1%"
+		system_volume_change false 1 1
 	elif [ "$1" == "(" ]; then
-		system_volume_change "+1% +1%"
+		system_volume_change true 1 1
 	elif [ "$1" == "I" ]; then
 		read_corner
 		gtts_speak "scaling"
@@ -4959,9 +4959,13 @@ pcm_volume_change() {
 }
 
 set_system_volume() {
+	if [ "$1" == true ]; then
+		dir="+"
+	else
+		dir="-"
+	fi
 	if [ "$OS" == "Linux" ]; then
-		# shellcheck disable=SC2086
-		pactl set-sink-volume @DEFAULT_SINK@ $1
+		pactl set-sink-volume @DEFAULT_SINK@ "$dir$2%" "$dir$3%"
 	elif [ "$OS" == "Darwin" ]; then
 		osascript -e "set volume output volume $1" 
 	fi
@@ -4980,36 +4984,33 @@ system_volume_change() {
 	else
 		return
 	fi
-	dir="$(echo -ne "$1" | cut -b1)"
-	num="$(echo -ne "$1" | cut -b2)"
-	num2="$(echo -ne "$1" | cut -b6)"
-	if [ "$dir" == "+" ]; then
+	if [ "$1" == true ]; then
 		if (( leftvolume + 1 <= 100 )) && (( rightvolume + 1 <= 100 )); then
-			l=$((leftvolume + num))
-			r=$((rightvolume + num2))
+			l=$((leftvolume + $2))
+			r=$((rightvolume + $3))
 			if (( l > 100 )) && (( r > 100 )); then
-				set_system_volume "+$((100 - leftvolume))% +$((100 - rightvolume))%"
+				set_system_volume true "$((100 - leftvolume))" "$((100 - rightvolume))"
 			elif (( l > 100 )); then
-				set_system_volume "+$((100 - leftvolume))% +$num2%"
+				set_system_volume true "$((100 - leftvolume))" "$2"
 			elif (( r > 100 )); then
-				set_system_volume "+$num% +$((100 - rightvolume))%"
+				set_system_volume true "$1" "$((100 - rightvolume))"
 			else
-				set_system_volume "$1"
+				set_system_volume "$1" "$2" "$3"
 			fi
 		fi
 	else
 		if (( leftvolume - 1 >= 0 )) && (( rightvolume - 1 >= 0 )); then
-			l=$((leftvolume - num))
-			r=$((rightvolume - num2))
+			l=$((leftvolume - $2))
+			r=$((rightvolume - $3))
 			if [ "$OS" == "Linux" ]; then
 				if (( l < 0 )) && (( r < 0 )); then
-					set_system_volume "-$leftvolume% -$rightvolume%"
+					set_system_volume false "$leftvolume" "$rightvolume"
 				elif (( l < 0 )); then
-					set_system_volume "-$leftvolume% -$num2%"
+					set_system_volume false "$leftvolume" "$2"
 				elif (( r < 0 )); then
-					set_system_volume "-$num% -$rightvolume%"
+					set_system_volume false "$1" "$rightvolume"
 				else
-					set_system_volume "$1"
+					set_system_volume "$1" "$2" "$3"
 				fi
 			fi
 		fi
@@ -5241,8 +5242,7 @@ read_line() {
 	if [ "$x" == "" ]; then
 		unset IFS
 		return
-	fi
-	if [ "$x" == "" ]; then
+	elif [ "$x" == "" ]; then
 		unset IFS
 		return
 	fi
@@ -5271,7 +5271,7 @@ read_line() {
 
 	read -rn1 x
 	while [ -n "$x" ]; do
-		if [ "$only_numbers" == true ] && [ "$x" != "" ]; then
+		if [ "$only_numbers" == true ] && [ "$x" != "" ] && [ "$x" != "" ]; then
 			if [ "$(isnum "$x")" == "0" ]; then
 				unset IFS
 				return 1
@@ -5280,10 +5280,8 @@ read_line() {
 		if [ "$x" == "" ]; then
 			unset IFS
 			return
-		fi
-		if [ "$x" == "" ]; then
-			# shellcheck disable=SC2000
-			if [ "$(echo "${line}" | wc -c)" -lt "2" ]; then
+		elif [ "$x" == "" ]; then
+			if [ "${#line}" -lt "1" ]; then
 				read -rn1 x
 				continue
 			fi
@@ -6332,16 +6330,16 @@ load_only_loops() {
 process_key() {
 	case "$1" in
 	'[')
-		system_volume_change "-1% -0%"
+		system_volume_change false 1 0
 		;;
 	']')
-		system_volume_change "-0% -1%"
+		system_volume_change false 0 1
 		;;
 	'{')
-		system_volume_change "+1% +0%"
+		system_volume_change true 1 0
 		;;
 	'}')
-		system_volume_change "+0% +1%"
+		system_volume_change true 0 1
 		;;
 	esac
 }
@@ -6915,8 +6913,7 @@ sort_queue() {
 	gtts_speak "sorted"
 
 	IFS=$'\n'
-	queue_array=($(sort <<<"${queue_array[*]}"))	
-	
+	mapfile -t queue_array < <(printf "%s\n" "${queue_array[@]}" | sort)
 	unset IFS
 	tmp=$(printf '%s\n' "${queue_array[@]}" | grep --text -n "$FILENAME" | cut -d':' -f1 | head -1)
 
@@ -6931,9 +6928,9 @@ shuffle_queue() {
 	gtts_speak "shuffled"
 
 	IFS=$'\n'
-	#escaped_filename=$(printf '%s\n' "$FILENAME" | tr -cd "[:alnum:]._\-,()[]\!\"\'\&\/ ")
-	queue_array=("$FILENAME" $(shuf <<<"${queue_array[*]}" | grep --text -v "$FILENAME"))	
-	unset IFS
+	mapfile -t tmp_array < <(printf "%s\n" "${queue_array[@]}" | shuf | grep --text -v "$FILENAME")
+	queue_array=("$FILENAME" "${tmp_array[@]}")
+	unset IFS tmp_array
 
 	POSITION=1
 	TRACK_RANDOM=false
@@ -8777,6 +8774,7 @@ main() {
 		var1="$FILENAME"
 	fi
 	# shellcheck disable=SC2086
+	# In this case, we want word splitting to expand $FLAGS for use by mplayer
 	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -ao pulse -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output" 2>/dev/null &
 
 	MPLAYER_PID="$!"
@@ -8835,7 +8833,6 @@ main() {
 			fi
 		fi
 
-		# shellcheck disable=SC1009
 		case "$input" in
 			'j')
 				pitch_down
@@ -8913,10 +8910,10 @@ main() {
 				fi
 				;;
 			'8')
-				system_volume_change "-3% -3%"
+				system_volume_change false 3 3
 				;;
 			'9')
-				system_volume_change "+3% +3%"
+				system_volume_change true 3 3
 				;;
 			'y')
 				set_default_edo
@@ -9875,9 +9872,9 @@ main() {
 					if [ "$ARTIST" != "$last" ]; then
 						IFS=$'\n'
 						if [ "$ARTIST" != "" ]; then
-							tmpq="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$ARTIST \- " | tail -1 | cut -d':' -f1)"
+							tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$ARTIST \- " | tail -1 | cut -d':' -f1)"
 						else
-							tmpq="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$TITLE" | tail -1 | cut -d':' -f1)"
+							tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$TITLE" | tail -1 | cut -d':' -f1)"
 						fi
 						unset IFS
 						JUMP="$((tmpq+1))"
@@ -9891,17 +9888,17 @@ main() {
 				if [ "$SHUFFLED" == false ]; then
 					IFS=$'\n'
 					if [ "$ARTIST" != "" ]; then
-						tmpq="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$ARTIST \- " | head -1 | cut -d':' -f1)"
+						tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$ARTIST \- " | head -1 | cut -d':' -f1)"
 					else
-						tmpq="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$TITLE" | head -1 | cut -d':' -f1)"
+						tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$TITLE" | head -1 | cut -d':' -f1)"
 					fi
 					if [ "$tmpq" -gt "1" ]; then
 						last_artist="$(echo -ne "${queue_array[$((tmpq-2))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 						if [ "$(echo -ne "$last_artist" | grep " - ")" != "" ]; then
 							last_artist="$(echo -ne "$last_artist" | sed "s/ - //g" | cut -d'' -f1)"
-							JUMP="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$last_artist \- " | head -1 | cut -d':' -f1)"
+							JUMP="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$last_artist \- " | head -1 | cut -d':' -f1)"
 						else
-							JUMP="$(printf '%s\n' ${queue_array[@]} | grep -n "\/$last_artist" | head -1 | cut -d':' -f1)"
+							JUMP="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$last_artist" | head -1 | cut -d':' -f1)"
 						fi
 					fi
 					unset IFS
@@ -10000,10 +9997,10 @@ main() {
 				redraw_screen true
 				;;
 			'*')
-				system_volume_change "-1% -1%"
+				system_volume_change false 1 1
 				;;
 			'(')
-				system_volume_change "+1% +1%"
+				system_volume_change true 1 1
 				;;
 			'!')
 				if [ "$PAUSE" == true ]; then
