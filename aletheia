@@ -19,7 +19,6 @@
 #OS=$(uname -s)
 OS="Linux"
 PROGRAM_NAME="aletheia"
-SCRIPT_PATH=$(realpath "$0")
 VERSION="0.9.6"
 ESPEAK_DIGITAL_VOICE=${ESPEAK_DIGITAL_VOICE:-false}
 MAIN_REFRESH_TIME=${REFRESH_TIME:-0.2}
@@ -31,7 +30,6 @@ AUDIO_FORMATS="mp3,flac,ogg,wav,wma"
 VIDEO_FORMATS="mkv,mp4,avi,webm,mpg,mpeg"
 NO_HELP=${NO_HELP:-false}
 
-export SCRIPT_PATH
 export MAIN_REFRESH_TIME
 export MPLAYER_PATH
 
@@ -235,6 +233,8 @@ get_system_volume() {
 		MENTIONED=true
 	fi
 }
+
+touch -m "$ALETHEIA/start"
 
 get_system_volume
 
@@ -3496,26 +3496,22 @@ main_menu() {
 			else
 				VIDEO=false
 				regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-				unset queue_array
-				IFS=$'\n'
-				index=0
-				for i in $(find "$MUSICDIR" -type f -regex "$regex" | sort); do
-					queue_array[$index]="$i"
-					index=$((index+1))
-				done
-				unset IFS
-				TOTAL_QUEUE=$index
-				SHUFFLED=true
-				if [ "$TOTAL_QUEUE" == "0" ]; then
+				mapfile -t tmp_array < <(find "$MUSICDIR" -type f -iregex "$regex" | shuf)
+				new_TOTAL_QUEUE=${#tmp_array[@]}
+				if [ "$new_TOTAL_QUEUE" == "0" ]; then
 					draw_banner "NO MUSIC"
 					gtts_speak "no music"
 					sleep $BANNER_WAIT_TIME
 					NO_QUEUE_FLAG=true
 					menu_start_over=true
 					continue
+				else
+					TOTAL_QUEUE=$new_TOTAL_QUEUE
+					queue_array=("${tmp_array[@]}")
+					SHUFFLED=true
+					JUMP="1"
+					echo -ne "$NOCOLOR"
 				fi
-				JUMP="1"
-				echo -ne "$NOCOLOR"
 			fi
 			if [ "$initial_screen" == true ]; then
 				start_search true
@@ -3597,10 +3593,6 @@ main_menu() {
 						draw_banner "NO LOCKS"
 						gtts_speak "no locked music" true
 						sleep $BANNER_WAIT_TIME
-						#tput cup $LINES
-						#echo -ne "$WHITE_BLACK"
-						#printf '%*s' $COLUMNS
-						#echo -ne "$NOCOLOR"
 						continue
 					else
 						draw_banner "WAIT"
@@ -3619,49 +3611,32 @@ main_menu() {
 						return $RETURN_JUMP
 					fi
 				elif [ "${OPT[$SELECTION]}" == "Music" ]; then
-					PICK=""
-					if [ "$initial_screen" == false ]; then
-						REPEAT_ONLY=false
-					fi
-					VIDEO=false
 					regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-					IFS=$'\n'
-					index=0
-					for i in $(find "$MUSICDIR" -type f -regex "$regex" -and -not -iname "*\.repeat\.*" | shuf); do
-						queue_array[$index]="$i"
-						index=$((index+1))
-					done
-					unset IFS
-					SHUFFLED=true
-					TOTAL_QUEUE=$index
-					if [ "$TOTAL_QUEUE" == "0" ]; then
+					mapfile -t tmp_array < <(find "$MUSICDIR" -type f -regex "$regex" -and -not -iname "*.repeat.*" | shuf)
+					new_TOTAL_QUEUE=${#tmp_array[@]}
+					if [ "$new_TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO MUSIC"
 						sleep $BANNER_WAIT_TIME
 						gtts_speak "no music" true
 						menu_start_over=true
 						NO_QUEUE_FLAG=true
 						continue
+					else
+						PICK=""
+						REPEAT_ONLY=false
+						VIDEO=false
+						SHUFFLED=true
+						queue_array=("${tmp_array[@]}")
+						TOTAL_QUEUE=$new_TOTAL_QUEUE
+						JUMP="1"
+						echo -ne "$NOCOLOR"
+						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+						return $RETURN_JUMP
 					fi
-					JUMP="1"
-					echo -ne "$NOCOLOR"
-					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-					return $RETURN_JUMP
 				elif [ "${OPT[$SELECTION]}" == "Sound" ]; then
-					PICK=""
-					REPEAT_ONLY=false
-					VIDEO=false
 					regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-					unset queue_array
-
-					IFS=$'\n'
-					index=0
-					for i in $(find "$SOUNDDIR" -type f -regex "$regex" | shuf); do
-						queue_array[$index]="$i"
-						index=$((index+1))
-					done
-					unset IFS
-					SHUFFLED=true
-					new_TOTAL_QUEUE=$index
+					mapfile -t tmp_array < <(find "$SOUNDDIR" -type f -regex "$regex" | shuf)
+					new_TOTAL_QUEUE=${#tmp_array[@]}
 					if [ "$new_TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO SOUNDS"
 						gtts_speak "no sounds" true
@@ -3670,40 +3645,39 @@ main_menu() {
 						NO_QUEUE_FLAG=true
 						draw_position
 						continue
-						
 					else
+						PICK=""
+						REPEAT_ONLY=false
+						VIDEO=false
+						SHUFFLED=true
 						TOTAL_QUEUE="$new_TOTAL_QUEUE"
+						queue_array=("${tmp_array[@]}")
+						JUMP="1"
+						echo -ne "$NOCOLOR"
+						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+						return $RETURN_JUMP
 					fi
-					JUMP="1"
-					echo -ne "$NOCOLOR"
-					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-					return $RETURN_JUMP
 				elif [ "${OPT[$SELECTION]}" == "Video" ]; then
-					REPEAT_ONLY=false
 					regex=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
-					unset queue_array
-
-					IFS=$'\n'
-					index=0
-					for i in $(find "$VIDEODIR" -type f -regex "$regex" | shuf); do
-						queue_array[$index]="$i"
-						index=$((index+1))
-					done
-					unset IFS
-					TOTAL_QUEUE=$index
-					if [ "$TOTAL_QUEUE" == "0" ]; then
+					mapfile -t tmp_array < <(find "$VIDEODIR" -type f -regex "$regex" | shuf)
+					new_TOTAL_QUEUE=${#tmp_array[@]}
+					if [ "$new_TOTAL_QUEUE" == "0" ]; then
 						draw_banner "NO VIDEOS"
 						gtts_speak "no videos" true
 						sleep $BANNER_WAIT_TIME
 						NO_QUEUE_FLAG=true
 						menu_start_over=true
 						continue
-						
-					fi					
-					JUMP="1"
-					echo -ne "$NOCOLOR"
-					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-					return $RETURN_JUMP
+					else
+						REPEAT_ONLY=false
+						SHUFFLED=true
+						TOTAL_QUEUE=$new_TOTAL_QUEUE
+						queue_array=("${tmp_array[@]}")
+						JUMP="1"
+						echo -ne "$NOCOLOR"
+						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+						return $RETURN_JUMP
+					fi
 				elif [ "${OPT[$SELECTION]}" == "Queue" ]; then
 					queue_controls true
 					if [ "$?" == "$RETURN_JUMP" ]; then
@@ -6771,18 +6745,12 @@ scale_help_screen() {
 
 add_downloaded() {
 	regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-	IFS=$'\n'
-	index=0
-	list=$(find "$MUSICDIR" -cnewer "$SCRIPT_PATH" -regex "$regex")
-	if [ "$list" != "" ]; then
-		for i in $list; do
-			queue_array[$((index+TOTAL_QUEUE))]="$i"
-			index=$((index+1))
-		done
-		unset IFS
-		DOWNLOAD_POSITION="$((TOTAL_QUEUE+1))"
-		TOTAL_QUEUE="$((index+TOTAL_QUEUE))"
-		if [ "$1" == false ] || [ "$1" == "" ]; then
+	list=$(find "$MUSICDIR" -cnewer "$ALETHEIA/start" -regex "$regex")
+	if [ "${list:0:1}" != "" ]; then
+		mapfile -O $TOTAL_QUEUE -t queue_array < <(echo -ne "$list")
+		DOWNLOAD_POSITION=$((TOTAL_QUEUE+1))
+		TOTAL_QUEUE=${#queue_array[@]}
+		if [ "$1" != true ]; then
 			gtts_speak "queued downloads"
 		fi
 		if [ "$1" != "noposition" ]; then
@@ -6792,7 +6760,7 @@ add_downloaded() {
 		redraw_buffer
 	else
 		unset IFS
-		if [ "$1" == false ] || [ "$1" == "" ]; then
+		if [ "$1" != true ]; then
 			gtts_speak "nothing downloaded"
 			draw_banner "NONE"
 		fi
@@ -6800,7 +6768,7 @@ add_downloaded() {
 		draw_pitch
 		draw_position
 	fi
-	touch -m "$SCRIPT_PATH"
+	touch -m "$ALETHEIA/start"
 }
 
 read_corner() {
@@ -10228,91 +10196,25 @@ if [ "$1" == "--music" ]; then
 		for i in $KEYWORDS; do
 			KEYWORD="$KEYWORD$i.*"
 		done
-		regex=".*${KEYWORD}\.\(${AUDIO_FORMATS//,/\\|}\)$"
-		unset queue_array
-		IFS=$'\n'
-		index=0
-		for i in $(find "$MUSICDIR" -type f -iregex "$regex" | shuf); do
-			queue_array[$index]="$i"
-			index=$((index+1))
-		done
-		unset IFS
-		TOTAL_QUEUE=$index
-		if [ "$index" -lt "1" ]; then
-			clear
-			tput cup $LINES
-			echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
-			exit 0
-		fi
+		regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 	else
-		regex=".*\.\($AUDIO_FORMATS//,/\\|}\)$"
-		unset queue_array
-		IFS=$'\n'
-		index=0
-		for i in $(find "$MUSICDIR" -type f -iregex "$regex" | shuf); do
-			queue_array[$index]="$i"
-			index=$((index+1))
-		done
-		unset IFS
-		TOTAL_QUEUE=$index
-		if [ "$index" -lt "1" ]; then
-			clear
-			tput cup $LINES
-			echo -e "\n${RED}Error: ${NOCOLOR}Nothing found in $MUSICDIR"
-			exit 0
-		fi
+		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 	fi
+	mapfile -t queue_array < <(find "$MUSICDIR" -type f -iregex "$regex" | shuf)
+	TOTAL_QUEUE=${#queue_array[@]}
 	SHUFFLED=true
 elif [ "$1" == "--sound" ] || [ "$WEB_CLIENT" == "1" ]; then
 	if [ "$2" != "" ]; then
 		for i in $KEYWORDS; do
 			KEYWORD="$KEYWORD$i.*"
 		done
-		if [ -e "$SOUNDDIR" ]; then
-			regex=".*${KEYWORD}\.\(${AUDIO_FORMATS//,/\\|}\)$"
-			unset queue_array
-
-			IFS=$'\n'
-			index=0
-			for i in $(find "$SOUNDDIR" -type f -iregex "$regex" | shuf); do
-				queue_array[$index]="$i"
-				index=$((index+1))
-			done
-			unset IFS
-			SHUFFLED=true
-		else
-			clear
-			tput cup $LINES
-			echo -e "\n${RED}Error: ${NOCOLOR}$SOUNDDIR does not exist."
-			exit 0
-		fi
+		regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 	else
-		if [ -e "$SOUNDDIR" ]; then
-			regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-			unset queue_array
-
-			IFS=$'\n'
-			index=0
-			for i in $(find "$SOUNDDIR" -type f -iregex "$regex" | sort); do
-				queue_array[$index]="$i"
-				index=$((index+1))
-			done
-			unset IFS
-			SHUFFLED=false
-		else
-			clear
-			tput cup $LINES
-			echo -e "\n${RED}Error: ${NOCOLOR}$SOUNDDIR does not exist."
-			exit 0
-		fi
+		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 	fi
-	if [ "$index" -lt "1" ]; then
-		clear
-		tput cup $LINES
-		echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
-		exit 0
-	fi
-	TOTAL_QUEUE=$index
+	mapfile -t queue_array < <(find "$SOUNDDIR" -type f -iregex "$regex" | shuf)
+	TOTAL_QUEUE=${#queue_array[@]}
+	SHUFFLED=true
 	if [ "$WEB_CLIENT" == "1" ]; then
 		node "$HOME/webserver.js" >/dev/null 2>/dev/null &
 		NODE_PID="$!"
@@ -10322,124 +10224,64 @@ elif [ "$1" == "--video" ]; then
 		for i in $KEYWORDS; do
 			KEYWORD="$KEYWORD$i.*"
 		done
-		regex=".*${KEYWORD}\.\(${VIDEO_FORMATS//,/\\|}\)$"
-		unset queue_array
-		IFS=$'\n'
-		index=0
-		for i in $(find "$VIDEODIR" -type f -iregex "$regex" | shuf); do
-			queue_array[$index]="$i"
-			index=$((index+1))
-		done
-		unset IFS
-		TOTAL_QUEUE=$index
+		regex=".*${KEYWORD}.*\.\(${VIDEO_FORMATS//,/\\|}\)$"
 	else
 		regex=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
-		unset queue_array
-		IFS=$'\n'
-		index=0
-		for i in $(find "$VIDEODIR" -type f -iregex "$regex" | shuf); do
-			queue_array[$index]="$i"
-			index=$((index+1))
-		done
-		unset IFS
 	fi
-	if [ "$index" -lt "1" ]; then
-		clear
-		tput cup $LINES
-		echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
-		exit 0
-	fi
-	TOTAL_QUEUE=$index
+	mapfile -t queue_array < <(find "$VIDEODIR" -type f -iregex "$regex" | shuf)
+	TOTAL_QUEUE=${#queue_array[@]}
 	VIDEO=false
 elif [ "$1" == "--directory" ]; then
 	if [ "$2" != "" ]; then
 		if [ -d "$2" ]; then
-			regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-			regex1=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
-			if [ "$3" == "" ]; then
-				unset queue_array
-				IFS=$'\n'
-				index=0
-				for i in $(find "$2" -type f -regex "$regex" -o -regex "$regex1" | shuf); do
-					queue_array[$index]="$i"
-					index=$((index+1))
-				done
-				unset IFS
-				SHUFFLED=true
-				TOTAL_QUEUE=$index
-			else
+			if [ "$3" != "" ]; then
 				KEYWORD=".*"
 				for i in "${@:3}"; do
 					KEYWORD+="$i.*"
 				done
 				regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
-				unset queue_array
-				IFS=$'\n'
-				index=0
-				for i in $(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf); do
-					queue_array[$index]="$i"
-					index=$((index+1))
-				done
-				unset IFS
-				TOTAL_QUEUE=$index
-				if [ "$index" -lt "1" ]; then
-					clear
-					tput cup $LINES
-					echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
-					exit 0
-				fi
+			else
+				regex=".*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
 			fi
+			mapfile -t queue_array < <(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf)
+			TOTAL_QUEUE=${#queue_array[@]}
+			nodir=false
 		else
-			clear
-			tput cup $LINES
-			echo -e "${RED}Error: ${NOCOLOR}No directory specified.$NOCOLOR"
-			exit 0
+			nodir=true
 		fi
 	else
+		nodir=true
+	fi
+	if [ "$nodir" == true ]; then
 		clear
 		tput cup $LINES
 		echo -e "${RED}Error: ${NOCOLOR}No directory specified.$NOCOLOR"
-		exit 0
-	fi
-	if [ "$index" -lt "1" ]; then
-		clear
-		tput cup $LINES
-		echo -e "\n${RED}Error: ${NOCOLOR}Nothing found in $2"
-		exit 0
+		exit 1
 	fi
 elif [ "$1" == "--file" ]; then
 	if [ "$2" == "" ]; then
 		clear
 		tput cup $LINES
 		echo -e "\n${RED}Error: ${NOCOLOR}No file specified."
-		exit 0
-	fi
-	if [ -e "$2" ]; then
+		exit 1
+	elif [ -e "$2" ]; then
 		queue_array[0]="$(realpath "$2")"
 		TOTAL_QUEUE=1
 	else
 		clear
 		tput cup $LINES
 		echo -e "\n${RED}Error: ${NOCOLOR}'$2' does not exist."
-		exit 0
+		exit 1
 	fi
 elif [ "$1" == "--playlist" ]; then
 	if [ -e "$2" ]; then
-		unset queue_array
-
-		IFS=$'\n'
-		index=0
-		while read -r i; do
-			queue_array[$index]="$i"
-			index=$((index+1))
-		done < "$2"
-		unset IFS
-		TOTAL_QUEUE="$index"
+		mapfile -t queue_array < "$2"
+		TOTAL_QUEUE=${#queue_array[@]}
 	else
 		clear
 		tput cup $LINES
 		echo -e "\n${RED}Error: ${NOCOLOR}Playlist file '$2' does not exist."
-		exit 0
+		exit 1
 	fi
 elif [ "$1" == "--server" ]; then
 	WEB_CLIENT=1
@@ -10472,14 +10314,6 @@ elif [ "$1" == "--mplayer-path" ]; then
 	render_all_help_screens
 	empty_pane
 
-	if [ -e "$ALETHEIA/config" ]; then
-		EQUALIZER="$(grep DEFAULT_EQUALIZER < "$ALETHEIA/config" | cut -d'=' -f2)"
-		if [ "$EQUALIZER" == "" ]; then
-			EQUALIZER="$DEFAULT_EQUALIZER"
-		fi
-	fi
-	draw_equalizer
-
 	main_menu true
 	if [ "$?" == "$RETURN_JUMP" ]; then
 		start_at_pos=$JUMP
@@ -10492,21 +10326,8 @@ elif [ "$1" != "" ]; then
 		KEYWORD+="$i.*"
 	done
 	regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
-	unset queue_array
-	IFS=$'\n'
-	index=0
-	for i in $(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf); do
-		queue_array[$index]="$i"
-		index=$((index+1))
-	done
-	unset IFS
-	TOTAL_QUEUE=$index
-	if [ "$index" -lt "1" ]; then
-		clear
-		tput cup $LINES
-		echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
-		exit 0
-	fi
+	mapfile -t queue_array < <(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf)
+	TOTAL_QUEUE=${#queue_array[@]}
 else
 	if [ "$WEB_CLIENT" == "1" ]; then
 		node "$HOME/webserver.js" >/dev/null 2>/dev/null &
@@ -10516,20 +10337,22 @@ else
 	render_all_help_screens
 	empty_pane
 
-	if [ -e "$ALETHEIA/config" ]; then
-		EQUALIZER="$(grep DEFAULT_EQUALIZER < "$ALETHEIA/config" | cut -d'=' -f2)"
-		if [ "$EQUALIZER" == "" ]; then
-			EQUALIZER="$DEFAULT_EQUALIZER"
-		fi
-	fi
-	draw_equalizer
-
 	main_menu true
 	if [ "$?" == "$RETURN_JUMP" ]; then
 		start_at_pos=$JUMP
 	else
 		start_at_pos=1
 	fi
+fi
+
+if [ "$TOTAL_QUEUE" == "0" ]; then
+	tput cup $LINES
+	if [ "$2" == "" ]; then
+		echo -e "\n${RED}Error: ${NOCOLOR}Nothing found."
+	else
+		echo -e "\n${RED}Error: ${NOCOLOR}Nothing found with keyword '$KEYWORDS'"
+	fi
+	exit 1
 fi
 
 if [ "$rendered" == false ]; then
