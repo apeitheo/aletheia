@@ -3072,7 +3072,7 @@ draw_menu() {
 	empty_pane 1 $((top-1))
 	tput cup $top
 	echo -ne "$menu_buf"
-	empty_pane $((top+2+${TOTAL_OPTS}))
+	empty_pane $((top+2+TOTAL_OPTS))
 }
 
 main_menu() {
@@ -3527,17 +3527,12 @@ main_menu() {
 					echo -ne "$NOCOLOR"
 				fi
 			fi
-			#if [ "$initial_screen" == true ]; then
-			#	start_search true
-			#else
-				start_search
-			#fi
+			start_search
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			fi
 			menu_start_over=true
 			empty_pane
-			#redraw_buffer
 			z=""
 			continue
 		elif [ "$z" == "Q" ]; then
@@ -5673,8 +5668,8 @@ empty_pane() {
 		lineno="1"
 	fi
 
-	for (( i=$lineno; i <= pane; i++ )); do
-		tput cup $i
+	for (( i=lineno; i <= pane; i++ )); do
+		tput cup "$i"
 		tput el
 	done
 }
@@ -6745,7 +6740,7 @@ scale_help_screen() {
 
 		echo -ne "$NOCOLOR${SCALE_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${SCALE_HELP_BUFFER[page]}" | grep -vE "^$" | wc -l)
+		helpbuflines=$(echo -ne "${SCALE_HELP_BUFFER[page]}" | grep -cvE "^$")
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
 			if [ "$NO_VERTICAL_PADDING" == true ]; then
 				empty_pane "$((helpbuflines+1))"
@@ -7040,7 +7035,7 @@ voice_settings_screen() {
 		fi
 		echo -ne "$NOCOLOR${VOICE_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${VOICE_HELP_BUFFER[$page]}" | grep -vE "^$" | wc -l)
+		helpbuflines=$(echo -ne "${VOICE_HELP_BUFFER[$page]}" | grep -cvE "^$")
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
 			if $NO_VERTICAL_PADDING; then
 				empty_pane "$((helpbuflines+1))"
@@ -7228,14 +7223,17 @@ render() {
 			if [ "${line:2:1}" != " " ]; then
 				tmp1="$BLUE$line"
 				tmp2=""
-					if (( TWO_COLUMN == true && (i+number_per_page-2) < ${#text_array[@]} )); then
-						if [ "${pmt_line:2:1}" != " " ]; then
-							pmt1="$BLUE$pmt_line"
-							pmt2=""
-						else
-							pmt1="$BLUE ${pmt_line:0:2}"
-							pmt2="$WHITE${pmt_line#* * }"
-							pmt_line=" $BLUE ${pmt_line:0:2} $WHITE${pmt_line# * * }"
+					#if (( TWO_COLUMN == true && (i+number_per_page-2) < ${#text_array[@]} )); then
+					if [ "$TWO_COLUMN" == true ]; then
+						if (( (i+number_per_page-2) < ${#text_array[@]} )); then
+							if [ "${pmt_line:2:1}" != " " ]; then
+								pmt1="$BLUE$pmt_line"
+								pmt2=""
+							else
+								pmt1="$BLUE ${pmt_line:0:2}"
+								pmt2="$WHITE${pmt_line#* * }"
+								pmt_line=" $BLUE ${pmt_line:0:2} $WHITE${pmt_line# * * }"
+							fi
 						fi
 					else
 						pmt_line=""
@@ -7243,9 +7241,11 @@ render() {
 			else
 				tmp1="$BLUE ${line:0:2}"
 				tmp2="$WHITE${line#* * }"
-				if (( TWO_COLUMN == true && (i+number_per_page-2) < ${#text_array[@]} )); then
-					pmt1="$BLUE ${pmt_line:0:2}"
-					pmt2="$WHITE${pmt_line#* * }"
+				if [ "$TWO_COLUMN" == true ]; then
+					if (( (i+number_per_page-2) < ${#text_array[@]} )); then
+						pmt1="$BLUE ${pmt_line:0:2}"
+						pmt2="$WHITE${pmt_line#* * }"
+					fi
 				else
 					pmt_line=""
 				fi
@@ -7331,7 +7331,7 @@ loop_help_screen() {
 		fi
 		echo -ne "$NOCOLOR${REPEAT_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${REPEAT_HELP_BUFFER[$page]}" | grep -vE "^$" | wc -l)
+		helpbuflines=$(echo -ne "${REPEAT_HELP_BUFFER[$page]}" | grep -cvE "^$")
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
 			if [ "$NO_VERTICAL_PADDING" == true ]; then
 				empty_pane "$((helpbuflines+1))"
@@ -7468,7 +7468,7 @@ help_screen() {
 		fi
 		echo -ne "$NOCOLOR${HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${HELP_BUFFER[$page]}" | grep -vE "^$" | wc -l)
+		helpbuflines=$(echo -ne "${HELP_BUFFER[$page]}" | grep -cvE "^$")
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
 			if [ "$NO_VERTICAL_PADDING" == true ]; then
 				empty_pane "$((helpbuflines+1))"
@@ -7606,16 +7606,6 @@ start_search() {
 				draw_position
 			fi
 		else
-			if [ "$1" == true ]; then
-				jump="$(echo -n "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
-				tmp=$(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep --text -ni "$jump" | head -1 | cut -d':' -f1)
-				if [ "$tmp" != "" ]; then
-					JUMP="$tmp"
-					return "$RETURN_JUMP"
-				else
-					return
-				fi
-			fi
 			jump="$(echo -ne "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
 			mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -ni "$jump" | grep -v '.repeat.')
 			length=${#search_array[@]}
