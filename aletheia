@@ -29,6 +29,7 @@ fi
 AUDIO_FORMATS="mp3,flac,ogg,wav,wma"
 VIDEO_FORMATS="mkv,mp4,avi,webm,mpg,mpeg"
 NO_HELP=${NO_HELP:-false}
+NO_VERTICAL_PADDING=${NO_VERTICAL_PADDING:-false}
 
 export MAIN_REFRESH_TIME
 export MPLAYER_PATH
@@ -1817,7 +1818,11 @@ repeat() {
 				else
 					REP=""
 				fi
-				tput cup $((LOCKING_POS+2)) 1
+				if [ "$NO_VERTICAL_PADDING" == true ]; then
+					tput cup $((LOCKING_POS+1)) 1
+				else
+					tput cup $((LOCKING_POS+2)) 1
+				fi
 				if [ -e "$FILENAME.locked" ]; then
 					if [ -e "$FILENAME.repeats" ]; then
 						echo -ne "${WHITE_BLACK}${REP}#"
@@ -2309,7 +2314,11 @@ repeat() {
 				else
 					REP=""
 				fi
-				tput cup $((LOCKING_POS+2)) 1
+				if [ "$NO_VERTICAL_PADDING" == true ]; then
+					tput cup $((LOCKING_POS+1)) 1
+				else
+					tput cup $((LOCKING_POS+2)) 1
+				fi
 				if [ -e "$FILENAME.locked" ]; then
 					rm -f "$FILENAME".locked
 					LOCKED=false
@@ -2360,7 +2369,11 @@ repeat() {
 					fi
 
 					if [ "$REPEAT_TOTAL" == "0" ]; then
-						tput cup $((LOCKING_POS+2)) 1
+						if [ "$NO_VERTICAL_PADDING" == true ]; then
+							tput cup $((LOCKING_POS+1)) 1
+						else
+							tput cup $((LOCKING_POS+2)) 1
+						fi
 						if [ -e "$FILENAME.locked" ]; then
 							echo -ne "${WHITE}$"
 						else
@@ -2414,7 +2427,11 @@ repeat() {
 					REPEAT_CURRENT=$((REPEAT_CURRENT+1))
 					REPEAT_TOTAL=$((REPEAT_TOTAL+1))
 					gtts_speak "locked $REPEAT_TOTAL"
-					tput cup $((LOCKING_POS+2)) 1
+					if [ "$NO_VERTICAL_PADDING" == true ]; then
+						tput cup $((LOCKING_POS+1)) 1
+					else
+						tput cup $((LOCKING_POS+2)) 1
+					fi
 					if [ -e "$FILENAME.locked" ]; then
 						echo -ne "${WHITE_BLACK}#"
 					else
@@ -2424,7 +2441,11 @@ repeat() {
 					REPEATS="$START_MARKER/$END_MARKER/$space$(echo -ne "\n")"
 					echo "$START_MARKER/$END_MARKER/$space" >"$FILENAME.repeats"
 					gtts_speak "locked"
-					tput cup $((LOCKING_POS+2)) 1
+					if [ "$NO_VERTICAL_PADDING" == true ]; then
+						tput cup $((LOCKING_POS+1)) 1
+					else
+						tput cup $((LOCKING_POS+2)) 1
+					fi
 					if [ -e "$FILENAME.locked" ]; then
 						echo -ne "${WHITE_BLACK}#"
 					else
@@ -2902,8 +2923,7 @@ scale_edo() {
 }
 
 draw_menu() {
-	tput cup "$first" $((COLUMNS/2-5-moveleft))
-	menu_buf="$PADDING$COLOR_ACCENT$TOP_BAR_MENU$(tput el)"
+	menu_buf="$PADDING$(tput el; tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$TOP_BAR_MENU$(tput el)"
 	if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 		menu_buf="$menu_buf\b${LINE_CHAR}wqqqqqqqk${LINE_CHAR_END}$(tput el)"
 	fi
@@ -2926,7 +2946,7 @@ draw_menu() {
 			else
 				pad=""
 			fi
-			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$(tput cuf $((COLUMNS/2-5-moveleft)))$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
+			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$(tput el; tput cuf $((COLUMNS/2-5-moveleft)))$BAR$BLUE_BLACK ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$SELECTION" == "1" ]; then
 					if [ "$MUSIC_SELECTION" == "1" ] && [ "$i" == "1" ]; then
@@ -2998,7 +3018,7 @@ draw_menu() {
 			else
 				pad=""
 			fi
-			menu_buf="$menu_buf\n$PADDING$(tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
+			menu_buf="$menu_buf\n$PADDING$(tput el; tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$SELECTION" == "1" ]; then
 					if [ "$i" -ge "2" ]; then
@@ -3046,11 +3066,13 @@ draw_menu() {
 		fi
 	done
 
-	menu_buf="$menu_buf\n$PADDING$(tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$BOTTOM_BAR_MENU$(tput el)"
+	menu_buf="$menu_buf\n$PADDING$(tput el; tput cuf $((COLUMNS/2-5-moveleft)))$COLOR_ACCENT$BOTTOM_BAR_MENU$(tput el)"
 
-	tput cup $(((LINES/2) - (TOTAL_OPTS/2)-1)) $((COLUMNS/2-5-moveleft))
-
+	top=$(((LINES/2) - (TOTAL_OPTS/2)-1))	
+	empty_pane 1 $((top-1))
+	tput cup $top
 	echo -ne "$menu_buf"
+	empty_pane $((top+2+${TOTAL_OPTS}))
 }
 
 main_menu() {
@@ -3103,8 +3125,6 @@ main_menu() {
 	first=$(((LINES/2) - (TOTAL_OPTS/2)-1))
 	last=$((first + TOTAL_OPTS - 1))
 
-	empty_pane
-	
 	until [ "$z" = "," ]; do
 		if [ "$LINES" -le "10" ]; then
 			TOTAL_OPTS=3
@@ -5405,7 +5425,11 @@ redraw_screen() {
 }
 
 reset_buffer() {
-	number_per_page="$((LINES-4))"
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		number_per_page="$((LINES-2))"
+	else
+		number_per_page="$((LINES-4))"
+	fi
 	original_number_per_page="$number_per_page"
 
 	BUFFER=""
@@ -5606,11 +5630,15 @@ cleanup() {
 
 redraw_buffer() {
 	echo -ne "$NOCOLOR"
-	tput cup 1
-	tput el
-	tput cup $((LINES-2))
-	tput el
-	tput cup 2
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		tput cup 1
+	else
+		tput cup 1
+		tput el
+		tput cup $((LINES-2))
+		tput el
+		tput cup 2
+	fi
 	echo -ne "$BUFFER"
 
 	if [ "$number_per_page" -lt "$TOTAL_QUEUE" ]; then
@@ -5627,22 +5655,28 @@ redraw_buffer() {
 empty_pane() {
 	tput civis
 	lineno=$1
-	pane="$((LINES-2))"
+	stop=$2
+	pane=$((LINES-2))
+
+	if [ -n "$stop" ]; then
+		pane=$stop
+	fi
+
+	if [ "$NO_VERTICAL_PADDING" == false ]; then
+		tput cup 1
+		tput el
+		tput cup $((LINES-2))
+		tput el
+	fi
 
 	if [ "$lineno" == "" ]; then
 		lineno="1"
 	fi
 
-	tput sgr0
-	while [ "$lineno" -le "$pane" ]; do
-		tput cup $lineno
+	for (( i=$lineno; i <= pane; i++ )); do
+		tput cup $i
 		tput el
-		lineno="$((lineno+1))"
 	done
-	tput cup 1
-	tput el
-	tput cup $((LINES-2))
-	tput el
 }
 
 draw_volume() {
@@ -6594,7 +6628,11 @@ queue_help_screen() {
 	gtts_speak "queue controls"
 	local flagged=false
 	original_number_per_page="$number_per_page"
-	number_per_page="$((LINES-4))"
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		number_per_page="$((LINES-2))"
+	else
+		number_per_page="$((LINES-4))"
+	fi
 
 	FLAGGED=false
 	if [ "$QUEUE_HELP_LENGTH" -le "$number_per_page" ]; then
@@ -6627,7 +6665,11 @@ queue_help_screen() {
 		done
 		draw_banner "CONTROLS" false true
 
-		tput cup 2
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			tput cup 1
+		else
+			tput cup 2
+		fi
 		echo -ne "$NOCOLOR$buf"
 
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
@@ -6692,15 +6734,24 @@ scale_help_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#SCALE_HELP_BUFFER[@]}" ]; do
-		number_per_page=$((LINES-4))
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			number_per_page=$((LINES-2))
+			tput cup 1
+		else
+			number_per_page=$((LINES-4))
+			tput cup 2
+		fi
 		original_number_per_page=$number_per_page
 
-		tput cup 2
 		echo -ne "$NOCOLOR${SCALE_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${SCALE_HELP_BUFFER[$page]}" | wc -l)
+		helpbuflines=$(echo -ne "${SCALE_HELP_BUFFER[page]}" | grep -vE "^$" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$((helpbuflines+2))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				empty_pane "$((helpbuflines+1))"
+			else
+				empty_pane "$((helpbuflines+2))"
+			fi
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
@@ -6975,15 +7026,27 @@ voice_settings_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#VOICE_HELP_BUFFER[@]}" ]; do
-		number_per_page=$((LINES-4))
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			number_per_page=$((LINES-2))
+		else
+			number_per_page=$((LINES-4))
+		fi
 		original_number_per_page=$number_per_page
 		draw_banner "VOICE"
-		tput cup 2
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			tput cup 1
+		else
+			tput cup 2
+		fi
 		echo -ne "$NOCOLOR${VOICE_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${VOICE_HELP_BUFFER[$page]}" | wc -l)
+		helpbuflines=$(echo -ne "${VOICE_HELP_BUFFER[$page]}" | grep -vE "^$" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$((helpbuflines+2))"
+			if $NO_VERTICAL_PADDING; then
+				empty_pane "$((helpbuflines+1))"
+			else
+				empty_pane "$((helpbuflines+2))"
+			fi
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
@@ -7066,7 +7129,11 @@ voice_settings_screen() {
 			draw_equalizer
 			draw_banner "VOICE"
 			draw_position
-			number_per_page="$((LINES-4))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				number_per_page="$((LINES-2))"
+			else
+				number_per_page="$((LINES-4))"
+			fi
 			original_number_per_page="$number_per_page"
 		elif [ "$inputchar" == $'\e' ]; then
 			read -rn2 -t 0.03 key
@@ -7112,10 +7179,18 @@ render() {
 	local length="$1"
 	local width="$2"
 	local text="$3"
-	number_per_page="$((LINES-4))"
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		number_per_page="$((LINES-2))"
+	else
+		number_per_page="$((LINES-4))"
+	fi
 	original_number_per_page="$number_per_page"
 
+	mapfile -t text_array <<< "$text"
+
 	FLAGGED=false
+
+	length=${#text_array[@]}
 
 	if [ "$length" -le "$number_per_page" ]; then
 		number_per_page="$length"
@@ -7144,48 +7219,38 @@ render() {
 		fi
 		x=0
 		for i in $(seq $pos $((pos + (number_per_page-1)))); do
-			line="$(echo -e "$text" | sed -n "${i}p")"
+			line="${text_array[$((i-1))]}"
 			if [ "$TWO_COLUMN" == false ]; then
 				pmt_line=""
 			else
-				pmt_line="$(echo -e "$text" | sed -n $((i+number_per_page))p)"
+				pmt_line="${text_array[$((i+number_per_page-1))]}"
 			fi
-			if [ "$(echo "$line" | cut -b3)" != " " ]; then
+			if [ "${line:2:1}" != " " ]; then
 				tmp1="$BLUE$line"
 				tmp2=""
-
-				if [ "$TWO_COLUMN" == true ]; then
-					if [ "$((i+number_per_page-2))" -lt "$(echo -n "$text" | wc -l)" ]; then
-						if [ "$(echo "$pmt_line" | cut -b3)" != " " ]; then
+					if (( TWO_COLUMN == true && (i+number_per_page-2) < ${#text_array[@]} )); then
+						if [ "${pmt_line:2:1}" != " " ]; then
 							pmt1="$BLUE$pmt_line"
 							pmt2=""
 						else
-							pmt1="$BLUE $(echo "$pmt_line" | cut -b1-2)"
-							pmt2="$WHITE$(echo "$pmt_line" | cut -d' ' -f3-)"
-							pmt_line=" $BLUE$pmt1 $WHITE$pmt2"
+							pmt1="$BLUE ${pmt_line:0:2}"
+							pmt2="$WHITE${pmt_line#* * }"
+							pmt_line=" $BLUE ${pmt_line:0:2} $WHITE${pmt_line# * * }"
 						fi
 					else
 						pmt_line=""
 					fi
-				else
-					pmt_line=""
-				fi
 			else
-				tmp1="$BLUE $(echo "$line" | cut -b1-2)"
-				tmp2="$WHITE$(echo "$line" | cut -d' ' -f3-)"
-
-				if [ "$TWO_COLUMN" == true ]; then
-					if [ "$((i+number_per_page-2))" -lt "$(echo -n "$text" | wc -l)" ]; then
-						pmt1="$BLUE $(echo "$pmt_line" | cut -b1-2)"
-						pmt2="$WHITE$(echo "$pmt_line" | cut -d' ' -f3-)"
-					else
-						pmt_line=""
-					fi
+				tmp1="$BLUE ${line:0:2}"
+				tmp2="$WHITE${line#* * }"
+				if (( TWO_COLUMN == true && (i+number_per_page-2) < ${#text_array[@]} )); then
+					pmt1="$BLUE ${pmt_line:0:2}"
+					pmt2="$WHITE${pmt_line#* * }"
 				else
 					pmt_line=""
 				fi
 
-				if [ "$(echo "$pmt_line" | cut -b3)" != " " ]; then
+				if [ "${pmt_line:2:1}" != " " ]; then
 					pmt1="$BLUE$pmt_line"
 					pmt2=""
 				fi
@@ -7198,17 +7263,27 @@ render() {
 				difference=$(((COLUMNS - width + 2) / 2 ))
 			fi
 
-			if [ "$pmt_line" != "" ] && [ "$line" != "" ]; then
-				buf="$buf$(printf '%*s' $difference "")$tmp1 $tmp2$(tput el)$(tput cup $((x+2)) $(((COLUMNS/2+1))))$(printf '%*s' $((difference-1)) "")$pmt1 $pmt2$(tput el)\n"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				offset=$((x+1))
 			else
-				buf="$buf$(printf '%*s' $difference "")$tmp1 $tmp2$(tput el)\n"
+				offset=$((x+2))
 			fi
 
-			x=$((x+1))
+			if [ "$pmt_line" != "" ] && [ "$line" != "" ]; then
+				buf[x]="$(tput el; tput cuf $difference)$tmp1 $tmp2$(tput el)$(tput cup $offset $(((COLUMNS/2+difference))))$pmt1 $pmt2$(tput el)\n"
+			else
+				buf[x]="$(tput el; tput cuf $difference)$tmp1 $tmp2$(tput el)\n"
+			fi
 
+			((x++))
 		done
 
-		TMP_BUFFER+=("$buf")
+		until [ "$x" == "$original_number_per_page" ]; do
+			buf[x]="\n"
+			((x++))
+		done
+
+		TMP_BUFFER+=("$(printf '%s' "${buf[@]}")")
 
 		if [ "$TWO_COLUMN" == false ]; then
 			pos="$((pos+number_per_page))"
@@ -7242,15 +7317,27 @@ loop_help_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#REPEAT_HELP_BUFFER[@]}" ]; do
-		number_per_page=$((LINES-4))
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			number_per_page=$((LINES-2))
+		else
+			number_per_page=$((LINES-4))
+		fi
 		original_number_per_page=$number_per_page
 
-		tput cup 2
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			tput cup 1
+		else
+			tput cup 2
+		fi
 		echo -ne "$NOCOLOR${REPEAT_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${REPEAT_HELP_BUFFER[$page]}" | wc -l)
+		helpbuflines=$(echo -ne "${REPEAT_HELP_BUFFER[$page]}" | grep -vE "^$" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$((helpbuflines+2))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				empty_pane "$((helpbuflines+1))"
+			else
+				empty_pane "$((helpbuflines+2))"
+			fi
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
@@ -7357,7 +7444,11 @@ help_screen() {
 
 	page=0
 	until [ "$page" -lt "0" ] || [ "$page" -gt "${#HELP_BUFFER[@]}" ]; do
-		number_per_page=$((LINES-4))
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			number_per_page=$((LINES-2))
+		else
+			number_per_page=$((LINES-4))
+		fi
 		original_number_per_page=$number_per_page
 
 		tput cup 0
@@ -7370,12 +7461,20 @@ help_screen() {
 		printf '%*s' $((COLUMNS - 24)) ""
 		echo -ne "${BLUE_BLACK}POS${WHITE_BLACK}:${BLUE_BLACK}QUE${WHITE_BLACK}:${BLUE_BLACK}TOG$PADDING$NOCOLOR"
 
-		tput cup 2
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			tput cup 1
+		else
+			tput cup 2
+		fi
 		echo -ne "$NOCOLOR${HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${HELP_BUFFER[$page]}" | wc -l)
+		helpbuflines=$(echo -ne "${HELP_BUFFER[$page]}" | grep -vE "^$" | wc -l)
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
-			empty_pane "$((helpbuflines+2))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				empty_pane "$((helpbuflines+1))"
+			else
+				empty_pane "$((helpbuflines+2))"
+			fi
 		fi
 
 		if [ "$TWO_COLUMN" == true ]; then
@@ -7611,7 +7710,11 @@ new_playlist() {
 
 search_queue() {
 	total=${#search_array[@]}
-	local number_per_page="$((LINES-4))"
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		local number_per_page="$((LINES-2))"
+	else
+		local number_per_page="$((LINES-4))"
+	fi
 	local original_number_per_page="$number_per_page"
 
 	local FLAGGED=false
@@ -7662,7 +7765,11 @@ search_queue() {
 				BUFFER="$BUFFER$BLUE$PADDING ${m} $WHITE$line$(tput el)$NOCOLOR\n"
 			fi
 		done
-		tput cup 2
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			tput cup 1
+		else
+			tput cup 2
+		fi
 		echo -ne "$NOCOLOR$BUFFER"
 		
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
@@ -7804,7 +7911,11 @@ search_queue() {
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
 			reset_dimensions
-			number_per_page="$((LINES-4))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				number_per_page="$((LINES-2))"
+			else
+				number_per_page="$((LINES-4))"
+			fi
 			original_number_per_page="$number_per_page"
 			REDRAWN=true
 			clear
@@ -7865,7 +7976,11 @@ queue_controls() {
 	gtts_speak "select playlist"
 	SEARCHBUFFER="$(ls -1 "$ALETHEIA/playlists/")"
 	total="$(echo -e "$SEARCHBUFFER" | wc -l)"
-	local number_per_page="$((LINES-4))"
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		local number_per_page="$((LINES-2))"
+	else
+		local number_per_page="$((LINES-4))"
+	fi
 	local original_number_per_page="$number_per_page"
 	local FLAGGED=false
 	local REDRAWN=false
@@ -7913,7 +8028,11 @@ queue_controls() {
 			tmp_buf="$tmp_buf. $i. $line, "
 			BUFFER="$BUFFER$BLUE ${i} $WHITE$line$(tput el)\n"
 		done
-		tput cup 2
+		if [ "$NO_VERTICAL_PADDING" == true ]; then
+			tput cup 1
+		else
+			tput cup 2
+		fi
 		echo -ne "$NOCOLOR$BUFFER"
 
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
@@ -8070,7 +8189,11 @@ queue_controls() {
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
 			reset_dimensions
-			number_per_page="$((LINES-4))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				number_per_page="$((LINES-2))"
+			else
+				number_per_page="$((LINES-4))"
+			fi
 			original_number_per_page="$number_per_page"
 			REDRAWN=true
 			clear
@@ -8145,7 +8268,11 @@ set_equalizer() {
 		fi
 		return
 	fi
-	tput cup $((LINES-4))
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		tput cup $((LINES-2))
+	else
+		tput cup $((LINES-4))
+	fi
 	echo -ne "$PADDING${WHITE}Mid$BLUE? "
 	gtts_speak "mid"
 	mid="$(read_number)"
@@ -8204,14 +8331,22 @@ print_queue() {
 	current=$POSITION
 	BUFFER_BACKUP="$BUFFER"
 
-	number_per_page="$((LINES-4))"
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		number_per_page="$((LINES-2))"
+	else
+		number_per_page="$((LINES-4))"
+	fi
 
 	original_number_per_page="$number_per_page"
 
 	FLAGGED=false
 	REDRAWN=false
 
-	tput cup 2
+	if [ "$NO_VERTICAL_PADDING" == true ]; then
+		tput cup 1
+	else
+		tput cup 2
+	fi
 
 	CHANGED=false
 
@@ -8291,7 +8426,11 @@ print_queue() {
 			_last=$((pos+end))
 			diff=$((_last-pos+1))
 			truepos=$((i-1+pos))
-			tput cup 2
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				tput cup 1
+			else
+				tput cup 2
+			fi
 			m=$pos
 			new_buf=""
 			for i in $(seq 1 $number_per_page); do
@@ -8481,7 +8620,11 @@ print_queue() {
 			pos=1
 			clear
 			reset_dimensions
-			number_per_page=$((LINES-4))
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				number_per_page=$((LINES-2))
+			else
+				number_per_page=$((LINES-4))
+			fi
 			original_number_per_page=$number_per_page
 			draw_volume
 			draw_equalizer
@@ -9284,7 +9427,11 @@ main() {
 			'%')
 				rm -f "$FILENAME.repeats" >/dev/null 2>/dev/null
 				gtts_speak "unlocked"
-				tput cup $((LOCKING_POS+2)) 1
+				if [ "$NO_VERTICAL_PADDING" == true ]; then
+					tput cup $((LOCKING_POS+1)) 1
+				else
+					tput cup $((LOCKING_POS+2)) 1
+				fi
 				if [ -e "$FILENAME.locked" ]; then
 					INDICATOR="${WHITE_BLACK}&"
 				else
@@ -9593,7 +9740,11 @@ main() {
 				else
 					REP=""
 				fi
-				tput cup $((LOCKING_POS+2)) 1
+				if [ "$NO_VERTICAL_PADDING" == true ]; then
+					tput cup $((LOCKING_POS+1)) 1
+				else
+					tput cup $((LOCKING_POS+2)) 1
+				fi
 				if [ -e "$FILENAME.locked" ]; then
 					rm -f "$FILENAME".locked
 					LOCKED=false
