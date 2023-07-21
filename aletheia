@@ -3507,16 +3507,17 @@ main_menu() {
 					echo -ne "$NOCOLOR"
 				fi
 			fi
-			if [ "$initial_screen" == true ]; then
-				start_search true
-			else
+			#if [ "$initial_screen" == true ]; then
+			#	start_search true
+			#else
 				start_search
-			fi
+			#fi
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			fi
 			menu_start_over=true
-			redraw_buffer
+			empty_pane
+			#redraw_buffer
 			z=""
 			continue
 		elif [ "$z" == "Q" ]; then
@@ -7517,19 +7518,13 @@ start_search() {
 				fi
 			fi
 			jump="$(echo -ne "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
-			SEARCHBUFFER="$(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -ni "$jump")"
-			length="$(echo -e "$SEARCHBUFFER" | wc -l)"
+			mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -ni "$jump" | grep -v '.repeat.')
+			length=${#search_array[@]}
 			if [ "$length" == "1" ]; then
-				if [ "$(echo "$SEARCHBUFFER" | grep ":")" != "" ]; then
-					LOOP_ARTIST=false
-					JUMP="$(echo -e "$SEARCHBUFFER" | cut -d':' -f1)"
-					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-					return $RETURN_JUMP
-				else
-					draw_pitch
-					draw_position
-					redraw_buffer
-				fi
+				LOOP_ARTIST=false
+				JUMP="$(echo -e "${search_array[0]}" | cut -d':' -f1)"
+				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+				return $RETURN_JUMP
 			elif [ "$length" == "0" ]; then
 				draw_pitch
 				draw_position
@@ -7567,7 +7562,7 @@ new_playlist() {
 			KEYWORD="$KEYWORD$i.*"
 		done
 		file_list="$(find "$MUSICDIR" -type f)"
-		matches="$(echo -e "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${keyw}.*mp3$|.*${keyw}.*flac$")"
+		matches="$(echo -e "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${keyw}.*mp3$|.*${keyw}.*flac$" | grep -v '.repeat.')"
 		if [ "$2" == "true" ]; then
 			IFS=$'\n'
 			index=$TOTAL_QUEUE
@@ -7579,6 +7574,8 @@ new_playlist() {
 			unset IFS
 			if [ "$index" == "$TOTAL_QUEUE" ]; then
 				gtts_speak "nothing found" true
+				draw_pitch
+				draw_position
 				return
 			fi
 		else
@@ -7593,6 +7590,8 @@ new_playlist() {
 			unset IFS
 			if [ "$index" == "0" ]; then
 				gtts_speak "nothing found" true
+				draw_pitch
+				draw_position
 				return
 			fi
 		fi
@@ -7611,7 +7610,7 @@ new_playlist() {
 }
 
 search_queue() {
-	total="$(echo -e "$SEARCHBUFFER"| wc -l)"
+	total=${#search_array[@]}
 	local number_per_page="$((LINES-4))"
 	local original_number_per_page="$number_per_page"
 
@@ -7624,6 +7623,7 @@ search_queue() {
 
 	local BUFFER_BACKUP="$BUFFER"
 
+	current_pos=1
 	local pos=1
 	while [ "$pos" -le "$total" ] || [ "$FLAGGED" == false ]; do
 		BUFFER=""
@@ -7637,43 +7637,30 @@ search_queue() {
 		fi
 		tmp_buf=""
 		_last=$((pos+number_per_page))
-		_lines="$(echo -e "$SEARCHBUFFER" | sed -n "$pos,${_last}p")"
 		diff=$((_last-pos))
 		for i in $(seq 1 $diff); do
 			truepos=$i
-			line="$(echo -ne "$_lines" | sed -n "${truepos}p")"
+			line="${search_array[$(((pos+i-1)-1))]}"
 			m="$(echo -ne "$line" | cut -d':' -f1)"
 			if [ "$m" == "" ]; then
 				break
 			fi
 
-			line="$(echo "$line" | cut -d':' -f2 | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
-			if [ "$(echo -ne "$line" | grep " - ")" != "" ]; then
-				artist="$(echo -ne "$line" | sed -e "s/ - //g" | cut -d'' -f1)"
-				song="$(echo -ne "$line" | rev | sed -e "s/ - //g" | cut -d'' -f1 | rev)"
-				line="$artist - $song"
-			fi
+			line="$(echo "$line" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 			tmp_buf="$tmp_buf. $m. $line. "
 
-			if [ "$m" -lt "$POSITION" ]; then
-				COLOR="$WHITE"
-			elif [ "$m" -gt "$POSITION" ]; then
-				COLOR="$WHITE"
-			else
-				COLOR="$BLUE"
-			fi
-
-			if [ "$m" -lt "10" ]; then
+			if (( m < 10 )); then
 				pad=" "
 			else
 				pad=""
 			fi
 
-			offset="$((COLUMNS - ${#m} - 4 - ${#pad}))"
-
-
-			line="$(echo "$line" | cut -b 1-$offset)"
-			BUFFER="$BUFFER$BLUE$PADDING ${m} $COLOR$line$(tput el)\n"
+			line="$(echo -ne "$line" | cut -b 1-$((COLUMNS - ${#m} - 4 - ${#pad})))"
+			if (( ( pos + i - 1) == current_pos || m == POSITION)); then
+				BUFFER="$BUFFER$BLUE_BLACK$PADDING ${m} $WHITE_BLACK$line$(tput el)$NOCOLOR\n"
+			else
+				BUFFER="$BUFFER$BLUE$PADDING ${m} $WHITE$line$(tput el)$NOCOLOR\n"
+			fi
 		done
 		tput cup 2
 		echo -ne "$NOCOLOR$BUFFER"
@@ -7695,32 +7682,78 @@ search_queue() {
 		fi
 
 		if [ "$inputchar" = "j" ]; then
-			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			gtts_speak "page down"
-			if [ "$FLAGGED" == true ]; then
-				continue
-			fi
-			pos="$((pos+number_per_page))"
-			if [ "$pos" -ge "$total" ]; then
-				pos="$((pos-number_per_page))"
+			if (( (pos + number_per_page) <= total )); then
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				gtts_speak "page down"
+				if [ "$FLAGGED" == true ]; then
+					continue
+				fi
+				pos="$((pos+number_per_page))"
+				current_pos=$pos
 			fi
 		elif [ "$inputchar" = "k" ]; then
-			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			gtts_speak "page down"
-			if [ "$pos" == "1" ]; then
+			if (( (pos - number_per_page) <= 1 )); then
+				pos=1
+				current_pos=$pos
 				continue
 			else
 				FLAGGED=false
 			fi
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			gtts_speak "page down"
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				number_per_page="$original_number_per_page"
 			fi
-			pos="$((pos-number_per_page))"
+			pos=$((pos-number_per_page))
+			current_pos=$pos
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
+		elif [ "$inputchar" == "h" ]; then
+			if (( current_pos < total )); then
+				((current_pos++))
+			fi
+			if [ "$current_pos" -gt "$((pos+i-1))" ]; then
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				gtts_speak "page down"
+				CHANGED=true
+				if [ "$FLAGGED" == true ]; then
+					continue
+				fi
+				if [ "$((pos+number_per_page))" -le "$total" ]; then
+					if [ "$((pos+(number_per_page*2)))" -gt "$total" ]; then
+						pos="$((total-number_per_page+1))"
+					else
+						pos="$((pos+number_per_page))"
+					fi
+				fi
+			fi
+		elif [ "$inputchar" == "l" ]; then
+			if (( current_pos > 1 )); then
+				((--current_pos))
+			fi
+			if [ "$current_pos" -lt "$((pos+i-number_per_page))" ]; then
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				gtts_speak "page up"
+				CHANGED=true
+				if [ "$pos" == "1" ]; then
+					continue
+				else
+					FLAGGED=false
+				fi
+				if [ "$number_per_page" -lt "$original_number_per_page" ]; then
+					number_per_page="$original_number_per_page"
+				fi
+				pos="$((pos-number_per_page))"
+				if [ "$pos" -le "0" ]; then
+					pos=1
+				fi
+			fi
+		elif [ "$inputchar" == "" ]; then
+			JUMP="$(echo -ne "${search_array[$((current_pos-1))]}" | cut -d':' -f1)"
+			return "$RETURN_JUMP"
 		elif [ "$(isnum "$inputchar")" != "0" ]; then
 			gtts_speak " $inputchar"
 			up_down="$(read_line "$inputchar")"
@@ -7749,13 +7782,6 @@ search_queue() {
 				draw_position
 				return
 			fi
-		elif [ "$inputchar" == "" ]; then
-			if [ "$VOICE_ENABLED" == true ]; then
-				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			fi
-			LOOP_ARTIST=false
-			JUMP="$(echo "$SEARCHBUFFER" | head -1 | cut -d':' -f1)"
-			return $RETURN_JUMP
 		elif [ "$inputchar" == "T" ]; then
 			FLAGGED=false
 		elif [ "$inputchar" == "d" ]; then
@@ -7879,16 +7905,13 @@ queue_controls() {
 				pad=""
 			fi
 
-			offset="$((COLUMNS-${#i} - 3))"
-
-			line="$(echo "$line" | cut -b 1-$offset)"
+			line="$(echo "$line" | cut -b 1-$((COLUMNS-${#i}-3)))"
+			if [ "$line" == "" ]; then
+				line="(none)"
+			fi
 
 			tmp_buf="$tmp_buf. $i. $line, "
-			if [ "$line" == "" ]; then
-				BUFFER="$BUFFER$BLUE ${i} $WHITE(none)$(tput el)\n"
-			else
-				BUFFER="$BUFFER$BLUE ${i} $WHITE$line$(tput el)\n"
-			fi
+			BUFFER="$BUFFER$BLUE ${i} $WHITE$line$(tput el)\n"
 		done
 		tput cup 2
 		echo -ne "$NOCOLOR$BUFFER"
