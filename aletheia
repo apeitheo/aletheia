@@ -7908,7 +7908,7 @@ search_queue() {
 		elif [ "$inputchar" == "d" ]; then
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			espeak_say " $tmp_buf"
+			espeak_say " ${tmp_buf[*]}"
 			FLAGGED=false
 		elif [ "$inputchar" == "q" ]; then #|| [ "$inputchar" == "" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -8030,7 +8030,6 @@ queue_controls() {
 		if [ "$pos" -gt "$total" ]; then
 			return
 		fi
-		tmp_buf=""
 		for i in $(seq $pos $((pos + (number_per_page-1)))); do
 			line="$(echo -e "$SEARCHBUFFER" | sed -n "${i}p")"
 
@@ -8045,7 +8044,7 @@ queue_controls() {
 				line="(none)"
 			fi
 
-			tmp_buf="$tmp_buf. $i. $line, "
+			tmp_buf[i]="$i. $line. "
 			BUFFER="$BUFFER$BLUE ${i} $WHITE$line$(tput el)\n"
 		done
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
@@ -8173,7 +8172,7 @@ queue_controls() {
 			fi
 		elif [ "$inputchar" == "d" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			espeak_say " $tmp_buf" true
+			espeak_say " ${tmp_buf[*]}" true
 		elif [ "$inputchar" == "Z" ]; then
 			if [ "$initial_screen" == true ]; then
 				continue
@@ -8428,7 +8427,6 @@ print_queue() {
 			number_per_page="$TOTAL_QUEUE"
 		fi
 		flaggy=false
-		tmpbuf=""
 		if [ "$pos" -le $POSITION ] && [ "$((pos + (number_per_page-1)))" -ge "$POSITION" ] || [ $CHANGED == true ] ; then
 			if [ "$pos" == "$TOTAL_QUEUE" ] && [ "$TOTAL_QUEUE" != "1" ]; then
 				number_per_page="$original_number_per_page"
