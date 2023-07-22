@@ -468,10 +468,11 @@ gtts_speak() {
 		if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
 			return
 		fi
-		if [ ! -e "$ALETHEIA/voices/" ]; then
-			mkdir "$ALETHEIA/voices"
-		fi
-		if [ "$5" != true ]; then
+		if [ "$6" == true ]; then
+			until [ -z "$(pgrep -f "^play.*$ALETHEIA/voices")" ]; do
+				sleep 0.35
+			done
+		elif [ "$5" != true ]; then
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 		fi
 		line_count="$(echo -ne "$1" | wc -l)"
@@ -529,6 +530,22 @@ if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
 	}
 fi
 
+draw_vanish_indicator() {
+	tput cup $LINES $((COLUMNS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
+	echo -ne "$BLUE${char_count}$WHITE:$BLUE${word_count}$WHITE:$BLUE${line_count}$PADDING"
+}
+
+draw_vanish_banner() {
+	tput cup $LINES
+	echo -ne "${PADDING}$WHITE-- ${BLUE}$1$WHITE --"
+	LEFTBANNER_WIDTH=$((6+${#1}))
+}
+
+clear_vanish_banner() {
+	tput cup $LINES
+	printf '%*s' $((LEFTBANNER_WIDTH+1)) ""
+}
+
 vanish() {
 	local in_menu=$1
 	feedback_enabled=$VOICE_ENABLED
@@ -541,27 +558,19 @@ vanish() {
 	width=$((COLUMNS-((${#char_count}+2+${#word_count}+${#line_count})*2)-(${#PADDING}*2)-20))
 	tput cup $LINES
 	tput el
-	tput cup $LINES
-	echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE --"
-	LEFTBANNER_WIDTH="12"
+	draw_vanish_banner "INSERT"
 	tput cup $LINES $((COLUMNS/2))
 	echo -ne "${BLUE}_"
 	tput sc
 	visible=true
 	char=""
-	draw_indicator() {
-		tput cup $LINES $((COLUMNS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
-		echo -ne "$BLUE${char_count}$WHITE:$BLUE${word_count}$WHITE:$BLUE${line_count}$PADDING"
-	}
-	draw_indicator
+	draw_vanish_indicator
 	tput rc
 	tmpflag=true
 	quit=false
 	while true; do
-		tput cup $LINES
-		echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE -- "
-		LEFTBANNER_WIDTH="12"
-		draw_indicator
+		draw_vanish_banner "INSERT"
+		draw_vanish_indicator
 		if [ "$tmpflag" == false ]; then
 			IFS=$'\n'
 			char=""
@@ -591,9 +600,8 @@ vanish() {
 			if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
 				printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
 			fi
-			tput cup $LINES
 			gtts_speak "command mode"
-			echo -ne "${PADDING}$WHITE-- ${BLUE}VANISH$WHITE --"
+			draw_vanish_banner "VANISH"
 			while true; do
 				read -rsn1 newchar
 				if [ "$newchar" == "q" ]; then
@@ -605,6 +613,57 @@ vanish() {
 					fi
 					quit=true
 					break
+				elif [ "$newchar" == ":" ]; then
+					clear_vanish_banner
+					tput cup $LINES ${#PADDING}
+					echo -ne ":"
+					stty echo
+					command_line="$(read_line)"
+					stty -echo
+					if [[ "$command_line" == *" "* ]]; then
+						IFS=' ' read -r _ name <<< "$command_line"
+						WRITE_AS="$name"
+					else
+						WRITE_AS=""
+					fi
+					if [ "$command_line" == "w" ] || [ "$WRITE_AS" != "" ] || [ "$command_line" == "wq" ]; then
+						gtts_speak "saved"
+						if [ "$WRITE_AS" == "" ]; then
+							inputnew=$(fold -w 80 -s <<< "$inputnew")
+							echo -ne "\n\n$(date)\n\n$inputnew\n" >>"$HOME/Documents/journal"
+						else
+							echo -ne "$inputnew" >"$HOME/$WRITE_AS"
+						fi
+						tput cup $LINES
+						old_LEFTBANNER_WIDTH=$LEFTBANNER_WIDTH
+						LEFTBANNER_WIDTH="11"
+
+						if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
+							printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
+						fi
+						draw_vanish_banner "SAVED"
+						sleep $BANNER_WAIT_TIME
+						draw_vanish_banner "VANISH"
+						if [ "$command_line" == "wq" ]; then
+							if [ "$in_menu" != true ]; then
+								draw_pitch
+								draw_position
+							else
+								echo
+							fi
+							quit=true
+						fi
+						break
+					elif [ "$command_line" == "q" ]; then
+						if [ "$in_menu" != true ]; then
+							draw_pitch
+							draw_position
+						else
+							echo
+						fi
+						quit=true
+						break
+					fi
 				elif [ "$newchar" == "h" ]; then
 					if [ "$width" -gt "$(((COLUMNS*5)/8))" ]; then
 						continue
@@ -620,7 +679,7 @@ vanish() {
 					echo -ne "$WHITE${newdisplay}${BLUE}_"
 					#FIXME
 					tput el
-					draw_indicator
+					draw_vanish_indicator
 				elif [ "$newchar" == "l" ]; then
 					width="$((width-2))"
 					if [ "$width" -lt "0" ]; then
@@ -636,7 +695,7 @@ vanish() {
 					echo -ne " "
 					echo -ne "$WHITE${newdisplay}${BLUE}_"
 					tput el
-					draw_indicator
+					draw_vanish_indicator
 				elif [ "$newchar" == "p" ]; then
 					toggle_pause true
 				elif [ "$newchar" == "w" ]; then
@@ -650,8 +709,7 @@ vanish() {
 					if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
 						printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
 					fi
-					tput cup $LINES
-					echo -ne "$PADDING$WHITE-- ${BLUE}SAVED$WHITE --"
+					draw_vanish_banner "SAVED"
 					sleep $BANNER_WAIT_TIME
 				elif [ "$newchar" == "n" ]; then
 					gtts_speak "new entry"
@@ -660,7 +718,7 @@ vanish() {
 					char_count=0
 					tput cup $LINES
 					tput el
-					draw_indicator
+					draw_vanish_indicator
 					break
 				elif [ "$newchar" == "d" ]; then
 					if [ "$VOICE_ENABLED" == true ]; then
@@ -682,13 +740,12 @@ vanish() {
 					if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
 						printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
 					fi
-					tput cup $LINES
-					echo -ne "${PADDING}$WHITE-- ${BLUE}INSERT$WHITE -- "
+					draw_vanish_banner "SAVED"
 					tput el
-					draw_indicator
+					draw_vanish_indicator
 					break
 				elif [ "$newchar" == "i" ]; then
-					draw_indicator
+					draw_vanish_indicator
 					gtts_speak "insert mode"
 					break
 				fi
@@ -703,7 +760,7 @@ vanish() {
 					if [ "$inword" == true ]; then
 						inword=false
 						word_count=$((word_count-1))
-						draw_indicator
+						draw_vanish_indicator
 					fi
 					preword=true
 				elif [ "$newchar" != " " ]; then
@@ -715,7 +772,7 @@ vanish() {
 			inputnew="$(echo -ne "$inputnew" | rev | cut -c2- | rev)"
 			display="$(echo -ne "$display" | rev | cut -c2- | rev)"
 			char_count=$((char_count-1))
-			draw_indicator
+			draw_vanish_indicator
 			if [ "$word" != "" ]; then
 				word="$(echo -ne "$word" | rev | cut -c2- | rev)"
 			fi
@@ -779,7 +836,7 @@ vanish() {
 			tput cup $LINES $saved_spot
 		fi
 		echo -ne "$WHITE${newdisplay}${BLUE}_ \b"
-		draw_indicator
+		draw_vanish_indicator
 		tput rc
 	done
 }
@@ -2983,13 +3040,13 @@ draw_menu() {
 					if [ "$menu_start_over" == true ]; then
 						if [ "$SKIP_SPEAK_MENU" != true ]; then
 							if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-								gtts_speak "menu, ${OPT[$i]}, ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}"
+								gtts_speak "menu, ${OPT[$i]}, ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}" false false false false true
 							elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
 								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
 							elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
 								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
 							else
-								gtts_speak "menu, ${OPT[$i]}"
+								gtts_speak "menu, ${OPT[$i]}" false false false false true
 							fi
 						fi
 						menu_start_over=false
@@ -5413,7 +5470,6 @@ reset_buffer() {
 	original_number_per_page="$number_per_page"
 
 	BUFFER=""
-	UNCOLORED_BUFFER=""
 
 	HALF="$((POSITION % number_per_page + (number_per_page/2 + 1)))"
 
@@ -5463,11 +5519,12 @@ reset_buffer() {
 		new_line="$line"
 		pos=$((i-1+HALF))
 		orig_line="$line"
-		line="$(echo "$line" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev)"
+		line=${line##*/}
+		line=${line%.*}
 
-		if [ "$(echo -ne "$line" | grep --text " - ")" != "" ]; then
-			artist="$(echo -ne "$line" | sed -e "s/ - //g" | cut -d'' -f1)"
-			song="$(echo -ne "$line" | rev | sed -e "s/ - //g" | cut -d'' -f1 | rev)"
+		if [[ "$line" == *" - "* ]]; then
+			artist="${line%% - *}"
+			song="${line##* - }"
 			line="$artist - $song"
 		fi
 
@@ -5477,8 +5534,8 @@ reset_buffer() {
 			REPLACE=""
 		fi
 
-		ext="$(echo -ne "$orig_line" | rev | cut -d'.' -f1 | rev)"
-		filename_without_ext="$(echo -ne "$orig_line" | rev | cut -d'.' -f2- | rev)"
+		ext=${orig_line##*.}
+		filename_without_ext=${orig_line%%.*}
 
 		if [ -e "$filename_without_ext.repeat.$ext" ]; then
 			REP="$BLUE"
@@ -5500,7 +5557,7 @@ reset_buffer() {
 			fi
 		fi
 		
-		if [ "$pos" -lt "10" ] && [ "$TOTAL_QUEUE" -gt "9" ]; then
+		if (( pos < 10 && TOTAL_QUEUE > 9 )); then
 			pad="0"
 			display_pad=" "
 		else
@@ -5516,11 +5573,12 @@ reset_buffer() {
 			offset="$((COLUMNS - 5 - ${#pos} - ${#pad}))"
 		fi
 		if [ "${#line}" -gt "$offset" ]; then
-			line="$(echo -ne "$line" | sed -e 's/^ .*//g' | cut -b 1-$((offset-1)))…"
+			line="${line## .*}"
+			line="${line:0:$((offset-1))}…"
 		fi
-		if [ "$(echo -ne "$line" | grep --text " - ")" != "" ]; then
-			first_part="$(echo -ne "$line" | sed "s/ - //" | cut -d'' -f1)"
-			second_part="$(echo -ne "$line" | sed "s/ - //" | cut -d'' -f2)"
+		if [[ "$line" == *" - "* ]]; then
+			first_part="${line%% - *}"
+			second_part="${line##* - }"
 			combined=false
 		else
 			combined=true
@@ -5558,19 +5616,15 @@ reset_buffer() {
 				if [ "$pos" == "$POSITION" ]; then
 					BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $BLUE$display_pad$BLUE$pos $line$buf_space$APPEND$BLUE$minutes$WHITE:$BLUE$seconds$PADDING\n"
 					LOCKING_POS="$((i-1))"
-					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$minutes:$seconds$PADDING\n"
 				else
 					BUFFER="$BUFFER$PADDING$WHITE$INDICATOR $BLUE$display_pad$BLUE$pos $WHITE$line$buf_space$PADDING\n"
-					UNCOLORED_BUFFER="$UNCOLORED_BUFFER$PADDING$INDICATOR $display_pad$pos $line$buf_space$PADDING\n"
 				fi
 			else
 				BUFFER="$BUFFER$PADDING$BLUE$INDICATOR $display_pad$BLUE$pos $WHITE$line$buf_space$PADDING\n"
-				UNCOLORED_BUFFER="$BUFFER$PADDING$INDICATOR $display_pad$pos $line$buf_space$PADDING\n"
 			fi
 		fi
 	done
 }
-
 
 cleanup_sigint() {
 	kill "$ESPEAK_PID" "$MPLAYER_PID" >/dev/null 2>/dev/null
@@ -7614,13 +7668,9 @@ start_search() {
 		fi
 	else
 		if [ "$1" == true ]; then
-			gtts_speak "search canceled" true
+			gtts_speak "search canceled"
 		else
-			gtts_speak "search canceled. main screen" true
-			draw_pitch
-			draw_position
-		fi
-		if [ "$1" == false ]; then
+			gtts_speak "search canceled. main screen"
 			draw_pitch
 			draw_position
 			redraw_buffer
@@ -7874,6 +7924,7 @@ search_queue() {
 				fi
 			fi
 		elif [ "$inputchar" == "" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			JUMP="$(echo -ne "${search_array[$((current_pos-1))]}" | cut -d':' -f1)"
 			return "$RETURN_JUMP"
 		elif [ "$(isnum "$inputchar")" != "0" ]; then
@@ -7917,11 +7968,11 @@ search_queue() {
 			fi
 			number_per_page="$original_number_per_page"
 			if [ "$1" == false ]; then
-				gtts_speak "search canceled. main screen" true
+				gtts_speak "search canceled. main screen"
 				draw_pitch
 				draw_position
 			else
-				gtts_speak "search canceled" true
+				gtts_speak "search canceled"
 				draw_volume
 				draw_equalizer
 				draw_pitch
@@ -7975,7 +8026,7 @@ search_queue() {
 				;;
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-				gtts_speak "search canceled. main screen" true
+				gtts_speak "search canceled. main screen"
 				if [ "$REDRAWN" == false ]; then
 					BUFFER="$BUFFER_BACKUP"
 				fi
@@ -8475,7 +8526,6 @@ print_queue() {
 				nline="${queue_array[$((m-1))]##*/}"
 				nline="${nline%.*}"
 				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
-					#nline="$(echo -ne "${queue_array[$((m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad})))"
 					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad}))
 					nline="${nline:0:$value}"
 					padd="$(printf '%*s' $((value-${#nline})) "")"
@@ -8813,6 +8863,7 @@ print_queue() {
 			gtts_speak "queue closed. main screen"
 			return 200
 		elif [ "$inputchar" == "" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 			JUMP="$current"
 			draw_position
@@ -8934,7 +8985,7 @@ main() {
 	draw_equalizer
 	draw_volume
 
-	if [ "$(echo -ne "$TITLE" | grep " - ")" != "" ]; then
+	if [[ "$TITLE" == *" - "* ]]; then
 		ARTISTSONG="$ARTIST - $SONG"
 	else
 		ARTISTSONG="$TITLE"
@@ -10168,11 +10219,6 @@ main() {
 						gtts_speak "canceled"
 						continue
 					fi
-					if [ "$(echo -ne "$TITLE" | grep " - ")" != "" ]; then
-						ARTIST="$(echo -ne "$line" | sed -e "s/ - //g" | cut -d'' -f1)"
-					else
-						ARTIST=""
-					fi
 					mv "$FILENAME" "${path}/$newname.$ext" >/dev/null 2>/dev/null
 					if [ -e "$ALETHEIA/voices/$TITLE.mp3" ]; then
 						rm -f "$ALETHEIA/voices/$TITLE.mp3"
@@ -10183,7 +10229,7 @@ main() {
 					if [ -e "$FILENAME.repeats" ]; then
 						mv "$FILENAME.repeats" "${path}/$newname.$ext.repeats" >/dev/null 2>/dev/null
 					fi
-					gtts_speak "rename complete" true
+					gtts_speak "$newname" true
 					if [ "$POSITION" = "" ]; then
 						POSITION=1
 					fi
@@ -10603,15 +10649,15 @@ fi
 POSITION=$start_at_pos
 RUNTHROUGH=false
 
-while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
+while (( (POSITION <= TOTAL_QUEUE) && (POSITION >= 1) )); do
 	FILENAME="${queue_array[$((POSITION-1))]}"
-	TITLE="$(echo -ne "$FILENAME" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
-	line="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev)"
+	TITLE="${FILENAME##*/}"
+	TITLE="${TITLE%.*}"
 	LOOP_ON=false
 
-	if [ "$(echo -ne "$line" | grep " - ")" != "" ]; then
-		ARTIST="$(echo -ne "$line" | sed -e "s/ - //g" | cut -d'' -f1)"
-		SONG="$(echo -ne "$line" | rev | sed -e "s/ - //g" | cut -d'' -f1 | rev)"
+	if [[ "$TITLE" == *" - "* ]]; then
+		ARTIST="${TITLE%% - *}"
+		SONG="${TITLE##* - }"
 	else
 		ARTIST=""
 		SONG=""
