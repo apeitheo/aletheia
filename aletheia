@@ -3288,12 +3288,6 @@ main_menu() {
 		elif [ "$z" == "a" ]; then
 			set_equalizer false true
 			draw_equalizer
-			tput cup $((LINES-5))
-			tput el
-			tput cup $((LINES-4))
-			tput el
-			tput cup $((LINES-3))
-			tput el
 			z=""
 			continue
 		elif [ "$z" == "" ]; then
@@ -3321,7 +3315,6 @@ main_menu() {
 			continue
 		elif [ "$z" == "" ]; then
 			invert_colors true
-			empty_pane
 			z=""
 			continue
 		elif [ "$z" == "#" ]; then
@@ -3470,9 +3463,7 @@ main_menu() {
 			tput cup $((LINES-2))
 			tput el
 			voice_settings_screen true
-			if [ "$initial_screen" == true ]; then
-				empty_pane
-			else
+			if [ "$initial_screen" == false ]; then
 				redraw_buffer
 			fi
 			z=""
@@ -3484,10 +3475,8 @@ main_menu() {
 			tput el
 			if [ "$initial_screen" == true ]; then
 				help_screen true
-				empty_pane
 			else
 				help_screen false
-				empty_pane
 			fi
 			menu_start_over=true
 			z=""
@@ -3527,12 +3516,11 @@ main_menu() {
 					echo -ne "$NOCOLOR"
 				fi
 			fi
-			start_search
+			start_search true
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			fi
 			menu_start_over=true
-			empty_pane
 			z=""
 			continue
 		elif [ "$z" == "Q" ]; then
@@ -3541,7 +3529,6 @@ main_menu() {
 				JUMP=1
 				return $RETURN_JUMP
 			fi
-			empty_pane
 			z=""
 			continue
 		elif [ "$z" == $'\e' ]; then
@@ -3694,7 +3681,6 @@ main_menu() {
 						JUMP=1
 						return $RETURN_JUMP
 					fi
-					empty_pane
 					menu_start_over=true
 				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
 					tput cup 1
@@ -3709,7 +3695,6 @@ main_menu() {
 					tput el
 					if [ "$initial_screen" == true ]; then
 						help_screen true
-						#empty_pane
 					else
 						help_screen false
 						RIGHT_BANNER_WIDTH=$((${#POSITION} + ${#TOTAL_QUEUE} + 1 + (${#CORNER_DIVIDER}*2)))
@@ -5097,24 +5082,21 @@ fade_volume() {
 
 sleep_countdown() {
 	if [ "$WEB_CLIENT" == "0" ]; then
-		read -rsn1 -t "$(calc "$1 * 60")" tmp
+		read -rsn1 -t "$(echo "$1 * 60" | bc)" tmp
 	else
-		read -rsn1 -t "$(calc "$1 * 60")" tmp <"$ALETHEIA/web_client_pipe$$"
+		read -rsn1 -t "$(echo "$1 * 60" | bc)" tmp <"$ALETHEIA/web_client_pipe$$"
 	fi
 	if [ "$tmp" != "" ]; then
-		gtts_speak "sleep canceled"
-		tput cup $((LINES-3))
-		tput el
+		gtts_speak "sleep canceled. main screen"
 		echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
-		echo -ne "${PADDING}${WHITE}Sleep canceled"
+		draw_banner "CANCELED"
+		sleep $BANNER_WAIT_TIME
 		draw_pitch
 		return
 	fi
 	if [ "$SLEEPING" == true ]; then
 		SLEEPING=false
-		empty_pane
-		tput cup $((LINES-3))
-		echo -ne "${PADDING}${WHITE}Sleeping now..."
+		draw_banner "SLEEPING"
 		x="$VOLUME"
 		while [ "$x" -ge "0" ] && [ "$VOLUME" -gt "0" ]; do
 			VOLUME="$((VOLUME-1))"
@@ -5142,11 +5124,8 @@ sleep_countdown() {
 
 set_sleep() {
 	if [ "$WEB_CLIENT" == "0" ]; then
-		empty_pane
-		draw_banner "SLEEP"
-		gtts_speak "sleep"
-		tput cup $((LINES-3))
-		echo -ne "$NOCOLOR${PADDING}${WHITE}How many minutes$BLUE? "
+		draw_banner "MINUTES"
+		gtts_speak "enter time to sleep, in minutes"
 		answer="$(read_line)"
 	else
 		answer="180"
@@ -5156,10 +5135,8 @@ set_sleep() {
 		if [ "$(isnum "$answer")" != "0" ]; then
 			SLEEPING=true
 			if [ "$WEB_CLIENT" == "0" ]; then
-				empty_pane
-				tput cup $((LINES-3))
-				gtts_speak "suspend?"
-				echo -ne "${PADDING}${WHITE}Do you want to suspend$BLUE? "
+				gtts_speak "do you want to suspend? enter y, or n, or q to cancel"
+				draw_banner "SUSPEND" true
 				read -rsn1 suspend
 			else
 				suspend="y"
@@ -5167,25 +5144,29 @@ set_sleep() {
 		
 			if [ "$suspend" == "y" ] || [ "$suspend" == "Y" ]; then
 				SUSPEND=true
+			elif [ "$suspend" == "q" ] || [ "$suspend" == "" ] || [ "$suspend" == "~" ]; then
+				gtts_speak "sleep canceled. main screen"
+				draw_pitch
+				draw_position
+				return
 			else
 				SUSPEND=false
 			fi
-			tput cup $((LINES-3))
-			tput el
-			if [ "$VOICE_ENABLED" == true ]; then
-				if [ "$answer" != "1" ]; then
-					gtts_speak "sleep enabled"
-				else
-					gtts_speak "sleep enabled"
-				fi
-			fi
+
 			if [ "$SUSPEND" == true ]; then
-				echo -ne "${PADDING}${WHITE}Suspending in $BLUE$answer ${WHITE}minute"
+				draw_banner "SUSPEND ${answer}"
+				draw_position
+				gtts_speak "suspending in" true false true
 			else
-				echo -ne "${PADDING}${WHITE}Sleeping in $BLUE$answer ${WHITE}minute"
+				draw_banner "SLEEP ${answer}"
+				draw_position
+				gtts_speak "sleeping in" true false true
 			fi
-			if [ "$answer" != "1" ]; then
-				echo -ne "s"
+			gtts_speak "$answer" true false true
+			if [ "$answer" == "1" ]; then
+				gtts_speak "minute"
+			else
+				gtts_speak "minutes"
 			fi
 			PAUSE=false
 			if [ "$MUTE" == true ]; then
@@ -5196,15 +5177,15 @@ set_sleep() {
 			LOOP=true
 			draw_position
 			sleep_countdown "$answer"
-			sleep 1
-			redraw_buffer
-		else
-			gtts_speak "closed" true
 			draw_pitch
-			redraw_buffer
+			draw_position
+		else
+			gtts_speak "sleep canceled. main screen"
+			draw_pitch
+			draw_position
 		fi
 	else
-		gtts_speak "closed" true
+		gtts_speak "sleep canceled. main screen"
 		draw_pitch
 		redraw_buffer
 	fi
@@ -5317,7 +5298,9 @@ read_number() {
 			if [ "$number" -gt "-12" ]; then
 				for i in $(seq 1 ${#number}); do
 					echo -ne "\b" >/dev/stderr
-					tput el >/dev/stderr
+					if [ "$number" == "10" ]; then
+						echo -ne " \b" >/dev/stderr
+					fi
 				done
 				number="$((number-1))"
 				echo -ne $number >/dev/stderr
@@ -5327,7 +5310,9 @@ read_number() {
 			if [ "$number" -lt "12" ]; then
 				for i in $(seq 1 ${#number}); do
 					echo -ne "\b" >/dev/stderr
-					tput el >/dev/stderr
+					if [ "$number" == "-10" ] || [ "$number" == "-1" ]; then
+						echo -ne " \b" >/dev/stderr
+					fi
 				done
 				number="$((number+1))"
 				echo -ne $number >/dev/stderr
@@ -5336,7 +5321,6 @@ read_number() {
 		elif [ "$x" == "-" ]; then
 			for i in $(seq 1 ${#number}); do
 				echo -ne "\b" >/dev/stderr
-				tput el >/dev/stderr
 			done
 			echo -ne "$x" >/dev/stderr
 			if [ "$VOICE_ENABLED" == true ]; then
@@ -5355,7 +5339,6 @@ read_number() {
 		elif [ "$(isnum "$x")" != "0" ]; then
 			for i in $(seq 1 ${#number}); do
 				echo -ne "\b" >/dev/stderr
-				tput el >/dev/stderr
 			done
 			echo -ne "$x" >/dev/stderr
 			gtts_speak " $x"
@@ -5413,10 +5396,12 @@ redraw_screen() {
 	fi
 
 	redraw_buffer
-	tput cup 1
-	tput el
-	tput cup $((LINES-2))
-	tput el
+	if [ "$NO_VERTICAL_PADDING" == false ]; then
+		tput cup 1
+		tput el
+		tput cup $((LINES-2))
+		tput el
+	fi
 }
 
 reset_buffer() {
@@ -6599,11 +6584,11 @@ draw_equalizer() {
 toggle_voice() {
 	if [ "$VOICE_ENABLED" == false ]; then
 		VOICE_ENABLED=true
-		if [ "$2" != true ]; then
+		if [ "$1" != true ]; then
 			gtts_speak "on" false true
 		fi
 	else
-		if [ "$2" != true ]; then
+		if [ "$1" != true ]; then
 			if [ "$ONLY_VOICE_TITLES" == true ]; then
 				gtts_speak "reading only artist and title" false true
 			else
@@ -6613,7 +6598,6 @@ toggle_voice() {
 		VOICE_ENABLED=false
 		ONLY_VOICE_TITLES=false
 	fi
-	draw_banner "$3"
 }
 
 queue_help_screen() {
@@ -6865,7 +6849,7 @@ read_corner() {
 	z=""
 	draw_banner "READ" false false true
 	while true; do
-		gtts_speak "read from which corner?"
+		gtts_speak "enter a corner to read from. u, upper left. i, upper right. j, lower left. k, lower right, or q to quit"
 		if [ "$z" != "" ]; then
 			x="$z"
 		else
@@ -6900,9 +6884,6 @@ read_corner() {
 		elif [ "$x" == "j" ]; then
 				if [ "$LOCKED" == true ]; then
 					tmp_int="$(cut -d'/' -f1 < "$FILENAME.locked")"
-					gtts_speak "$INTERVAL" true false true
-					read -rn1 -t 0.05 z
-					if [ -n "$z" ]; then continue; fi
 					gtts_speak "$EDO" true false true
 					read -rn1 -t 0.05 z
 					if [ -n "$z" ]; then continue; fi
@@ -6916,9 +6897,6 @@ read_corner() {
 						gtts_speak "tempo" true false true
 					fi
 				else
-					gtts_speak "$INTERVAL" true false true
-					read -rn1 -t 0.05 z
-					if [ -n "$z" ]; then continue; fi
 					gtts_speak "$EDO" true false true
 					read -rn1 -t 0.05 z
 					if [ -n "$z" ]; then continue; fi
@@ -7531,7 +7509,6 @@ help_screen() {
 				draw_banner "MENU"
 				draw_position
 			fi
-			empty_pane
 			return
 		elif [ "$inputchar" == "m" ]; then
 			man aletheia
@@ -7571,11 +7548,12 @@ help_screen() {
 }
 
 start_search() {
+	kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 	draw_banner "SEARCH"
 	draw_position
 	tput rc
 	echo -ne "$BLUE_BLACK"
-	gtts_speak "search"
+	gtts_speak "enter search keyword"
 	if [ "$WEB_CLIENT" == "0" ]; then
 		jump="$(read_line)"
 	else
@@ -7588,7 +7566,9 @@ start_search() {
 		if [ "$(isnum "$jump")" != "0" ]; then
 			jump="${jump#"${jump%%[!0]*}"}"
 			if [ "$jump" -lt "1" ]; then
-				redraw_buffer
+				if [ "$1" == false ]; then
+					redraw_buffer
+				fi
 			elif [ "$jump" -le "$TOTAL_QUEUE" ]; then
 				if [ "$jump" -gt "0" ]; then
 					LOOP_ARTIST=false
@@ -7596,13 +7576,17 @@ start_search() {
 					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 					return $RETURN_JUMP
 				else
-					redraw_buffer
-					draw_pitch
+					if [ "$1" == false ]; then
+						redraw_buffer
+						draw_pitch
+					fi
 					draw_position
 				fi
 			else
-				redraw_buffer
-				draw_pitch
+				if [ "$1" == false ]; then
+					redraw_buffer
+					draw_pitch
+				fi
 				draw_position
 			fi
 		else
@@ -7615,11 +7599,13 @@ start_search() {
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				return $RETURN_JUMP
 			elif [ "$length" == "0" ]; then
-				draw_pitch
-				draw_position
-				redraw_buffer
+				if [ "$1" == false ]; then
+					draw_pitch
+					draw_position
+					redraw_buffer
+				fi
 			else
-				search_queue
+				search_queue "$1"
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 					return $RETURN_JUMP
@@ -7627,10 +7613,18 @@ start_search() {
 			fi
 		fi
 	else
-		gtts_speak "closed" true
-		draw_pitch
-		draw_position
-		redraw_buffer
+		if [ "$1" == true ]; then
+			gtts_speak "search canceled" true
+		else
+			gtts_speak "search canceled. main screen" true
+			draw_pitch
+			draw_position
+		fi
+		if [ "$1" == false ]; then
+			draw_pitch
+			draw_position
+			redraw_buffer
+		fi
 	fi
 }
 
@@ -7699,6 +7693,8 @@ new_playlist() {
 }
 
 search_queue() {
+	page=0
+	already_said=false
 	total=${#search_array[@]}
 	if [ "$NO_VERTICAL_PADDING" == true ]; then
 		local number_per_page="$((LINES-2))"
@@ -7716,6 +7712,7 @@ search_queue() {
 
 	local BUFFER_BACKUP="$BUFFER"
 
+	new_page=false
 	current_pos=1
 	local pos=1
 	while [ "$pos" -le "$total" ] || [ "$FLAGGED" == false ]; do
@@ -7740,7 +7737,7 @@ search_queue() {
 			fi
 
 			line="$(echo "$line" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
-			tmp_buf="$tmp_buf. $m. $line. "
+			tmp_buf[$((i-1))]="$m. $line."
 
 			if (( m < 10 )); then
 				pad=" "
@@ -7748,7 +7745,7 @@ search_queue() {
 				pad=""
 			fi
 
-			line="$(echo -ne "$line" | cut -b 1-$((COLUMNS - ${#m} - 4 - ${#pad})))"
+			line="${line:0:$((COLUMNS-${#m}-4-${#pad}))}"
 			if (( ( pos + i - 1) == current_pos || m == POSITION)); then
 				BUFFER="$BUFFER$BLUE_BLACK$PADDING ${m} $WHITE_BLACK$line$(tput el)$NOCOLOR\n"
 			else
@@ -7768,6 +7765,17 @@ search_queue() {
 		draw_banner "SEARCH"
 		printf '%*s' $((COLUMNS - 14)) ""
 		tput rc
+		if [ "$new_page" == true ]; then
+			new_page=false
+			espeak_say " ${tmp_buf[$((current_pos-(page*number_per_page-1)-2))]}"
+		fi
+
+		if [ "$already_said" != true ]; then
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			espeak_say " ${tmp_buf[*]}"
+			already_said=true
+		fi
 
 		if [ "$WEB_CLIENT" == "0" ]; then
 			read -rsn1 inputchar <&1
@@ -7780,16 +7788,19 @@ search_queue() {
 
 		if [ "$inputchar" = "j" ]; then
 			if (( (pos + number_per_page) <= total )); then
+				already_said=false
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 				gtts_speak "page down"
+				((page++))
 				if [ "$FLAGGED" == true ]; then
 					continue
 				fi
-				pos="$((pos+number_per_page))"
+				pos="$((pos+original_number_per_page))"
 				current_pos=$pos
 			fi
 		elif [ "$inputchar" = "k" ]; then
+			already_said=false
 			if (( (pos - number_per_page) <= 1 )); then
 				pos=1
 				current_pos=$pos
@@ -7799,11 +7810,12 @@ search_queue() {
 			fi
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			gtts_speak "page down"
+			gtts_speak "page up"
+			((--page))
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				number_per_page="$original_number_per_page"
 			fi
-			pos=$((pos-number_per_page))
+			pos=$((pos-original_number_per_page))
 			current_pos=$pos
 			if [ "$pos" -le "0" ]; then
 				pos=1
@@ -7811,30 +7823,42 @@ search_queue() {
 		elif [ "$inputchar" == "h" ]; then
 			if (( current_pos < total )); then
 				((current_pos++))
+			else
+				continue
+			fi
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			if [ "$current_pos" -gt "${#tmp_buf[@]}" ]; then
+				espeak_say " ${tmp_buf[$((current_pos-(page*original_number_per_page-1)-2))]}"
+			else
+				espeak_say " ${tmp_buf[$((current_pos-1))]}"
 			fi
 			if [ "$current_pos" -gt "$((pos+i-1))" ]; then
-				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-				gtts_speak "page down"
+				((page++))
+				new_page=true
 				CHANGED=true
 				if [ "$FLAGGED" == true ]; then
 					continue
 				fi
-				if [ "$((pos+number_per_page))" -le "$total" ]; then
-					if [ "$((pos+(number_per_page*2)))" -gt "$total" ]; then
-						pos="$((total-number_per_page+1))"
-					else
-						pos="$((pos+number_per_page))"
-					fi
+				if [ "$((pos+original_number_per_page))" -le "$total" ]; then
+					pos="$((pos+original_number_per_page))"
 				fi
 			fi
 		elif [ "$inputchar" == "l" ]; then
 			if (( current_pos > 1 )); then
 				((--current_pos))
+			else
+				continue
 			fi
-			if [ "$current_pos" -lt "$((pos+i-number_per_page))" ]; then
-				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-				gtts_speak "page up"
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			if [ "$current_pos" -gt "${#tmp_buf[@]}" ]; then
+				espeak_say " ${tmp_buf[$((current_pos-(page*number_per_page-1)-2))]}"
+			else
+				espeak_say " ${tmp_buf[$((current_pos-1))]}"
+			fi
+			if [ "$current_pos" -lt "$pos" ]; then
+				((--page))
 				CHANGED=true
+				new_page=true
 				if [ "$pos" == "1" ]; then
 					continue
 				else
@@ -7844,6 +7868,7 @@ search_queue() {
 					number_per_page="$original_number_per_page"
 				fi
 				pos="$((pos-number_per_page))"
+				current_pos="$((pos+number_per_page-1))"
 				if [ "$pos" -le "0" ]; then
 					pos=1
 				fi
@@ -7867,12 +7892,11 @@ search_queue() {
 			fi
 			return
 		elif [ "$inputchar" == "s" ]; then
-			start_search
+			start_search false
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
 			else
 				BUFFER="$BUFFER_BACKUP"
-				gtts_speak "closed" true
 				draw_volume
 				draw_equalizer
 				draw_pitch
@@ -7892,11 +7916,17 @@ search_queue() {
 				BUFFER="$BUFFER_BACKUP"
 			fi
 			number_per_page="$original_number_per_page"
-				gtts_speak "closed" true
+			if [ "$1" == false ]; then
+				gtts_speak "search canceled. main screen" true
+				draw_pitch
+				draw_position
+			else
+				gtts_speak "search canceled" true
 				draw_volume
 				draw_equalizer
 				draw_pitch
 				draw_position
+			fi
 			return
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -7945,7 +7975,7 @@ search_queue() {
 				;;
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-				gtts_speak "closed" true
+				gtts_speak "search canceled. main screen" true
 				if [ "$REDRAWN" == false ]; then
 					BUFFER="$BUFFER_BACKUP"
 				fi
@@ -8243,19 +8273,15 @@ queue_controls() {
 }
 
 set_equalizer() {
-	draw_banner "EQUALIZER"
-
-	empty_pane
-
-	tput cup $((LINES-5))
-	echo -ne "$PADDING${WHITE}Bass$BLUE? "
+	echo -ne "$WHITE_BLACK"
+	draw_banner "BASS"
 	gtts_speak "bass"
 	bass="$(read_number)"
 	if [ "$bass" == "" ]; then
 		gtts_speak "closed" true
-		if [ "$2" == false ] || [ "$2" == "" ]; then
-			redraw_buffer
-		fi
+		#if [ "$2" != true ]; then
+		#	redraw_buffer
+		#fi
 		return
 	fi
 	if [ "$NO_VERTICAL_PADDING" == true ]; then
@@ -8263,26 +8289,24 @@ set_equalizer() {
 	else
 		tput cup $((LINES-4))
 	fi
-	echo -ne "$PADDING${WHITE}Mid$BLUE? "
+	draw_banner "MID"
 	gtts_speak "mid"
 	mid="$(read_number)"
 	if [ "$mid" == "" ]; then
 		gtts_speak "closed" true
-		if [ "$2" == false ] || [ "$2" == "" ]; then
-			redraw_buffer
-		fi
+		#if [ "$2" != true ]; then
+		#	redraw_buffer
+		#fi
 		return
 	fi
-	tput cup $((LINES-3))
-	echo -ne "$PADDING${WHITE}Treble$BLUE? "
+	draw_banner "TREBLE"
 	gtts_speak "treble"
 	treble="$(read_number)"
 	if [ "$treble" == "" ]; then
 		gtts_speak "closed" true
-		if [ "$2" == false ] || [ "$2" == "" ]; then
-			draw_pitch
-			redraw_buffer
-		fi
+		#if [ "$2" != true ]; then
+		#	draw_pitch
+		#fi
 		return
 	fi
 
@@ -8297,7 +8321,7 @@ set_equalizer() {
 	treble="$treble:$treble:$treble"
 
 	EQUALIZER="$bass:$mid:$treble"
-	if [ "$1" == false ] || [ "$1" == "" ]; then
+	if [ "$1" != true ]; then
 		echo -e "af_cmdline equalizer $EQUALIZER" >"$ALETHEIA/pipe$$" &
 	fi
 
@@ -8307,17 +8331,16 @@ set_equalizer() {
 
 	draw_volume
 	draw_equalizer
-	if [ "$2" == false ] || [ "$2" == "" ]; then
-		if [ "$1" == false ] || [ "$1" == "" ]; then
-			draw_pitch
-			draw_position
-			redraw_buffer
-		fi
+	if [ "$1" != true ] && [ "$2" != true ]; then
+		draw_pitch
+		draw_position
 	fi
 }
 
 print_queue() {
-	gtts_speak "queue"
+	pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+
+	already_said=false
 	current=$POSITION
 	BUFFER_BACKUP="$BUFFER"
 
@@ -8423,6 +8446,7 @@ print_queue() {
 			fi
 			m=$pos
 			new_buf=""
+			tmp_buf=()
 			for i in $(seq 1 $number_per_page); do
 				if [ -e "${queue_array[$((m-1))]}.locked" ]; then
 					if [ -e "${queue_array[$((m-1))]}.repeats" ]; then
@@ -8450,17 +8474,31 @@ print_queue() {
 				else
 					rep="$BLUE"
 				fi
+				nline="${queue_array[$((m-1))]##*/}"
+				nline="${nline%.*}"
 				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
-					nline="$(echo -ne "${queue_array[$((m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad})))"
-					padd="$(printf '%*s' $((COLUMNS-(${#PADDING}*2)-3-${#m}-${#nline}-${#display_pad})) "")"
+					#nline="$(echo -ne "${queue_array[$((m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad})))"
+					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad}))
+					nline="${nline:0:$value}"
+					padd="$(printf '%*s' $((value-${#nline})) "")"
 					new_buf="$new_buf$BLUE_BLACK${PADDING}$INDICATOR$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$nline$padd$PADDING$NOCOLOR\n"
 				else
-					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$(echo -ne "${queue_array[$((m-1))]}" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev | cut -c 1-$((COLUMNS-(${#PADDING}*2)-3-${#m})))$(tput el)\n"
+					nline="${queue_array[$((m-1))]##*/}"
+					nline="${nline%.*}"
+					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}))
+					nline="${nline:0:$value}"
+					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$nline$(tput el)\n"
 				fi
+				tmp_buf[i]="$m. $nline. "
 				m=$((m+1))
 			done
 
 			echo -ne "$new_buf"
+
+			if [ "$already_said" == false ]; then
+				espeak_say " ${tmp_buf[*]}"
+				already_said=true
+			fi
 
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 				empty_pane "$((number_per_page+2))"
@@ -8470,15 +8508,14 @@ print_queue() {
 			continue
 		fi
 
-
 		draw_banner "QUEUE"
 		tput rc
 		
 		read -rsn1 inputchar
 		tput civis
 		if [ "$inputchar" = "j" ]; then
+			already_said=false
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			gtts_speak "page down"
 			CHANGED=true
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -8494,8 +8531,8 @@ print_queue() {
 				current=$pos
 			fi
 		elif [ "$inputchar" = "k" ]; then
+			already_said=false
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			gtts_speak "page up"
 			CHANGED=true
 			if [ "$pos" == "1" ]; then
 				continue
@@ -8514,10 +8551,11 @@ print_queue() {
 			if [ "$current" == "$TOTAL_QUEUE" ]; then
 				continue
 			fi
+			line="${queue_array[current]##*/}"
+			line="${line%.*}"
+			espeak_say " $line"
 			current=$((current+1))
 			if [ "$current" -gt "$truepos" ]; then
-				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-				gtts_speak "page down"
 				CHANGED=true
 				if [ "$FLAGGED" == true ]; then
 					continue
@@ -8537,9 +8575,10 @@ print_queue() {
 				continue
 			fi
 			current=$((current-1))
+			line="${queue_array[$(($((current-1))))]##*/}"
+			line="${line%.*}"
+			espeak_say " $line"
 			if [ "$current" -lt "$((truepos-number_per_page+1))" ]; then
-				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-				gtts_speak "page up"
 				CHANGED=true
 				if [ "$pos" == "1" ]; then
 					continue
@@ -8556,8 +8595,6 @@ print_queue() {
 			fi
 
 			skip=true
-		elif [ "$inputchar" == "," ]; then
-			gtts_speak "$(echo -ne "${queue_array[$((current-1))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 		elif [ "$(isnum "$inputchar")" != "0" ]; then
 			up_down="$(read_line "$inputchar")"
 			if [ "$(isnum "$up_down")" != "0" ]; then
@@ -8664,7 +8701,6 @@ print_queue() {
 				current=$((current+1))
 				if [ "$current" -gt "$truepos" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-					gtts_speak "page down"
 					CHANGED=true
 					if [ "$FLAGGED" == true ]; then
 						continue
@@ -8691,7 +8727,6 @@ print_queue() {
 				current=$((current-1))
 				if [ "$current" -lt "$((truepos-number_per_page+1))" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-					gtts_speak "page up"
 					CHANGED=true
 					if [ "$pos" == "1" ]; then
 						continue
@@ -8717,11 +8752,10 @@ print_queue() {
 			toggle_pause true
 			continue
 		elif [ "$inputchar" == "d" ]; then
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			if [ "$CHANGED" != false ]; then
-				espeak_say " $pos of $((pos+number_per_page-1)). $tmpbuf."
-			else
-				espeak_say " $pos of $((pos+number_per_page-1)). $tmpbuf."
+			toggle_voice true
+			if [ "$VOICE_ENABLED" == true ]; then
+				espeak_say " ${tmp_buf[*]}"
+				already_said=true
 			fi
 		elif [ "$inputchar" == $'\e' ]; then
 			read -rn2 -t 0.03 key
@@ -8768,7 +8802,7 @@ print_queue() {
 				return 200
 				;;
 			esac
-		elif [ "$inputchar" == "q" ] || [ "$inputchar" == ";" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == ";" ] || [ "$inputchar" == "" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			BUFFER="$BUFFER_BACKUP"
 			echo -ne "$NOCOLOR"
@@ -8778,7 +8812,7 @@ print_queue() {
 			redraw_buffer
 			draw_pitch
 			draw_position
-			gtts_speak "closed" true
+			gtts_speak "queue closed. main screen"
 			return 200
 		elif [ "$inputchar" == "" ]; then
 			kill "$MPLAYER_PID" >/dev/null 2>/dev/null
@@ -9150,10 +9184,10 @@ main() {
 				fi
 				draw_banner "QUIT" true
 				if [ "$VOICE_ENABLED" == true ]; then
-					gtts_speak "quit?"
+					gtts_speak "do you want to quit? enter y, or n, or q to cancel"
 				fi
 				input_char=""
-				until [ "$input_char" == "n" ] || [ "$input_char" == "q" ]; do
+				while true; do
 					read -rn1 input_char
 					if [ "$input_char" == "y" ]; then
 						echo -ne "$NOCOLOR"
@@ -9161,15 +9195,17 @@ main() {
 						clear
 						stty echo
 						return $RETURN_QUIT
-					elif [ "$input_char" == "q" ]; then
+					elif [ "$input_char" == "q" ] || [ "$input_char" == "" ]; then
 						draw_pitch
 						draw_position
 						break
 					elif [ "$input_char" == "n" ]; then
 						draw_pitch
 						draw_position
+						break
 					fi
 				done
+				gtts_speak "quit canceled. main screen"
 				;;
 			'P')
 				old_percent=0
@@ -10081,7 +10117,7 @@ main() {
 				fi
 				;;
 			's')
-				start_search
+				start_search false
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					return $RETURN_JUMP
 				fi
@@ -10573,6 +10609,7 @@ while [ "$POSITION" -le "$TOTAL_QUEUE" ] && [ "$POSITION" -ge "1" ]; do
 	FILENAME="${queue_array[$((POSITION-1))]}"
 	TITLE="$(echo -ne "$FILENAME" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 	line="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | cut -d'/' -f1 | rev)"
+	LOOP_ON=false
 
 	if [ "$(echo -ne "$line" | grep " - ")" != "" ]; then
 		ARTIST="$(echo -ne "$line" | sed -e "s/ - //g" | cut -d'' -f1)"
