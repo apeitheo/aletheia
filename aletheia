@@ -1197,11 +1197,9 @@ set_only_locked() {
 				done
 				unset IFS
 				if [ "$index" == "0" ]; then
-					#if [ "$5" == true ]; then
-						queue_array=("${old_queue_array[@]}")
-						unset old_queue_array
-						return 50 
-					#fi
+					queue_array=("${old_queue_array[@]}")
+					unset old_queue_array
+					return 50
 				else
 					TOTAL_QUEUE=$index
 				fi
@@ -3553,29 +3551,50 @@ main_menu() {
 		elif [ "$z" == "s" ]; then
 			if [ "$initial_screen" == false ]; then
 				REPEAT_ONLY=false
-			else
-				VIDEO=false
+			fi
+			if (( SELECTION == 2 )); then
+				dir="$SOUNDDIR"
 				regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-				mapfile -t tmp_array < <(find "$MUSICDIR" -type f -iregex "$regex" | shuf)
-				new_TOTAL_QUEUE=${#tmp_array[@]}
-				if [ "$new_TOTAL_QUEUE" == "0" ]; then
+			elif (( SELECTION == 3 )); then
+				dir="$VIDEODIR"
+				regex=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
+			else
+				dir="$MUSICDIR"
+				regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
+			fi
+			VIDEO=false
+			mapfile -t tmp_array < <(find "$dir" -type f -iregex "$regex" | sort)
+			new_TOTAL_QUEUE=${#tmp_array[@]}
+			if (( new_TOTAL_QUEUE == 0 )); then
+				if (( SELECTION == 2 )); then
+					draw_banner "NO SOUND"
+					gtts_speak "no sound"
+				elif (( SELECTION == 3 )); then
+					draw_banner "NO VIDEO"
+					gtts_speak "no video"
+				else
 					draw_banner "NO MUSIC"
 					gtts_speak "no music"
-					sleep $BANNER_WAIT_TIME
-					NO_QUEUE_FLAG=true
-					menu_start_over=true
-					continue
-				else
-					TOTAL_QUEUE=$new_TOTAL_QUEUE
-					queue_array=("${tmp_array[@]}")
-					SHUFFLED=true
-					JUMP="1"
-					echo -ne "$NOCOLOR"
 				fi
+				sleep $BANNER_WAIT_TIME
+				NO_QUEUE_FLAG=true
+				menu_start_over=true
+				z=""
+				continue
+			else
+				old_tq=$TOTAL_QUEUE
+				old_qa=("${queue_array[@]}")
+				TOTAL_QUEUE=$new_TOTAL_QUEUE
+				queue_array=("${tmp_array[@]}")
+				SHUFFLED=false
+				echo -ne "$NOCOLOR"
 			fi
 			start_search true
 			if [ "$?" == "$RETURN_JUMP" ]; then
 				return $RETURN_JUMP
+			else
+				TOTAL_QUEUE=$old_tq
+				queue_array=("${old_qa[@]}")
 			fi
 			menu_start_over=true
 			z=""
@@ -3740,10 +3759,12 @@ main_menu() {
 					fi
 					menu_start_over=true
 				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
-					tput cup 1
-					tput el
-					tput cup $((LINES-2))
-					tput el
+					if [ "$NO_VERTICAL_PADDING" == false ]; then
+						tput cup 1
+						tput el
+						tput cup $((LINES-2))
+						tput el
+					fi
 					voice_settings_screen true
 				elif [ "${OPT[$SELECTION]}" == "Help" ]; then
 					tput cup 1
@@ -4164,8 +4185,7 @@ set_custom_int() {
 }
 
 toggle_mute() {
-	#echo "pausing_keep mute" >"$ALETHEIA/pipe$$" &
-	if [ $MUTE = false ]; then
+	if [ "$MUTE" == false ]; then
 		gtts_speak "muted" true
 		if [ "$OS" == "Darwin" ]; then
 			osascript -e 'set volume with output muted'
@@ -6385,10 +6405,6 @@ load_only_loops() {
 		else
 			POSITION=1
 		fi
-		#reset_buffer
-		#redraw_buffer
-		#draw_pitch
-		#draw_position
 	else
 		draw_banner "WAIT"
 		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
@@ -6839,8 +6855,6 @@ scale_help_screen() {
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
-			#draw_pitch
-			#draw_position
 			return
 		elif [ "$inputchar" == $'\e' ]; then
 			read -rn2 -t 0.03 key
@@ -7178,22 +7192,17 @@ voice_settings_screen() {
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 				number_per_page="$original_number_per_page"
-				if [ "$1" == false ] || [ "$1" == "" ]; then
+				if [ "$1" != true ]; then
 					redraw_screen
-				else
-					empty_pane
 				fi
 				return
 				;;
 			esac
 		else
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			if [ "$1" == true ]; then
-				empty_pane
-			fi
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
-			if [ "$1" == false ] || [ "$1" == "" ]; then
+			if [ "$1" != true ]; then
 				redraw_screen
 			fi
 			return
@@ -7255,7 +7264,6 @@ render() {
 			if [ "${line:2:1}" != " " ]; then
 				tmp1="$BLUE$line"
 				tmp2=""
-					#if (( TWO_COLUMN == true && (i+number_per_page-2) < ${#text_array[@]} )); then
 					if [ "$TWO_COLUMN" == true ]; then
 						if (( (i+number_per_page-2) < ${#text_array[@]} )); then
 							if [ "${pmt_line:2:1}" != " " ]; then
@@ -7649,7 +7657,7 @@ start_search() {
 			length=${#search_array[@]}
 			if [ "$length" == "1" ]; then
 				LOOP_ARTIST=false
-				JUMP="$(echo -e "${search_array[0]}" | cut -d':' -f1)"
+				JUMP=${search_array[0]%%:*}
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				return $RETURN_JUMP
 			elif [ "$length" == "0" ]; then
@@ -7925,7 +7933,7 @@ search_queue() {
 			fi
 		elif [ "$inputchar" == "" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			JUMP="$(echo -ne "${search_array[$((current_pos-1))]}" | cut -d':' -f1)"
+			JUMP=${search_array[$((current_pos-1))]%%:*}
 			return "$RETURN_JUMP"
 		elif [ "$(isnum "$inputchar")" != "0" ]; then
 			gtts_speak " $inputchar"
@@ -8329,9 +8337,6 @@ set_equalizer() {
 	bass="$(read_number)"
 	if [ "$bass" == "" ]; then
 		gtts_speak "closed" true
-		#if [ "$2" != true ]; then
-		#	redraw_buffer
-		#fi
 		return
 	fi
 	if [ "$NO_VERTICAL_PADDING" == true ]; then
@@ -8344,9 +8349,6 @@ set_equalizer() {
 	mid="$(read_number)"
 	if [ "$mid" == "" ]; then
 		gtts_speak "closed" true
-		#if [ "$2" != true ]; then
-		#	redraw_buffer
-		#fi
 		return
 	fi
 	draw_banner "TREBLE"
@@ -8354,9 +8356,6 @@ set_equalizer() {
 	treble="$(read_number)"
 	if [ "$treble" == "" ]; then
 		gtts_speak "closed" true
-		#if [ "$2" != true ]; then
-		#	draw_pitch
-		#fi
 		return
 	fi
 
@@ -9124,7 +9123,6 @@ main() {
 			'i')
 				main_menu false
 				if [ "$?" == "$RETURN_JUMP" ]; then
-					JUMP="1"
 					return $RETURN_JUMP
 				fi
 				;;
