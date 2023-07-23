@@ -7296,6 +7296,18 @@ setup_screen() {
 			invert_colors  "$initial_screen"
 		elif [ "$inputchar" == "" ]; then
 			toggle_colors "$initial_screen"
+		elif [ "$inputchar" == "" ]; then
+			if [ "$USE_TAGS" == true ]; then
+				draw_banner "FILENAME"
+				USE_TAGS=false
+			else
+				draw_banner "TAGS"
+				USE_TAGS=true
+			fi
+			sleep $BANNER_WAIT_TIME
+			if [ "$1" != true ]; then
+				reset_buffer
+			fi
 		elif [ "$inputchar" == "#" ]; then
 			save_settings true
 		elif [ "$inputchar" == "c" ]; then
@@ -8865,6 +8877,15 @@ print_queue() {
 			else
 				return $RETURN_NEXT
 			fi
+		elif [ "$inputchar" == "" ]; then
+			if [ "$USE_TAGS" == true ]; then
+				draw_banner "FILENAME"
+				USE_TAGS=false
+			else
+				draw_banner "TAGS"
+				USE_TAGS=true
+			fi
+			sleep $BANNER_WAIT_TIME
 		elif [ "$inputchar" == "s" ]; then
 			start_search
 			if [ "$?" == "$RETURN_JUMP" ]; then
@@ -10075,10 +10096,11 @@ main() {
 			'')
 				if [ "$USE_TAGS" == true ]; then
 					draw_banner "FILENAME"
+					USE_TAGS=false
 				else
 					draw_banner "TAGS"
+					USE_TAGS=true
 				fi
-				(( USE_TAGS ^= 1 ))
 				sleep $BANNER_WAIT_TIME
 				reset_buffer
 				redraw_buffer
