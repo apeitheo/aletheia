@@ -483,12 +483,12 @@ cache_metadata() {
 		echo -ne "INSERT INTO music (filename, artist, song, album, number) VALUES ('$i', '$artist', '$song', '$album', '$tracknum');"
 	}
 
-	export -f func
+	export -f extract_func
 	parallel --citation <<< "will cite\n" >/dev/null 2>/dev/null
 	draw_wait
 	parallel -j0 extract_func {} ::: "${music_array[@]}" >"$ALETHEIA/useless_out" 2>"$ALETHEIA/useless" &
 	parallel_pid=$!
-	sleep 0.2
+	clear
 	tail -f "$ALETHEIA/useless" | grep -E "^:" &
 
 	while true; do
