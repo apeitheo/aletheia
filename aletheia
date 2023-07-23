@@ -30,6 +30,12 @@ AUDIO_FORMATS="mp3,flac,ogg,wav,wma"
 VIDEO_FORMATS="mkv,mp4,avi,webm,mpg,mpeg"
 NO_HELP=${NO_HELP:-false}
 NO_VERTICAL_PADDING=${NO_VERTICAL_PADDING:-false}
+USE_TAGS=true
+
+ALETHEIA="$HOME/.aletheia"
+MUSICDIR=${MUSICDIR:-"$HOME/Music/"}
+SOUNDDIR=${SOUNDDIR:-"$HOME/Sounds/"}
+VIDEODIR=${VIDEODIR:-"$HOME/Videos/"}
 
 export MAIN_REFRESH_TIME
 export MPLAYER_PATH
@@ -62,15 +68,10 @@ stty -echo
 stty -ixon
 clear
 
-ALETHEIA="$HOME/.aletheia"
-MUSICDIR=${MUSICDIR:-"$HOME/Music/"}
-SOUNDDIR=${SOUNDDIR:-"$HOME/Sounds/"}
-VIDEODIR=${VIDEODIR:-"$HOME/Videos/"}
-
 WEB_CLIENT=${WEB_CLIENT:-0}
 
 export HELP_BUFFER=()
-export VOICE_HELP_BUFFER=()
+export SETUP_HELP_BUFFER=()
 export TMP_BUFFER=()
 export TWO_COLUMN=false
 export OUTPUT=""
@@ -449,6 +450,56 @@ if [ "$DEFAULT_THEME" == true ]; then
 		BLUE_BLACK="$BLUE"
 	fi
 fi
+
+cache_metadata() {
+	export db_file="$ALETHEIA/music.db"
+	rm -f "$db_file" >/dev/null 2>/dev/null
+	sqlite3 "$db_file" "CREATE TABLE IF NOT EXISTS music (filename TEXT PRIMARY KEY, artist TEXT, song TEXT, album TEXT, number TEXT);"
+
+	AUDIO_FORMATS="mp3,flac,ogg"
+	regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
+
+	mapfile -t music_array < <(find "$MUSICDIR" -type f -iregex "$regex")
+
+	extract_func() {
+		line=$(exiftool -Artist -Title -Album -TrackNumber "$1")
+		artist="$(echo -ne "$line" | grep -E "^Artist")"
+		song="$(echo -ne "$line" | grep -E "^Title")"
+		album="$(echo -ne "$line" | grep -E "^Album")"
+		tracknum="$(echo -ne "$line" | grep -E "^Track Number")"
+		artist="${artist##*: }"
+		song="${song##*: }"
+		echo -e ": $artist - $song" >/dev/stderr
+		album="${album##*: }"
+		tracknum="${tracknum##*: }"
+		artist="${artist//\'/\'\'}"
+		song="${song//\'/\'\'}"
+		album="${album//\'/\'\'}"
+		tracknum="${tracknum//\'/\'\'}"
+		i="${1##*/}"
+		i="${i//\'/\'\'}"
+		((index++))
+
+		echo -ne "INSERT INTO music (filename, artist, song, album, number) VALUES ('$i', '$artist', '$song', '$album', '$tracknum');"
+	}
+
+	export -f func
+	parallel --citation <<< "will cite\n" >/dev/null 2>/dev/null
+	draw_wait
+	parallel -j0 extract_func {} ::: "${music_array[@]}" >"$ALETHEIA/useless_out" 2>"$ALETHEIA/useless" &
+	parallel_pid=$!
+	sleep 0.2
+	tail -f "$ALETHEIA/useless" | grep -E "^:" &
+
+	while true; do
+		if ! ps -p $parallel_pid >/dev/null 2>/dev/null; then
+			break
+		fi
+	done
+
+	line="$(cat "$ALETHEIA/useless_out")"
+	sqlite3 "$db_file" "BEGIN;$line;END;"
+}
 
 compute() {
 	# if no pitch change requested, eliminate the overhead of calling sox to
@@ -878,14 +929,25 @@ e  Play Transition
 5  Start Position
 7  End Position"
 
-VOICE_HELP="Voice Controls
+SETUP_HELP="#  Save Settings
+Voice Controls
 d  Toggle Voice
 Voice Volume Settings
 8  Volume Down
 9  Volume Up
 Voice Pitch Settings
 J  Down
-K  Up"
+K  Up
+Metadata Cache
+c  Cache Tags
+^T  Toggle Tags
+Customization
+^A  Select Theme
+^P  Toggle Panels
+^D  Toggle Dark Mode
+^O  Invert Color
+^Y  Toggle Color"
+
 
 QUEUE_HELP="Queue Controls
 j  Page Down
@@ -1021,7 +1083,6 @@ $  Save Position
 Video Controls
 <  Enable Video
 >  Fullscreen Video
-^T  Always on Top
 Download Controls
 W  Add Downloads
 ^W  Jump Downloads
@@ -1037,13 +1098,13 @@ z  Redraw Screen
 |  Vanish Editor"
 
 HELP_LENGTH="$(echo -e "$HELP" | wc -l)"
-VOICE_HELP_LENGTH="$(echo -e "$VOICE_HELP" | wc -l)"
+SETUP_HELP_LENGTH="$(echo -e "$SETUP_HELP" | wc -l)"
 SCALE_HELP_LENGTH="$(echo -e "$SCALE_HELP" | wc -l)"
 REPEAT_HELP_LENGTH="$(echo -e "$REPEAT_HELP" | wc -l)"
 QUEUE_HELP_LENGTH="$(echo -e "$QUEUE_HELP" | wc -l)"
 
 export HELP_LENGTH
-export VOICE_HELP_LENGTH
+export SETUP_HELP_LENGTH
 export SCALE_HELP_LENGTH
 export REPEAT_HELP_LENGTH
 export QUEUE_HELP_LENGTH
@@ -1066,7 +1127,7 @@ draw_banner() {
 	else
 		RIGHT_BANNER_WIDTH="$((${#i}+2))"
 	fi
-	if [ "$2" == false ] || [ "$2" == "" ]; then
+	if [ "$2" != true ]; then
 		COLOR1="$WHITE_BLACK"
 		COLOR2="$BLUE_BLACK"
 		length="$POSITION_WIDTH"
@@ -1131,13 +1192,29 @@ set_loop() {
 set_loop_artist() {
 	local force_enable=$1
 	if [ "$LOOP_ARTIST" == false ] || [ "$force_enable" == true ]; then
-		LOOP=false
-		LOOP_ARTIST=true
-		TRACK_RANDOM=false
-		ONLY_LOCKED=false
-		LOOP_ARTIST_NAME="$(echo "$TITLE" | sed -e "s/ - //g" | cut -d'' -f1 | tr '[:upper:]' '[:lower:]')"
-		gtts_speak "loop artist"
-		draw_banner "LOOP ARTIST"
+		if [ "$USE_TAGS" == true ]; then
+			get_metadata "$POSITION" >/dev/null
+			if [ "$artist" != "" ]; then
+				LOOP_ARTIST_NAME="${artist,,}"
+				LOOP=false
+				LOOP_ARTIST=true
+				TRACK_RANDOM=false
+				ONLY_LOCKED=false
+				gtts_speak "loop artist"
+				draw_banner "LOOP ARTIST"
+			fi
+		else
+			if [[ "$TITLE" == *" - "* ]]; then
+				LOOP=false
+				LOOP_ARTIST=true
+				TRACK_RANDOM=false
+				ONLY_LOCKED=false
+				LOOP_ARTIST_NAME="${TITLE%% - *}"
+				LOOP_ARTIST_NAME="${LOOP_ARTIST_NAME,,}"
+				gtts_speak "loop artist"
+				draw_banner "LOOP ARTIST"
+			fi
+		fi
 	else
 		gtts_speak "loop off"
 		LOOP=false
@@ -1191,7 +1268,7 @@ set_only_locked() {
 				index=0
 				for i in $(find "$MUSICDIR" -type f -regex "$regex" | shuf); do
 					if [ "$(echo -ne "$i" | grep '.repeat.')" == "" ]; then
-						queue_array[$index]="$(echo -ne "$i" | rev | cut -d'.' -f2- | rev)"
+						queue_array[index]="${i%.*}"
 						index=$((index+1))
 					fi
 				done
@@ -3157,7 +3234,7 @@ main_menu() {
 	OPT[2]="Sound"
 	OPT[3]="Video"
 	OPT[4]="Queue"
-	OPT[5]="Voice"
+	OPT[5]="Setup"
 	OPT[6]="Help"
 	OPT[7]="Quit"
 	if [ "$LINES" -gt "10" ]; then
@@ -3517,7 +3594,7 @@ main_menu() {
 			tput el
 			tput cup $((LINES-2))
 			tput el
-			voice_settings_screen true
+			setup_screen "$initial_screen"
 			if [ "$initial_screen" == false ]; then
 				redraw_buffer
 			fi
@@ -3758,14 +3835,14 @@ main_menu() {
 						return $RETURN_JUMP
 					fi
 					menu_start_over=true
-				elif [ "${OPT[$SELECTION]}" == "Voice" ]; then
+				elif [ "${OPT[$SELECTION]}" == "Setup" ]; then
 					if [ "$NO_VERTICAL_PADDING" == false ]; then
 						tput cup 1
 						tput el
 						tput cup $((LINES-2))
 						tput el
 					fi
-					voice_settings_screen true
+					setup_screen "$initial_screen"
 				elif [ "${OPT[$SELECTION]}" == "Help" ]; then
 					tput cup 1
 					tput el
@@ -5535,45 +5612,41 @@ reset_buffer() {
 	fi
 
 	for i in $(seq 1 "$diff"); do
-		line="$(echo -ne "${queue_array[$((i+HALF-2))]}")"
-		new_line="$line"
 		pos=$((i-1+HALF))
-		orig_line="$line"
-		line=${line##*/}
-		line=${line%.*}
+		new_line="${queue_array[i+HALF-2]}"
+		orig_line="$new_line"
 
-		if [[ "$line" == *" - "* ]]; then
-			artist="${line%% - *}"
-			song="${line##* - }"
-			line="$artist - $song"
-		fi
-
-		if [ "$pos" == "$POSITION" ]; then
-			REPLACE="$BLUE_BLACK"
-		else
-			REPLACE=""
-		fi
+		line="$(get_metadata "$pos")"
 
 		ext=${orig_line##*.}
 		filename_without_ext=${orig_line%%.*}
 
+		_REP="$WHITE"
+		if [ "$pos" == "$POSITION" ] && [ "$PANELS_ENABLED" == true ]; then
+			_REP="$WHITE_BLACK"
+		fi
+
 		if [ -e "$filename_without_ext.repeat.$ext" ]; then
-			REP="$BLUE"
+			if [ "$pos" == "$POSITION" ] && [ "$PANELS_ENABLED" ]; then
+				REP="$BLUE_BLACK"
+			else
+				REP="$BLUE"
+			fi
 		else
 			REP=""
 		fi
 
 		if [ -e "$orig_line.locked" ]; then
 			if [ -e "$orig_line.repeats" ]; then
-				INDICATOR="${WHITE}$REP#"
+				INDICATOR="${_REP}$REP#"
 			else
-				INDICATOR="${WHITE}$"
+				INDICATOR="${_REP}$"
 			fi
 		else
 			if [ -e "$orig_line.repeats" ]; then
-				INDICATOR="${WHITE}$REP&"
+				INDICATOR="${_REP}$REP&"
 			else
-				INDICATOR="${BLUE} "
+				INDICATOR="${_REP} "
 			fi
 		fi
 		
@@ -5629,7 +5702,7 @@ reset_buffer() {
 			buf_space="$(printf '%*s' $((COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3)) "")"
 		fi
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
-			BUFFER="$BUFFER$BLUE_BLACK$PADDING$INDICATOR $display_pad$BLUE_BLACK$pos $line$buf_space$APPEND_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING$(tput sgr0)\n"
+			BUFFER="$BUFFER$BLUE_BLACK$PADDING$BLUE_BLACK$INDICATOR$BLUE_BLACK $BLUE_BLACK$display_pad$BLUE_BLACK$pos $line$buf_space$APPEND_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING$(tput sgr0)\n"
 			LOCKING_POS="$((i-1))"
 		else
 			if [ "$PANELS_ENABLED" == false ]; then
@@ -6114,55 +6187,66 @@ toggle_colors() {
 	draw_wait false
 	if [ "$COLORS_ENABLED" == false ]; then
 		COLORS_ENABLED=true
-		BLUE=$orig_blue
-		RED="${ESC}1;31m"
-		if [ "$PANELS_ENABLED" == true ]; then
-			BLUE_BLACK="${ESC}1;34;1;40m"
-			WHITE_BLACK="${ESC}1;37;1;40m"
-		else
-			BLUE_BLACK="${ESC}1;34m"
-			WHITE_BLACK="${ESC}1;37m"
-		fi
-	else
-		orig_blue_black=$BLUE_BLACK
-		orig_blue=$BLUE
-		COLORS_ENABLED=false
-		if [ "$PANELS_ENABLED" == true ]; then
-			BLUE_BLACK="${ESC}1;37;1;40m"
-			WHITE_BLACK="${ESC}1;37;1;40m"
-		else
-			BLUE_BLACK="${ESC}1;37m"
-			WHITE_BLACK="${ESC}1;37m"
-		fi
-		RED="${ESC}1;37m"
-		BLUE="${ESC}1;37m"
-	fi
-	if [ "$DARK_BACKGROUND" == true ]; then
-		WHITE="${ESC}1;37m"
-		if [ "$PANELS_ENABLED" == true ]; then
-			WHITE_BLACK="${ESC}1;37;1;40m"
-		else
-			WHITE_BLACK="${ESC}1;37m"
-		fi
-	else
-		WHITE="${ESC}1;30m"
-		if [ "$PANELS_ENABLED" == true ]; then
-			WHITE_BLACK="${ESC}1;30;1;40m"
-		else
-			WHITE_BLACK="${ESC}1;30m"
-		fi
-	fi
+		value="$(read_config "COLOR_HIGHLIGHT")"
+		if [ "$value" != "" ]; then
+			COLOR_HIGHLIGHT="$value"
 
-	if [ "$COLORS_ENABLED" == true ]; then
-		WHITE=$orig_WHITE
+			color="${value#"#"}"
+			red=$((16#${color:0:2}))
+			green=$((16#${color:2:2}))
+			blue=$((16#${color:4:2}))
+
+			BLUE="${ESC}1;38;2;${red};${green};${blue}m"
+		fi
+
+		value="$(read_config "COLOR_UNSELECTED")"
+		if [ "$value" != "" ]; then
+			COLOR_UNSELECTED="$value"
+
+			color="${value#"#"}"
+			red=$((16#${color:0:2}))
+			green=$((16#${color:2:2}))
+			blue=$((16#${color:4:2}))
+
+			WHITE="${ESC}1;38;2;${red};${green};${blue}m"
+			if [ "$PANELS_ENABLED" == true ]; then
+				WHITE_BLACK="${ESC}1;38;2;${red};${green};${blue};1;40m"
+			else
+				WHITE_BLACK="${ESC}1;38;2;${red};${green};${blue}m"
+			fi
+		fi
+
+		value="$(read_config "COLOR_PANEL")"
+		if [ "$value" != "" ]; then
+			COLOR_PANEL="$value"
+
+			colorblue="${COLOR_PANEL#"#"}"
+			red=$((16#${colorblue:0:2}))
+			green=$((16#${colorblue:2:2}))
+			blue=$((16#${colorblue:4:2}))
+
+			if [ "$PANELS_ENABLED" == true ]; then
+				WHITE_BLACK="${WHITE%m};48;2;$red;$green;${blue}m"
+				BLUE_BLACK="${BLUE%m};48;2;$red;$green;${blue}m"
+			fi
+			COLOR_ACCENT="${ESC}1;38;2;$red;$green;${blue}m"
+		fi
+	else
+		COLORS_ENABLED=false
+		PANELS_ENABLED=true
+		BLUE_BLACK="${ESC}1;37;1;40m"
+		WHITE_BLACK="${ESC}1;37;1;40m"
+		RED="${ESC}0;37m"
+		BLUE="${ESC}0;37m"
+		WHITE="${ESC}0;37m"
 	fi
 	render_all_help_screens
-	if [ "$1" == false ] || [ "$1" == "" ]; then
+	if [ "$1" != true ]; then
 		reset_buffer
 	fi
 	draw_volume
 	draw_equalizer
-	if [ "$1" == false ] || [ "$1" == "" ]; then
+	if [ "$1" != true ]; then
 		redraw_buffer
 		draw_pitch
 	fi
@@ -6608,7 +6692,59 @@ render_all_help_screens() {
 	else
 		rendered=false
 	fi
-	render_voice_settings_screen
+	render_setup_screen
+}
+
+get_metadata() {
+	pos=$1
+	if [ "$USE_TAGS" == true ]; then
+		if [ -e "$ALETHEIA/music.db" ]; then
+			#   ,___,
+			#  ( o,o )
+			#  { `" }
+			# -"---"--
+			x="${queue_array[$((pos-1))]##*/}"
+			x="${x//\'/\'\'}"
+			query_result=$(sqlite3 "$ALETHEIA/music.db" "SELECT artist, song, album FROM music WHERE filename='$x';")
+
+			IFS='|' read -r artist song album <<< "$query_result"
+		else
+			artist=""
+			album=""
+			song=""
+		fi
+
+		if [ "$artist" == "" ] || [ "$song" == "" ]; then
+			line="${queue_array[$((pos-1))]##*/}"
+			line="${line%.*}"
+
+			if [[ "$line" == *" - "* ]]; then
+				artist="${line%% - *}"
+				song="${line##* - }"
+				line="$artist - $song"
+			else
+				line="${queue_array[$((pos-1))]##*/}"
+				line="${line%.*}"
+			fi
+		else
+			if [ "$album" == "" ]; then
+				line="$artist ~ $song"
+			else
+				line="$artist ~ $album ~ $song"
+			fi
+		fi
+	else
+		line="${queue_array[$((pos-1))]}"
+		line=${line##*/}
+		line=${line%.*}
+
+		if [[ "$line" == *" - "* ]]; then
+			artist="${line%% - *}"
+			song="${line##* - }"
+			line="$artist - $song"
+		fi
+	fi
+	echo -ne "$line"
 }
 
 draw_pitch() {
@@ -7044,9 +7180,9 @@ shuffle_queue() {
 	redraw_buffer
 }
 
-render_voice_settings_screen() {
-	render $((VOICE_HELP_LENGTH+1)) "$(echo -ne "$VOICE_HELP" | wc -L)" "$VOICE_HELP"
-	VOICE_HELP_BUFFER=("${TMP_BUFFER[@]}")
+render_setup_screen() {
+	render $((SETUP_HELP_LENGTH+1)) "$(echo -ne "$SETUP_HELP" | wc -L)" "$SETUP_HELP"
+	SETUP_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
 render_scale_help_screen() {
@@ -7054,11 +7190,11 @@ render_scale_help_screen() {
 	SCALE_HELP_BUFFER=("${TMP_BUFFER[@]}")
 }
 
-voice_settings_screen() {
-	gtts_speak "voice settings"
+setup_screen() {
+	gtts_speak "settings"
 	flagged=false
 
-	width="$(echo -ne "$VOICE_HELP" | wc -L)"
+	width="$(echo -ne "$SETUP_HELP" | wc -L)"
 	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
 		TWO_COLUMN=true
 	else
@@ -7066,22 +7202,22 @@ voice_settings_screen() {
 	fi
 
 	page=0
-	until [ "$page" -lt "0" ] || [ "$page" -gt "${#VOICE_HELP_BUFFER[@]}" ]; do
+	until [ "$page" -lt "0" ] || [ "$page" -gt "${#SETUP_HELP_BUFFER[@]}" ]; do
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
 			number_per_page=$((LINES-2))
 		else
 			number_per_page=$((LINES-4))
 		fi
 		original_number_per_page=$number_per_page
-		draw_banner "VOICE"
+		draw_banner "SETUP"
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
 			tput cup 1
 		else
 			tput cup 2
 		fi
-		echo -ne "$NOCOLOR${VOICE_HELP_BUFFER[$page]}"
+		echo -ne "$NOCOLOR${SETUP_HELP_BUFFER[$page]}"
 
-		helpbuflines=$(echo -ne "${VOICE_HELP_BUFFER[$page]}" | grep -cvE "^$")
+		helpbuflines=$(echo -ne "${SETUP_HELP_BUFFER[$page]}" | grep -cvE "^$")
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
 			if $NO_VERTICAL_PADDING; then
 				empty_pane "$((helpbuflines+1))"
@@ -7111,7 +7247,7 @@ voice_settings_screen() {
 		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			if [ "$((page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
+			if [ "$((page+1))" -lt "${#SETUP_HELP_BUFFER[@]}" ]; then
 				page=$((page+1))
 			fi
 		elif [ "$inputchar" = "k" ]; then
@@ -7147,6 +7283,38 @@ voice_settings_screen() {
 				draw_position
 			fi
 			play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
+		elif [ "$inputchar" == "" ]; then
+			select_color "$initial_screen"
+		elif [ "$inputchar" == "" ]; then
+			toggle_panels "$initial_screen"
+		elif [ "$inputchar" == "" ]; then
+			toggle_dark_mode
+			draw_volume
+			draw_equalizer
+			draw_position
+		elif [ "$inputchar" == "" ]; then
+			invert_colors  "$initial_screen"
+		elif [ "$inputchar" == "" ]; then
+			toggle_colors "$initial_screen"
+		elif [ "$inputchar" == "#" ]; then
+			save_settings true
+		elif [ "$inputchar" == "c" ]; then
+			cache_metadata
+			draw_volume
+			draw_equalizer
+			if [ "$1" == true ]; then
+				draw_position
+				return
+			else
+				if [ "$in_menu" != true ]; then
+					reset_buffer
+					redraw_buffer
+				else
+					draw_banner "MENU"
+				fi
+				draw_position
+				return
+			fi
 		elif [ "$inputchar" == "8" ]; then
 			if [ "$(echo -e "$VOICE_VOLUME > 0.05" | bc)" == "1" ]; then
 				VOICE_VOLUME="$(echo "$VOICE_VOLUME-0.05" | bc)"
@@ -7160,7 +7328,7 @@ voice_settings_screen() {
 			gtts_speak "$VOICE_VOLUME" false false true
 			flagged=true
 		elif [ "$inputchar" == "d" ]; then
-			echo "$VOICE_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
+			echo "$SETUP_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g" | sed "s/EDO/e d o/g" | sed "s/PCM/p,c,m/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -7180,7 +7348,7 @@ voice_settings_screen() {
 			read -rn2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$((page+1))" -lt "${#VOICE_HELP_BUFFER[@]}" ]; then
+				if [ "$((page+1))" -lt "${#SETUP_HELP_BUFFER[@]}" ]; then
 					page=$((page+1))
 				fi
 				;;
@@ -7615,7 +7783,7 @@ start_search() {
 	draw_position
 	tput rc
 	echo -ne "$BLUE_BLACK"
-	gtts_speak "enter search keyword"
+	gtts_speak "enter search keywords"
 	if [ "$WEB_CLIENT" == "0" ]; then
 		jump="$(read_line)"
 	else
@@ -7624,6 +7792,7 @@ start_search() {
 			jump="$(read_line)"
 		fi
 	fi
+	jump_regex="${jump// /.*}"
 	if [ "$jump" != "" ]; then
 		if [ "$(isnum "$jump")" != "0" ]; then
 			jump="${jump#"${jump%%[!0]*}"}"
@@ -7653,7 +7822,7 @@ start_search() {
 			fi
 		else
 			jump="$(echo -ne "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
-			mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -ni "$jump" | grep -v '.repeat.')
+			mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -niE "$jump_regex" | grep -v '.repeat.')
 			length=${#search_array[@]}
 			if [ "$length" == "1" ]; then
 				LOOP_ARTIST=false
@@ -7689,21 +7858,15 @@ start_search() {
 new_playlist() {
 	local initial_screen=$1
 	KEYWORD=""
-	gtts_speak "enter keyword to start new playlist"
+	gtts_speak "enter keywords to start new playlist"
 	draw_banner "SEARCH"
 	keyw="$(read_line)"
 	if [ "$keyw" == "" ]; then
-		if [ "$initial_screen" == true ]; then
-			empty_pane
-		else
-			draw_pitch
-		fi
+		draw_pitch
 	else
-		for i in $keyw; do
-			KEYWORD="$KEYWORD$i.*"
-		done
+		KEYWORD="${keyw// /.*}"
 		file_list="$(find "$MUSICDIR" -type f)"
-		matches="$(echo -e "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${keyw}.*mp3$|.*${keyw}.*flac$" | grep -v '.repeat.')"
+		matches="$(echo -e "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${KEYWORD}.*mp3$|.*${KEYWORD}.*flac$" | grep -v '.repeat.')"
 		if [ "$2" == "true" ]; then
 			IFS=$'\n'
 			index=$TOTAL_QUEUE
@@ -7794,7 +7957,8 @@ search_queue() {
 				break
 			fi
 
-			line="$(echo "$line" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
+			line="${line##*/}"
+			line="${line%.*}"
 			tmp_buf[$((i-1))]="$m. $line."
 
 			if (( m < 10 )); then
@@ -7975,17 +8139,16 @@ search_queue() {
 				BUFFER="$BUFFER_BACKUP"
 			fi
 			number_per_page="$original_number_per_page"
+			draw_volume
+			draw_equalizer
 			if [ "$1" == false ]; then
 				gtts_speak "search canceled. main screen"
-				draw_pitch
-				draw_position
+				redraw_buffer
 			else
 				gtts_speak "search canceled"
-				draw_volume
-				draw_equalizer
-				draw_pitch
-				draw_position
 			fi
+			draw_pitch
+			draw_position
 			return
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -8116,7 +8279,7 @@ queue_controls() {
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 			empty_pane "$((number_per_page+2))"
 		fi
-		draw_banner "QUEUE"
+		draw_banner "SELECT LIST"
 
 		read -rsn1 inputchar <&1
 
@@ -8248,7 +8411,7 @@ queue_controls() {
 			else
 				gtts_speak "canceled"
 			fi
-			draw_banner "QUEUE"
+			draw_banner "SELECT LIST"
 			draw_position
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -8278,7 +8441,7 @@ queue_controls() {
 			reset_buffer
 			draw_volume
 			draw_equalizer
-			draw_banner "QUEUE"
+			draw_banner "SELECT LIST"
 			draw_position
 			FLAGGED=false
 			pos=1
@@ -8496,17 +8659,35 @@ print_queue() {
 			new_buf=""
 			tmp_buf=()
 			for i in $(seq 1 $number_per_page); do
-				if [ -e "${queue_array[$((m-1))]}.locked" ]; then
-					if [ -e "${queue_array[$((m-1))]}.repeats" ]; then
-						INDICATOR="$BLUE$REPLACE${WHITE}#"
+				_REP="$WHITE"
+				if [ "$m" == "$POSITION" ] && [ "$PANELS_ENABLED" == true ]; then
+					_REP="$WHITE_BLACK"
+				fi
+
+				n=${queue_array[$((m-1))]}
+				ext=${n##*.}
+				piece=${n%.*}
+				piece=${piece%.*}
+				if [ -e "${piece}.repeat.${ext}" ]; then
+					if [ "$m" == "$POSITION" ] && [ "$PANELS_ENABLED" ]; then
+						REP="$BLUE_BLACK"
 					else
-						INDICATOR="$BLUE${REPLACE}${WHITE}$"
+						REP="$BLUE"
 					fi
 				else
-					if [ -e "${queue_array[$((m-1))]}.repeats" ]; then
-						INDICATOR="$BLUE$REPLACE${WHITE}&"
+					REP=""
+				fi
+				if [ -e "$n.locked" ]; then
+					if [ -e "$n.repeats" ]; then
+						INDICATOR="${_REP}$REP#"
 					else
-						INDICATOR="${BLUE} "
+						INDICATOR="${_REP}$"
+					fi
+				else
+					if [ -e "$n.repeats" ]; then
+						INDICATOR="${_REP}$REP&"
+					else
+						INDICATOR="${_REP} "
 					fi
 				fi
 				if [ "$TOTAL_QUEUE" -gt "9" ]; then
@@ -8522,19 +8703,21 @@ print_queue() {
 				else
 					rep="$BLUE"
 				fi
-				nline="${queue_array[$((m-1))]##*/}"
-				nline="${nline%.*}"
+				#nline="${queue_array[$((m-1))]##*/}"
+				#nline="${nline%.*}"
 				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
 					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad}))
-					nline="${nline:0:$value}"
-					padd="$(printf '%*s' $((value-${#nline})) "")"
-					new_buf="$new_buf$BLUE_BLACK${PADDING}$INDICATOR$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$nline$padd$PADDING$NOCOLOR\n"
+					nline="$(get_metadata "$m")"
+					newline="${nline:0:$value}"
+					padd="$(printf '%*s' $((value-${#newline})) "")"
+					new_buf="$new_buf$BLUE_BLACK${PADDING}$INDICATOR$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$newline$padd$PADDING$NOCOLOR\n"
 				else
-					nline="${queue_array[$((m-1))]##*/}"
-					nline="${nline%.*}"
+					#nline="${queue_array[$((m-1))]##*/}"
+					nline="$(get_metadata "$m")"
+					#nline="${nline%.*}"
 					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}))
-					nline="${nline:0:$value}"
-					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$nline$(tput el)\n"
+					newline="${nline:0:$value}"
+					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$newline$(tput el)\n"
 				fi
 				tmp_buf[i]="$m. $nline. "
 				m=$((m+1))
@@ -8555,7 +8738,7 @@ print_queue() {
 			continue
 		fi
 
-		draw_banner "QUEUE"
+		draw_banner "PLAYLIST"
 		tput rc
 		
 		read -rsn1 inputchar
@@ -8702,7 +8885,7 @@ print_queue() {
 			original_number_per_page=$number_per_page
 			draw_volume
 			draw_equalizer
-			draw_banner "QUEUE"
+			draw_banner "PLAYLIST"
 			draw_position
 			reset_buffer
 			continue
@@ -9739,11 +9922,13 @@ main() {
 					gtts_speak "video disabled"
 					VIDEO=false
 					draw_banner "OFF"
+					echo "vo_ontop 0" >"$ALETHEIA/pipe$$" &
 				else
 					gtts_speak "video enabled"
 					VIDEO=true
 					VIDEO_FLAGGED=true
 					draw_banner "VIDEO ON"
+					echo "vo_ontop 1" >"$ALETHEIA/pipe$$" &
 				fi
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				JUMP="$POSITION"
@@ -9888,18 +10073,15 @@ main() {
 				fi
 				;;
 			'')
-				if [ "$ALWAYS_ON_TOP" == true ]; then
-					gtts_speak "always on top"
-					draw_banner "OFF"
-					ALWAYS_ON_TOP=false
-					echo "vo_ontop 0" >"$ALETHEIA/pipe$$" &
+				if [ "$USE_TAGS" == true ]; then
+					draw_banner "FILENAME"
 				else
-					gtts_speak "off"
-					draw_banner "ON TOP"
-					ALWAYS_ON_TOP=true
-					echo "vo_ontop 1" >"$ALETHEIA/pipe$$" &
+					draw_banner "TAGS"
 				fi
+				(( USE_TAGS ^= 1 ))
 				sleep $BANNER_WAIT_TIME
+				reset_buffer
+				redraw_buffer
 				draw_pitch
 				draw_position
 				;;
@@ -9926,7 +10108,7 @@ main() {
 					render_all_help_screens
 					DIMENSIONS_RESET=false
 				fi
-				voice_settings_screen
+				setup_screen
 				;;
 			'/')
 				set_custom_edo
@@ -10473,9 +10655,7 @@ rendered=false
 
 if [ "$1" == "--music" ]; then
 	if [ "$2" != "" ]; then
-		for i in $KEYWORDS; do
-			KEYWORD="$KEYWORD$i.*"
-		done
+		KEYWORD="${KEYWORDS// /.*}"
 		regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 	else
 		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
@@ -10485,9 +10665,7 @@ if [ "$1" == "--music" ]; then
 	SHUFFLED=true
 elif [ "$1" == "--sound" ] || [ "$WEB_CLIENT" == "1" ]; then
 	if [ "$2" != "" ]; then
-		for i in $KEYWORDS; do
-			KEYWORD="$KEYWORD$i.*"
-		done
+		KEYWORD="${KEYWORDS// /.*}"
 		regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 	else
 		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
@@ -10501,9 +10679,7 @@ elif [ "$1" == "--sound" ] || [ "$WEB_CLIENT" == "1" ]; then
 	fi
 elif [ "$1" == "--video" ]; then
 	if [ "$2" != "" ]; then
-		for i in $KEYWORDS; do
-			KEYWORD="$KEYWORD$i.*"
-		done
+		KEYWORD="${KEYWORDS// /.*}"
 		regex=".*${KEYWORD}.*\.\(${VIDEO_FORMATS//,/\\|}\)$"
 	else
 		regex=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
@@ -10515,15 +10691,13 @@ elif [ "$1" == "--directory" ]; then
 	if [ "$2" != "" ]; then
 		if [ -d "$2" ]; then
 			if [ "$3" != "" ]; then
-				KEYWORD=".*"
-				for i in "${@:3}"; do
-					KEYWORD+="$i.*"
-				done
+				KEYWORD="${*:3}"
+				KEYWORD="${KEYWORD// /.*}"
 				regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
 			else
 				regex=".*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
 			fi
-			mapfile -t queue_array < <(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf)
+			mapfile -t queue_array < <(find "$2" -type f -iregex "$regex" | shuf)
 			TOTAL_QUEUE=${#queue_array[@]}
 			nodir=false
 		else
@@ -10601,10 +10775,8 @@ elif [ "$1" == "--mplayer-path" ]; then
 		start_at_pos=1
 	fi
 elif [ "$1" != "" ]; then
-	KEYWORD=".*"
-	for i in "$@"; do
-		KEYWORD+="$i.*"
-	done
+	KEYWORD="${*}"
+	KEYWORD="${KEYWORD// /.*}"
 	regex=".*${KEYWORD}.*\.\(${AUDIO_FORMATS//,/\\|}\|${VIDEO_FORMATS//,/\\|}\)$"
 	mapfile -t queue_array < <(find "$MUSICDIR" "$SOUNDDIR" "$VIDEODIR" -type f -iregex "$regex" | shuf)
 	TOTAL_QUEUE=${#queue_array[@]}
