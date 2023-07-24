@@ -6,7 +6,7 @@ The dependencies needed to run Aletheia are:
 
 bash, pactl, calc, bc, gtts-cli, espeak-ng, sox, ffmpeg, ffprobe, mplayer, parallel, sqlite3
 
-To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' and confirm to save.
+To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' and confirm to save. Changing themes, voice settings, and the option to cache metadata tags is avaliable in the Setup screen on the main menu.
 
 If your distribution isn't listed below, you can use the provided install and uninstall scripts:
 
@@ -20,21 +20,28 @@ Slackware Package: ./aletheia.SlackBuild
 List of installed files when using ./install:
 
 /usr/local/bin/aletheia
+/usr/local/bin/aletheia_desktop_launcher
 /usr/local/share/man/man1/aletheia.1
+/usr/local/share/applications/aletheia.desktop
+/usr/local/share/icons/aletheia.png
 
 DESTDIR=/path/to/directory ./install to install somewhere other than /usr/local
 
 List of installed files for DEB/RPM packages:
 
 /usr/bin/aletheia
+/usr/bin/aletheia_desktop_launcher
 /usr/share/man/man1/aletheia.1.gz
+/usr/share/applications/aletheia.desktop
+/usr/share/icons/aletheia.png
 
 List of installed files for Slackware package:
 
 /usr/bin/aletheia
+/usr/bin/aletheia_desktop_launcher
 /usr/man/man1/aletheia.1.gz
-
-There are xfce4-terminal and gnome-terminal.desktop files, as well as an icon, included to dedicate a terminal to Aletheia and give it a launchable icon. To install one or the other, place in ~/.local/share/applications/ or /usr/local/share/applications/, and the icon in ~/.icons/ or /usr/local/share/icons/
+/usr/share/applications/aletheia.desktop
+/usr/share/icons/aletheia.png
 
 Patreon: https://www.patreon.com/aletheia_project
 GitHub: https://www.github.com/apeitheo/aletheia
