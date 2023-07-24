@@ -5,4 +5,4 @@ Type=Application
 Terminal=false
 Name=Aletheia
 Exec=xfce4-terminal --command="aletheia"
-Icon=aletheia.png
+Icon=aletheia
