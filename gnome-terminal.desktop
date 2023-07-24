@@ -2,5 +2,5 @@
 Type=Application
 Terminal=false
 Name=Aletheia
-Exec=gnome-terminal --command="aletheia"
-Icon=aletheia.png
+Exec=gnome-terminal -- aletheia
+Icon=aletheia
