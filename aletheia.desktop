@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Terminal=false
+Name=Aletheia
+
+# GNOME
+Exec=/bin/sh -c "/usr/libexec/gnome-terminal-server --app-id=org.gnome.aletheia --class=org.gnome.aletheia --name=org.gnome.aletheia >/dev/null 2>/dev/null & sleep 0.1; gnome-terminal --app-id=org.gnome.aletheia --hide-menubar --geometry=48x15 -- aletheia"
+
+# XFCE
+#Exec=xfce4-terminal --command=aletheia --geometry 48x15 --icon=/usr/share/icons/aletheia.png
+
+# KDE
+#Exec=konsole --hide-menubar --hide-tabbar --title "Aletheia" --icon /usr/share/icons/aletheia.png -e "aletheia"
+
+Icon=aletheia
+StartupWMClass=org.gnome.aletheia
+GenericName=Media Player
+Categories=AudioVideo;Audio;Player;Video;
