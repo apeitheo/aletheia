@@ -4,13 +4,14 @@ GREEN="\033[1;32m"
 BLUE="\033[1;36m"
 NOCOLOR="\033[0m"
 RED="\033[1;31m"
+YELLOW="\033[1;33m"
 
 DESTDIR=${DESTDIR:-/usr/local}
 
 QUIT=false
 USER="$(whoami)"
 
-echo -ne "${GREEN}Aletheia `cat aletheia | grep \"VERSION=\" | cut -d'\"' -f2`\n\n"
+echo -ne "${GREEN}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n\n"
 echo -ne "${BLUE}Checking for dependencies...\n\n"
 
 check_dep() {
@@ -50,25 +51,57 @@ if [ ! -w "$DESTDIR" ]; then
 	exit 1
 fi
 
+DESTDIR=${DESTDIR%/}
+
 mkdir -p "$DESTDIR/bin/"
 mkdir -p "$DESTDIR/share/man/man1/"
+mkdir -p "$DESTDIR/share/applications"
+mkdir -p "$DESTDIR/share/icons"
 
-install -m 755 aletheia "$DESTDIR/bin/"
-install -m 644 aletheia.1 "$DESTDIR/share/man/man1/"
+FAIL=false
 
-chown "$USER:$USER" "$DESTDIR/bin/aletheia"
-chown "$USER:$USER" "$DESTDIR/share/man/man1/aletheia.1"
-
-mandb >/dev/null 2>/dev/null
-
-echo -e "\n${GREEN}Aletheia successfully installed in:$NOCOLOR\n"
-echo "${DESTDIR}/bin/aletheia"
-echo -e "${DESTDIR}/share/man/man1/aletheia.1\n"
-
-if [ "$DESTDIR" != "/usr/local" ] && [ "$DESTDIR" != "/usr/local/" ]; then
-	echo -e "${GREEN}Use DESTDIR=${DESTDIR} ./uninstall to remove$NOCOLOR"
-else
-	echo -e "${GREEN}Use ./uninstall to remove$NOCOLOR"
+if ! install -m 755 aletheia "$DESTDIR/bin/"; then
+	FAIL=true
 fi
+if ! install -m 644 aletheia.1 "$DESTDIR/share/man/man1/"; then
+	FAIL=true
+fi
+if ! install -m 644 aletheia.desktop "$DESTDIR/share/applications/"; then
+	FAIL=true
+fi
+if ! install -m 644 aletheia.png "$DESTDIR/share/icons/"; then
+	FAIL=true
+fi
+DESTDIR_ESCAPED=${DESTDIR//\//\\\/}
+sed -i "s/\/usr\/share\/icons\/aletheia.png/${DESTDIR_ESCAPED}\/share\/icons\/aletheia.png/g" "${DESTDIR}/share/applications/aletheia.desktop"
 
-echo
+FILES[0]="${DESTDIR}/bin/aletheia"
+FILES[1]="${DESTDIR}/share/man/man1/aletheia.1"
+FILES[2]="${DESTDIR}/share/applications/aletheia.desktop"
+FILES[3]="${DESTDIR}/share/icons/aletheia.png"
+
+for i in $(seq 0 $((${#FILES[@]}-1))); do
+	chown "$USER:$USER" "${FILES[i]}"
+done
+
+if ! $FAIL; then
+	if ! mandb >/dev/null 2>/dev/null; then
+		echo "${YELLOW}Warning:$NOCOLOR mandb failed"
+	fi
+
+	echo -e "\n${GREEN}Aletheia installed in:$NOCOLOR\n"
+
+	for i in $(seq 0 $((${#FILES[@]}-1))); do
+		echo "${FILES[i]}"
+	done
+
+	if [ "$DESTDIR" != "/usr/local" ] && [ "$DESTDIR" != "/usr/local/" ]; then
+		echo -e "\n${GREEN}Use DESTDIR=${DESTDIR} ./uninstall to remove$NOCOLOR"
+	else
+		echo -e "\n${GREEN}Use ./uninstall to remove$NOCOLOR"
+	fi
+	exit 0
+else
+	echo -e "\n${RED}Install not successful.$NOCOLOR\n"
+	exit 1
+fi

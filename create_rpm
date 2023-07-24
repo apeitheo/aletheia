@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION=${VERSION:-0.9.6}
-REVISION=3
+REVISION=4
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
 
@@ -19,10 +19,17 @@ fi
 
 mkdir -p "$TMPDIR"/rpmbuild/{BUILD,BUILDROOT,RPMS,SOURCES,SOURCES/man,SPECS,SRPMS}
 
-cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/"
-cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/man/"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/applications"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
 
-echo -e "Summary: A CLI media player with pitch controls and voice feedback\nName: aletheia\nVersion: ${VERSION}\nRelease: 3%{?dist}\nLicense: GPL3\nBuildArch: %{_arch}\nURL: http://www.patreon.com/aletheia_project\nRequires: mplayer\nRequires: pulseaudio-utils\nRequires: calc\nRequires: bc\nRequires: gtts\nRequires: espeak-ng\nRequires: sox\nRequires: ffmpeg\n\n%description\nA command-line media player with pitch and speed controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.\n\n%install\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/aletheia\" %{buildroot}/%{_bindir}/aletheia\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/man/aletheia.1\" %{buildroot}/%{_mandir}/man1/aletheia.1\n\n%files\n%attr(0755, root, root) %{_bindir}/aletheia\n%attr(0644, root, root) %{_mandir}/man1/aletheia.1.gz\n\n%changelog\n* `date +\"%a %b %e %Y\"` Brad Hermanson ${VERSION}-${REVISION}\n- Initial package release" >"$TMPDIR"/rpmbuild/SPECS/aletheia.spec
+cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
+cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
+cp "$SRCDIR/aletheia.desktop" "$TMPDIR/rpmbuild/SOURCES/usr/share/applications/"
+cp "$SRCDIR/aletheia.png" "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
+
+echo -e "Summary: A CLI media player with pitch controls and voice feedback\nName: aletheia\nVersion: ${VERSION}\nRelease: ${REVISION}%{?dist}\nLicense: GPL3\nBuildArch: %{_arch}\nURL: http://www.patreon.com/aletheia_project\nRequires: mplayer\nRequires: pulseaudio-utils\nRequires: calc\nRequires: bc\nRequires: gtts\nRequires: espeak-ng\nRequires: sox\nRequires: ffmpeg\nRequires: parallel\nRequires: sqlite\n\n%description\nA command-line media player with pitch and speed controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.\n\n%install\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/usr/bin/aletheia\" %{buildroot}/%{_bindir}/aletheia\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1/aletheia.1\" %{buildroot}/%{_mandir}/man1/aletheia.1\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/usr/share/applications/aletheia.desktop\" %{buildroot}/%{_datadir}/applications/aletheia.desktop\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/usr/share/icons/aletheia.png\" %{buildroot}/%{_datadir}/icons/aletheia.png\n\n%files\n%attr(0755, root, root) %{_bindir}/aletheia\n%attr(0644, root, root) %{_mandir}/man1/aletheia.1.gz\n%attr(0644, root, root) %{_datadir}/applications/aletheia.desktop\n%attr(0644, root, root) %{_datadir}/icons/aletheia.png\n\n%changelog\n* `date +\"%a %b %e %Y\"` Brad Hermanson ${VERSION}-${REVISION}\n- Initial package release" >"$TMPDIR"/rpmbuild/SPECS/aletheia.spec
 
 cd "$TMPDIR"
 rpmbuild -bb rpmbuild/SPECS/aletheia.spec

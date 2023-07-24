@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION=${VERSION:-0.9.6}
-REVISION=3
+REVISION=4
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -17,15 +17,15 @@ if [ -e "$TMPDIR" ]; then
 	rm -rf "$TMPDIR"
 fi
 
-mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/
+mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/ "$TMPDIR"/usr/share/applications/
 
-echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer, parallel, sqlite3\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
 
-cp "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
-cp "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
+install -m 755 "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
+install -m 644 "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
+install -m 644 "$SRCDIR/aletheia.desktop" "$TMPDIR/usr/share/applications/"
+install -m 644 "$SRCDIR/aletheia.png" "$TMPDIR/usr/share/icons/"
 
-chmod 755 "$TMPDIR/usr/bin/aletheia"
-chmod 644 "$TMPDIR/usr/share/man/man1/aletheia.1"
 cd "$TMPDIR"
 chown -R root:root "$TMPDIR"
 dpkg-deb --build "$TMPDIR"
@@ -33,6 +33,8 @@ if [ -e "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" ]; then
 	mv /tmp/aletheia_${VERSION}-${REVISION}_all.deb $SRCDIR
 	echo "Moved aletheia_${VERSION}-${REVISION}_all.deb to $SRCDIR"
 else
-	echo -e "${RED}Error:$NOCOLOR Package does not exist"
+	echo -e "${RED}Error:$NOCOLOR Package creation not successful."
 	exit 1
 fi
+
+exit 0

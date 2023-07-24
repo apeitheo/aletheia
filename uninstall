@@ -11,13 +11,25 @@ if [ ! -w "$DESTDIR" ]; then
 	exit 1
 fi
 
-rm -f "${DESTDIR}/bin/aletheia"
-rm -f "${DESTDIR}/share/man/man1/aletheia.1"
+FILES[0]="${DESTDIR}/bin/aletheia"
+FILES[1]="${DESTDIR}/share/man/man1/aletheia.1"
+FILES[2]="${DESTDIR}/share/applications/aletheia.desktop"
+FILES[3]="${DESTDIR}/share/icons/aletheia.png"
 
-if [ -e "${DESTDIR}/bin/aletheia" ] || [ -e "${DESTDIR}/share/man/man1/aletheia.1" ]; then
+FAIL=false
+for i in $(seq 0 $((${#FILES[@]}-1))); do
+	if ! rm -f "${FILES[i]}" >/dev/null 2>/dev/null; then
+		echo -e "${RED}Failed:${NOCOLOR} ${FILES[i]} not deleted." 
+		FAIL=true
+	else
+		echo "rm -f \"${FILES[i]}\""
+	fi
+done
+
+if $FAIL; then
 	echo -e "${RED}Uninstall not successful$NOCOLOR"
 	exit 1
 else
-	echo -e "${BLUE}Aletheia successfully uninstalled${BLUE}"
+	echo -e "${BLUE}Aletheia uninstalled${BLUE}"
 	exit 0
 fi
