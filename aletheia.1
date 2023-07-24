@@ -59,7 +59,7 @@ Display a brief synopsis of available command-line options.
 
 .SS MENU
 
-The main menu is presented initially when loading Aletheia without any options. Use 'j' and 'k' (or arrow keys) to move the selection down or up, and enter to select. The first three options (Music, Sound, Video) scan ~/Music/, ~/Sounds/, or ~/Videos/ by default and generate a playlist based on available media. The next option, Queue, presents the user with available playlists in ~/.aletheia/playlists/. Type the number listed next to the playlist and push enter to select, or simply push enter to select the top playlist. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference. Press 'd' while in a help screen to read the page aloud.
+The main menu is presented initially when loading Aletheia without any options. Use 'j' and 'k' (or arrow keys) to move the selection down or up, and enter to select. The first three options (Music, Sound, Video) scan ~/Music/, ~/Sounds/, or ~/Videos/ by default and generate a playlist based on available media. The next option, Queue, presents the user with available playlists in ~/.aletheia/playlists/. Type the number listed next to the playlist and push enter to select, or simply push enter to select the top playlist. The Setup screen has an caching ('c') option to cache and utilize metadata tags, and toggle on and off tags with '^T'. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference. Press 'd' while in a help screen to read the page aloud.
 
 .RS 7
 .TP
@@ -517,6 +517,11 @@ Jump to the first new file.
 Combines the above two actions to add and jump to new files.
 
 .RE
+.SS SETUP SCREEN
+
+This area consolidates settings related to voice feedback (specifically voice pitch and volume), changing themes, toggling the panel, and toggling light or dark mode.
+
+.RE
 .SS SLEEP MODE
 
 The '~' key enables sleep mode (fade volume & optionally suspend) for the current file. It first asks the time to wait until sleeping, and then asks if you'd like to suspend as well (y/n), or simply fade volume and exit Aletheia. Once sleep mode is enabled, pressing any key will cancel sleep and bring you back to the main screen.
@@ -531,7 +536,7 @@ Toggles the display of panels on the top and bottom of screen, as well as a pane
 
 .TP
 .B ^O
-Inverts the use of white text so that light terminal themes can be used in addition to dark.
+Swaps the two primary colors.
 
 .TP
 .B ^Y
@@ -539,7 +544,11 @@ Toggles the use of color. Panels are needed when color is disabled to see the pl
 
 .TP
 .B ^A
-Randomizes colors with the option to save. Use 'n' or 'b' to go next or back in the theme selection, 'v' to invert the two primary text colors, 'c' to select complementary themes or back to randomized again. '#' to save, and 'q' to exit theme selection and return to the previous theme.
+Randomizes colors with the option to save. Use 'n' or 'b' to go next or back in the theme selection, or 'v' to invert the two primary text colors. '#' to save, and 'q' to exit theme selection and return to the previous theme. To generate light or dark varieties, use ^D to change to light or dark mode, and then activate this mode to generate colors suitable for light or dark backgrounds.
+
+.TP
+.B ^D
+Toggle between light mode, dark mode, and a custom color specified directly in ~/.aletheia/config or via ^A random color selection.
 
 .TP
 .B #
@@ -549,6 +558,10 @@ Saves all settings, including voice, panels, color, and white invert settings. A
 .TP
 .B ~/.aletheia/config
 The Aletheia configuration file.
+
+.TP
+.B ~/.aletheia/music.db
+The SQLite3 database for metadata tags, if media has been cached on the Setup screen.
 
 .TP
 .B ~/.aletheia/playlists/
@@ -633,6 +646,10 @@ A comma-separated list of audio formats to enable, provided they are supported b
 .B VIDEO_FORMATS=
 A comma-separated list of audio formats to enable, provided they are supported by mplayer.
 
+.TP
+.B TERMINAL=
+Override automatic terminal selection when using aletheia_desktop_launcher. Currently supports one of the following: gnome-terminal, xfce4-terminal, konsole, xterm, urxvt, kitty, alacritty, and mate-terminal.
+
 .SH AVAILABLE ENVIRONMENT VARIABLES
 These can preceed the ./aletheia command to adjust things on load and bypass current config settings in '~/.aletheia/config'.
 
@@ -649,7 +666,7 @@ If true, uses the faster espeak-ng natural voice engine for all voice feedback i
 Specifies the location in which to find the mplayer binary to use.
 
 .TP
-.B NO_HELP=
+.B NO_HELP= (deprecated as help screens have been optimized now)
 If true, disables non-essential help screens to help speed up loading and refresh time.
 
 .SH SEE ALSO
