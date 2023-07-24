@@ -63,6 +63,9 @@ FAIL=false
 if ! install -m 755 aletheia "$DESTDIR/bin/"; then
 	FAIL=true
 fi
+if ! install -m 755 aletheia_desktop_launcher "$DESTDIR/bin/"; then
+	FAIL=true
+fi
 if ! install -m 644 aletheia.1 "$DESTDIR/share/man/man1/"; then
 	FAIL=true
 fi
@@ -72,13 +75,12 @@ fi
 if ! install -m 644 aletheia.png "$DESTDIR/share/icons/"; then
 	FAIL=true
 fi
-DESTDIR_ESCAPED=${DESTDIR//\//\\\/}
-sed -i "s/\/usr\/share\/icons\/aletheia.png/${DESTDIR_ESCAPED}\/share\/icons\/aletheia.png/g" "${DESTDIR}/share/applications/aletheia.desktop"
 
 FILES[0]="${DESTDIR}/bin/aletheia"
-FILES[1]="${DESTDIR}/share/man/man1/aletheia.1"
-FILES[2]="${DESTDIR}/share/applications/aletheia.desktop"
-FILES[3]="${DESTDIR}/share/icons/aletheia.png"
+FILES[1]="${DESTDIR}/bin/aletheia_desktop_launcher"
+FILES[2]="${DESTDIR}/share/man/man1/aletheia.1"
+FILES[3]="${DESTDIR}/share/applications/aletheia.desktop"
+FILES[4]="${DESTDIR}/share/icons/aletheia.png"
 
 for i in $(seq 0 $((${#FILES[@]}-1))); do
 	chown "$USER:$USER" "${FILES[i]}"

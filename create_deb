@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION=${VERSION:-0.9.6}
-REVISION=4
+REVISION=5
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -22,6 +22,7 @@ mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPD
 echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer, parallel, sqlite3\nDescription: A CLI media player with pitch controls and voice feedback." >"$TMPDIR"/DEBIAN/control
 
 install -m 755 "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
+install -m 755 "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/usr/bin/"
 install -m 644 "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
 install -m 644 "$SRCDIR/aletheia.desktop" "$TMPDIR/usr/share/applications/"
 install -m 644 "$SRCDIR/aletheia.png" "$TMPDIR/usr/share/icons/"

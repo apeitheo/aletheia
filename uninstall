@@ -12,9 +12,10 @@ if [ ! -w "$DESTDIR" ]; then
 fi
 
 FILES[0]="${DESTDIR}/bin/aletheia"
-FILES[1]="${DESTDIR}/share/man/man1/aletheia.1"
-FILES[2]="${DESTDIR}/share/applications/aletheia.desktop"
-FILES[3]="${DESTDIR}/share/icons/aletheia.png"
+FILES[1]="${DESTDIR}/bin/aletheia_desktop_launcher"
+FILES[2]="${DESTDIR}/share/man/man1/aletheia.1"
+FILES[3]="${DESTDIR}/share/applications/aletheia.desktop"
+FILES[4]="${DESTDIR}/share/icons/aletheia.png"
 
 FAIL=false
 for i in $(seq 0 $((${#FILES[@]}-1))); do
