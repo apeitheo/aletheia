@@ -67,6 +67,8 @@ install -D -m 644 aletheia.png $PKG/usr/share/icons/aletheia.png
 gzip $PKG/usr/man/man1/aletheia.1
 
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
+cp -a README LICENSE \
+    $PKG/usr/doc/$PRGNAM-$VERSION
 cat $CWD/$PRGNAM.SlackBuild >$PKG/usr/doc/$PRGNAM-$VERSION/$PRGNAM.SlackBuild
 
 mkdir -p $PKG/install
