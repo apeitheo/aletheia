@@ -1,0 +1,29 @@
+aletheia
+--------
+
+- Didier Spaier:
+    - Recommended shellcheck which has been invaluable
+      in helping optimize and speed up the codebase.
+    - Helps ensure Aletheia works properly on Slint, the
+      operating system for the visually-impaired.
+
+aletheia.desktop
+----------------
+
+- Nathaniel Russel:
+    - Suggested having an official aletheia.desktop file
+      be included with code suggestions as to how it'd work
+
+aletheia_desktop_launcher
+-------------------------
+
+- Nathaniel Russel:
+    - Provided code that led to the creation of this script
+      that is now used by aletheia.desktop to provide an
+      official launcher that should work on most systems.
+
+aletheia.SlackBuild
+-------------------
+
+- Nathaniel Russel
+    - Submitted code to future-proof SlackBuild

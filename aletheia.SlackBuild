@@ -22,8 +22,7 @@
 #  OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 #  ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-cd $(dirname $0)
-CWD=$(pwd)
+cd $(dirname $0) ; CWD=$(pwd)
 
 PRGNAM=aletheia
 VERSION=${VERSION:-0.9.6}
@@ -64,7 +63,9 @@ install -D -m 755 aletheia_desktop_launcher $PKG/usr/bin/aletheia_desktop_launch
 install -D -m 644 aletheia.1 $PKG/usr/man/man1/aletheia.1
 install -D -m 644 aletheia.desktop $PKG/usr/share/applications/aletheia.desktop
 install -D -m 644 aletheia.png $PKG/usr/share/icons/aletheia.png
-gzip $PKG/usr/man/man1/aletheia.1
+
+find $PKG/usr/man -type f -exec gzip -9 {} \;
+for i in $( find $PKG/usr/man -type l ) ; do ln -s $( readlink $i ).gz $i.gz ; rm $i ; done
 
 mkdir -p $PKG/usr/doc/$PRGNAM-$VERSION
 cp -a README LICENSE \

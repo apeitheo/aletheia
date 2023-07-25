@@ -6677,9 +6677,7 @@ invert_int() {
 	fi
 	INTERVAL="$((-(INTERVAL)))"
 	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
-	espeak_say " $INTERVAL $EDO"
-	VOICE_ENABLED=false
-	ONLY_VOICE_TITLES=false
+	gtts_speak " $INTERVAL"
 	draw_pitch
 }
 
@@ -9906,7 +9904,7 @@ main() {
 					fi
 
 				done
-				espeak_say " $INTERVAL $EDO"
+				gtts_speak " $INTERVAL"
 				RIGHT_BANNER_WIDTH=0
 				draw_pitch
 				draw_position
