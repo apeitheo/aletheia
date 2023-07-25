@@ -3,9 +3,9 @@ aletheia
 
 - Didier Spaier:
     - Recommended shellcheck which has been invaluable
-	  in helping optimize and speed up the codebase.
-	- Helps ensure Aletheia works properly on Slint, the
-	  operating system for the visually-impaired.
+      in helping optimize and speed up the codebase.
+    - Helps ensure Aletheia works properly on Slint, the
+      operating system for the visually-impaired.
 
 aletheia.desktop
 ----------------
