@@ -9822,7 +9822,7 @@ main() {
 
 				pactl set-sink-volume @DEFAULT_SINK@ "$SYSTEM_VOLUME_LEFT" "$SYSTEM_VOLUME_RIGHT"
 				draw_volume
-				espeak_say " $tmp_volume_left"
+				gtts_speak "$tmp_volume_left"
 				;;
 			'G')
 				oscillate
