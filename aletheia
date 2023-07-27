@@ -570,7 +570,7 @@ gtts_speak_chain() {
 			done
 
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
-			play -v $VOICE_VOLUME "${CHAIN[@]}" >/dev/null 2>/dev/null &
+			play -v "$VOICE_VOLUME" "${CHAIN[@]}" >/dev/null 2>/dev/null &
 		fi
 	fi
 }
@@ -632,7 +632,7 @@ gtts_speak() {
 
 if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
 	gtts_speak() {
-		kill $(cat "$ALETHEIA/espeak.pid") >/dev/null 2>/dev/null
+		kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 		espeak_say "$1" "$2" "$3" true &
 	}
 fi
