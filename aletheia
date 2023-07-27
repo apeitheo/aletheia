@@ -582,11 +582,7 @@ gtts_speak() {
 		if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
 			return
 		fi
-		if [ "$6" == true ]; then
-			until [ -z "$(pgrep -f "^play.*$ALETHEIA/voices")" ]; do
-				sleep 0.35
-			done
-		elif [ "$5" != true ]; then
+		if [ "$5" != true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		line_count="$(echo -ne "$1" | wc -l)"
@@ -3176,7 +3172,7 @@ draw_menu() {
 					if [ "$menu_start_over" == true ]; then
 						if [ "$SKIP_SPEAK_MENU" != true ]; then
 							if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-								gtts_speak "menu, ${OPT[i]}, ${OPT_MUSIC_SUBMENU[MUSIC_SELECTION]}" false false false false true
+								gtts_speak "menu, ${OPT[i]}, ${OPT_MUSIC_SUBMENU[MUSIC_SELECTION]}"
 							elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
 								gtts_speak "${OPT[i]} ${OPT_MUSIC_SUBMENU[SOUND_SELECTION]}"
 							elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
@@ -3187,7 +3183,7 @@ draw_menu() {
 								else
 									opt="${OPT[i]}"
 								fi
-								gtts_speak "menu, $opt" false false false false true
+								gtts_speak "menu, $opt"
 							fi
 						fi
 						menu_start_over=false
