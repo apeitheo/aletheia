@@ -10818,10 +10818,9 @@ if [ ! -d "$VIDEODIR" ]; then
 	mkdir -p "$VIDEODIR"
 fi
 
-rm -f "$ALETHEIA/pipe*" >/dev/null 2>/dev/null
+rm -f "$ALETHEIA"/pipe* >/dev/null 2>/dev/null
 
 mkfifo "$ALETHEIA/pipe$$"
-
 
 exec 3<> "$ALETHEIA/pipe$$"
 
