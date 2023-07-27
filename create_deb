@@ -8,8 +8,8 @@ if [ "$(whoami)" != "root" ]; then
 	exit 1
 fi
 
-VERSION=${VERSION:-0.9.6}
-REVISION=5
+VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
+REVISION=6
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -27,11 +27,11 @@ install -m 644 "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
 install -m 644 "$SRCDIR/aletheia.desktop" "$TMPDIR/usr/share/applications/"
 install -m 644 "$SRCDIR/aletheia.png" "$TMPDIR/usr/share/icons/"
 
-cd "$TMPDIR"
+cd "$TMPDIR" || exit 1
 chown -R root:root "$TMPDIR"
 dpkg-deb --build "$TMPDIR"
 if [ -e "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" ]; then
-	mv /tmp/aletheia_${VERSION}-${REVISION}_all.deb $SRCDIR
+	mv "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" "$SRCDIR"
 	echo "Moved aletheia_${VERSION}-${REVISION}_all.deb to $SRCDIR"
 else
 	echo -e "${RED}Error:$NOCOLOR Package creation not successful."
