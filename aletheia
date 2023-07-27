@@ -295,6 +295,11 @@ if [ -e "$ALETHEIA/config" ]; then
 			VOICE_VOLUME="$value"
 		fi
 
+		value="$(read_config "ESPEAK_DIGITAL_VOICE")"
+		if [ "$value" != "" ]; then
+			ESPEAK_DIGITAL_VOICE="$value"
+		fi
+
 		value="$(read_config "PANELS_ENABLED")"
 		if [ "$value" != "" ]; then
 			PANELS_ENABLED="$value"
@@ -511,7 +516,63 @@ compute() {
 		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed "$(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)" >/dev/null 2>/dev/null
 		rm -f "/tmp/_$2-tmp.mp3"
 	fi
-	play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+	if [ "$3" != true ]; then
+		play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+	fi
+}
+
+gtts_speak_chain() {
+	pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+		kill "$(cat "$ALETHEIA/espeak.pid" 2>/dev/null)" >/dev/null 2>/dev/null
+	fi
+	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+		list=""
+		for i in "$@"; do
+			list+="$i, "
+		done
+		espeak-ng -v en-us+m1 "$list" &
+		echo -ne "$!" >"$ALETHEIA/espeak.pid"
+	else
+		if (( $# > 2 )); then
+			gtts_speak "please wait"
+		fi
+		if [ "$VOICE_ENABLED" == true ]; then
+			CHAIN=()
+			index=0
+			for i in "$@"; do
+				if [ "${i:0:1}" == " " ]; then
+					clip="${i:1}"
+				else
+					clip="$i"
+				fi
+				if [ "${i:0:1}" == "\-" ]; then
+					clip="\\$clip"
+				fi
+				if [ "$clip" == "" ]; then
+					continue
+				fi
+				if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
+					if [ "$(echo -ne "$clip" | rev | cut -c 1)" == "?" ]; then
+						clip="$(echo -ne "$clip" | rev | cut -c 2- | rev)\\?"
+					fi
+				else
+					compute "$clip" "$clip" true >/dev/null 2>/dev/null
+				fi
+				CHAIN[index]="$clip"
+				index=$((index+1))
+			done
+
+			ind=0
+			for i in "${CHAIN[@]}"; do
+				CHAIN[ind]="$ALETHEIA/voices/$i${VOICE_PITCH}.mp3"
+				ind=$((ind+1))
+			done
+
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			play -v $VOICE_VOLUME "${CHAIN[@]}" >/dev/null 2>/dev/null &
+		fi
+	fi
 }
 
 gtts_speak() {
@@ -571,13 +632,8 @@ gtts_speak() {
 
 if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
 	gtts_speak() {
-		# think this should work for now until I have time to take a deeper look,
-		# but it's important to be available in case people want to run this on
-		# older machines. sox is nearly instant on my machine, but aletheia
-		# ideally should run on older hardware as well; at least the final release.
-		# I initially removed the support in lieu of the natural voice, but some
-		# will find this useful.
-		espeak_say "$1" "$2" "$3" &
+		kill $(cat "$ALETHEIA/espeak.pid") >/dev/null 2>/dev/null
+		espeak_say "$1" "$2" "$3" true &
 	}
 fi
 
@@ -1118,6 +1174,9 @@ espeak_say() {
 			espeak-ng -v en-us+m1 " $1" &
 		fi
 		ESPEAK_PID="$!"
+		if [ "$4" == true ]; then
+			echo -ne "$ESPEAK_PID" >"$ALETHEIA/espeak.pid"
+		fi
 	fi
 }
 
@@ -3115,13 +3174,18 @@ draw_menu() {
 					if [ "$menu_start_over" == true ]; then
 						if [ "$SKIP_SPEAK_MENU" != true ]; then
 							if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-								gtts_speak "menu, ${OPT[$i]}, ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}" false false false false true
+								gtts_speak "menu, ${OPT[i]}, ${OPT_MUSIC_SUBMENU[MUSIC_SELECTION]}" false false false false true
 							elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
-								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
+								gtts_speak "${OPT[i]} ${OPT_MUSIC_SUBMENU[SOUND_SELECTION]}"
 							elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-								gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
+								gtts_speak "${OPT[i]} ${OPT_MUSIC_SUBMENU[VIDEO_SELECTION]}"
 							else
-								gtts_speak "menu, ${OPT[$i]}" false false false false true
+								if [ "${OPT[i]}" == "Setup" ]; then
+									opt="settings"
+								else
+									opt="${OPT[i]}"
+								fi
+								gtts_speak "menu, $opt" false false false false true
 							fi
 						fi
 						menu_start_over=false
@@ -3129,13 +3193,18 @@ draw_menu() {
 						if [ "$NO_QUEUE_FLAG" == false ]; then
 							if [ "$SKIP_SPEAK_MENU" != true ]; then
 								if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
-									gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$MUSIC_SELECTION]}"
+									gtts_speak "${OPT[i]} ${OPT_MUSIC_SUBMENU[MUSIC_SELECTION]}"
 								elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
-									gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$SOUND_SELECTION]}"
+									gtts_speak "${OPT[i]} ${OPT_MUSIC_SUBMENU[SOUND_SELECTION]}"
 								elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
-									gtts_speak "${OPT[$i]} ${OPT_MUSIC_SUBMENU[$VIDEO_SELECTION]}"
+									gtts_speak "${OPT[i]} ${OPT_MUSIC_SUBMENU[VIDEO_SELECTION]}"
 								else
-									gtts_speak "${OPT[$i]}"
+									if [ "${OPT[i]}" == "Setup" ]; then
+										opt="settings"
+									else
+										opt="${OPT[i]}"
+									fi
+									gtts_speak "$opt"
 								fi
 							fi
 						else
@@ -3327,6 +3396,7 @@ main_menu() {
 			continue
 		fi
 		if [ "$z" == "j" ]; then
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$MUSIC_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
 					MUSIC_SELECTION=$((MUSIC_SELECTION+1))
@@ -3350,6 +3420,7 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "k" ]; then
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$MUSIC_SELECTION" != "1" ]; then
 					MUSIC_SELECTION=$((MUSIC_SELECTION-1))
@@ -3373,6 +3444,7 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "l" ]; then
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			if [ "$SELECTION" == "1" ]; then
 				MUSIC_RIGHT_WINDOW=true
 				SOUND_RIGHT_WINDOW=false
@@ -3392,6 +3464,7 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "h" ]; then
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			echo -ne "$WHITE"
 			MUSIC_RIGHT_WINDOW=false
 			SOUND_RIGHT_WINDOW=false
@@ -5721,6 +5794,7 @@ reset_buffer() {
 
 cleanup_sigint() {
 	kill "$ESPEAK_PID" "$MPLAYER_PID" >/dev/null 2>/dev/null
+	kill "$(cat "$ALETHEIA/espeak.pid" 2>/dev/null)" >/dev/null 2>/dev/null
 	pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 	if [ "$WEB_CLIENT" == "1" ]; then
 		kill "$NODE_PID" >/dev/null 2>/dev/null
@@ -5737,6 +5811,7 @@ cleanup_sigint() {
 
 cleanup() {
 	kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+	kill "$(cat "$ALETHEIA/espeak.pid" 2>/dev/null)" >/dev/null 2>/dev/null
 	pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 	tmp_volume_left="$(echo $SYSTEM_VOLUME_LEFT | cut -d'%' -f1)"
 	tmp_volume_right="$(echo $SYSTEM_VOLUME_RIGHT | cut -d'%' -f1)"
@@ -7793,7 +7868,7 @@ start_search() {
 	draw_position
 	tput rc
 	echo -ne "$BLUE_BLACK"
-	gtts_speak "enter search keywords"
+	gtts_speak "search keywords"
 	if [ "$WEB_CLIENT" == "0" ]; then
 		jump="$(read_line)"
 	else
@@ -7969,7 +8044,7 @@ search_queue() {
 
 			line="${line##*/}"
 			line="${line%.*}"
-			tmp_buf[$((i-1))]="$m. $line."
+			tmp_buf[$((i-1))]="$m$line"
 
 			if (( m < 10 )); then
 				pad=" "
@@ -7998,14 +8073,28 @@ search_queue() {
 		printf '%*s' $((COLUMNS - 14)) ""
 		tput rc
 		if [ "$new_page" == true ]; then
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			new_page=false
-			espeak_say " ${tmp_buf[$((current_pos-(page*number_per_page-1)-2))]}"
+			ind=$((current_pos-(page*number_per_page-1)-2))
+			one=${tmp_buf[ind]%%*}
+			two=${tmp_buf[ind]##*}
+			gtts_speak_chain "$one" "$two" &
 		fi
 
 		if [ "$already_said" != true ]; then
-			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			espeak_say " ${tmp_buf[*]}"
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+			chained=()
+			index=0
+			for i in $(seq 0 $((${#tmp_buf[@]}-1))); do
+				chained[index]="${tmp_buf[i]%%*}"
+				((index++))
+				chained[index]="${tmp_buf[i]##*}"
+				chained[index]=${chained[index]//\~/\-}
+				((index++))
+			done
+			gtts_speak_chain "${chained[@]}" &
 			already_said=true
 		fi
 
@@ -8021,8 +8110,9 @@ search_queue() {
 		if [ "$inputchar" = "j" ]; then
 			if (( (pos + number_per_page) <= total )); then
 				already_said=false
+				kill %% >/dev/null 2>/dev/null
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 				gtts_speak "page down"
 				((page++))
 				if [ "$FLAGGED" == true ]; then
@@ -8040,8 +8130,9 @@ search_queue() {
 			else
 				FLAGGED=false
 			fi
+			kill %% >/dev/null 2>/dev/null
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			gtts_speak "page up"
 			((--page))
 			if [ "$number_per_page" -lt "$original_number_per_page" ]; then
@@ -8058,11 +8149,17 @@ search_queue() {
 			else
 				continue
 			fi
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			kill %% >/dev/null 2>/dev/null
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			if [ "$current_pos" -gt "${#tmp_buf[@]}" ]; then
-				espeak_say " ${tmp_buf[$((current_pos-(page*original_number_per_page-1)-2))]}"
+				ind=$((current_pos-(page*original_number_per_page-1)-2))
+				one=${tmp_buf[ind]%%*}
+				two=${tmp_buf[ind]##*}
 			else
-				espeak_say " ${tmp_buf[$((current_pos-1))]}"
+				ind=$((current_pos-1))
+				one=${tmp_buf[ind]%%*}
+				two=${tmp_buf[ind]##*}
 			fi
 			if [ "$current_pos" -gt "$((pos+i-1))" ]; then
 				((page++))
@@ -8074,6 +8171,8 @@ search_queue() {
 				if [ "$((pos+original_number_per_page))" -le "$total" ]; then
 					pos="$((pos+original_number_per_page))"
 				fi
+			else
+				gtts_speak_chain "$one" "$two" &
 			fi
 		elif [ "$inputchar" == "l" ]; then
 			if (( current_pos > 1 )); then
@@ -8081,11 +8180,15 @@ search_queue() {
 			else
 				continue
 			fi
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			kill %% >/dev/null 2>/dev/null
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			if [ "$current_pos" -gt "${#tmp_buf[@]}" ]; then
-				espeak_say " ${tmp_buf[$((current_pos-(page*number_per_page-1)-2))]}"
+				one=${tmp_buf[$((current_pos-(page*original_number_per_page-1)-2))]%%*}
+				two=${tmp_buf[$((current_pos-(page*original_number_per_page-1)-2))]##*}
 			else
-				espeak_say " ${tmp_buf[$((current_pos-1))]}"
+				one=${tmp_buf[$((current_pos-1))]%%*}
+				two=${tmp_buf[$((current_pos-1))]##*}
 			fi
 			if [ "$current_pos" -lt "$pos" ]; then
 				((--page))
@@ -8104,9 +8207,12 @@ search_queue() {
 				if [ "$pos" -le "0" ]; then
 					pos=1
 				fi
+			else
+				gtts_speak_chain "$one" "$two" &
 			fi
 		elif [ "$inputchar" == "" ]; then
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			JUMP=${search_array[$((current_pos-1))]%%:*}
 			return "$RETURN_JUMP"
 		elif [ "$(isnum "$inputchar")" != "0" ]; then
@@ -8140,10 +8246,11 @@ search_queue() {
 			FLAGGED=false
 		elif [ "$inputchar" == "d" ]; then
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			espeak_say " ${tmp_buf[*]}"
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+			gtts_speak_chain "${chained[@]}" &
 			FLAGGED=false
 		elif [ "$inputchar" == "q" ]; then #|| [ "$inputchar" == "" ]; then
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			if [ "$REDRAWN" == false ]; then
 				BUFFER="$BUFFER_BACKUP"
@@ -8225,9 +8332,9 @@ search_queue() {
 }
 
 queue_controls() {
-	gtts_speak "select playlist"
 	SEARCHBUFFER="$(ls -1 "$ALETHEIA/playlists/")"
 	total="$(echo -e "$SEARCHBUFFER" | wc -l)"
+	tmp_buf=()
 	if [ "$NO_VERTICAL_PADDING" == true ]; then
 		local number_per_page="$((LINES-2))"
 	else
@@ -8276,7 +8383,7 @@ queue_controls() {
 				line="(none)"
 			fi
 
-			tmp_buf[i]="$i. $line. "
+			tmp_buf[i]="$i$line"
 			BUFFER="$BUFFER$BLUE ${i} $WHITE$line$(tput el)\n"
 		done
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
@@ -8286,12 +8393,23 @@ queue_controls() {
 		fi
 		echo -ne "$NOCOLOR$BUFFER"
 
+		chained=()
+		index=0
+		for i in $(seq 0 $((${#tmp_buf[@]}))); do
+			chained[index]="${tmp_buf[i]%%*}"
+			((index++))
+			chained[index]="${tmp_buf[i]##*}"
+			((index++))
+		done
+
+		gtts_speak_chain "${chained[@]}" &
+
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
 			empty_pane "$((number_per_page+2))"
 		fi
 		draw_banner "SELECT LIST"
 
-		read -rsn1 inputchar <&1
+		read -rsn1 inputchar
 
 		if [ "$inputchar" = "j" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -8403,8 +8521,9 @@ queue_controls() {
 				return $RETURN_JUMP
 			fi
 		elif [ "$inputchar" == "d" ]; then
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-			espeak_say " ${tmp_buf[*]}" true
+			gtts_speak_chain "${chained[@]}" &
 		elif [ "$inputchar" == "Z" ]; then
 			if [ "$initial_screen" == true ]; then
 				continue
@@ -8561,6 +8680,7 @@ set_equalizer() {
 
 print_queue() {
 	pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+	kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 
 	already_said=false
 	current=$POSITION
@@ -8713,8 +8833,6 @@ print_queue() {
 				else
 					rep="$BLUE"
 				fi
-				#nline="${queue_array[$((m-1))]##*/}"
-				#nline="${nline%.*}"
 				if [ "$current" == "$m" ] || [ "$POSITION" == "$m" ]; then
 					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}-${#display_pad}))
 					nline="$(get_metadata "$m")"
@@ -8722,21 +8840,30 @@ print_queue() {
 					padd="$(printf '%*s' $((value-${#newline})) "")"
 					new_buf="$new_buf$BLUE_BLACK${PADDING}$INDICATOR$BLUE_BLACK $display_pad$BLUE_BLACK$m $rep$newline$padd$PADDING$NOCOLOR\n"
 				else
-					#nline="${queue_array[$((m-1))]##*/}"
 					nline="$(get_metadata "$m")"
-					#nline="${nline%.*}"
 					value=$((COLUMNS-(${#PADDING}*2)-3-${#m}))
 					newline="${nline:0:$value}"
 					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$newline$(tput el)\n"
 				fi
-				tmp_buf[i]="$m. $nline. "
+				tmp_buf[$((i-1))]="$m$nline"
 				m=$((m+1))
 			done
 
 			echo -ne "$new_buf"
 
 			if [ "$already_said" == false ]; then
-				espeak_say " ${tmp_buf[*]}"
+				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+				kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+				chained=()
+				index=0
+				for i in $(seq 0 $((${#tmp_buf[@]}-1))); do
+					chained[index]="${tmp_buf[i]%%*}"
+					((index++))
+					chained[index]="${tmp_buf[i]##*}"
+					chained[index]=${chained[index]//\~/\-}
+					((index++))
+				done
+				gtts_speak_chain "${chained[@]}" &
 				already_said=true
 			fi
 
@@ -8755,7 +8882,8 @@ print_queue() {
 		tput civis
 		if [ "$inputchar" = "j" ]; then
 			already_said=false
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			CHANGED=true
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -8772,7 +8900,8 @@ print_queue() {
 			fi
 		elif [ "$inputchar" = "k" ]; then
 			already_said=false
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			CHANGED=true
 			if [ "$pos" == "1" ]; then
 				continue
@@ -8791,9 +8920,11 @@ print_queue() {
 			if [ "$current" == "$TOTAL_QUEUE" ]; then
 				continue
 			fi
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			line="${queue_array[current]##*/}"
 			line="${line%.*}"
-			espeak_say " $line"
+			gtts_speak "$line"
 			current=$((current+1))
 			if [ "$current" -gt "$truepos" ]; then
 				CHANGED=true
@@ -8814,10 +8945,12 @@ print_queue() {
 			if [ "$current" == "1" ]; then
 				continue
 			fi
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			current=$((current-1))
 			line="${queue_array[$(($((current-1))))]##*/}"
 			line="${line%.*}"
-			espeak_say " $line"
+			gtts_speak "$line"
 			if [ "$current" -lt "$((truepos-number_per_page+1))" ]; then
 				CHANGED=true
 				if [ "$pos" == "1" ]; then
@@ -9052,7 +9185,7 @@ print_queue() {
 				;;
 			esac
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == ";" ] || [ "$inputchar" == "" ]; then
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 			BUFFER="$BUFFER_BACKUP"
 			echo -ne "$NOCOLOR"
 			reset_buffer
