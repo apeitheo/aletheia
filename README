@@ -15,7 +15,7 @@ Uninstallation: ./uninstall
 
 Debian Package: ./create_deb
 Fedora Package: ./create_rpm
-Slackware Package: ./aletheia.SlackBuild
+Slackware Package: create_archive --release && ./aletheia.SlackBuild
 
 List of installed files when using ./install:
 
