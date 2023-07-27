@@ -534,8 +534,10 @@ gtts_speak_chain() {
 		espeak-ng -v en-us+m1 "$list" &
 		echo -ne "$!" >"$ALETHEIA/espeak.pid"
 	else
-		if (( $# > 2 )); then
-			gtts_speak "please wait"
+		if [ "$NO_WAIT" != true ]; then
+			if (( $# > 2 )); then
+				gtts_speak "please wait"
+			fi
 		fi
 		if [ "$VOICE_ENABLED" == true ]; then
 			CHAIN=()
@@ -6450,62 +6452,29 @@ web_client_func() {
 }
 
 say_locked_and_loops() {
-	while true; do
-		if ! ps aux | pgrep -f "^play.*$ALETHEIA/voices.*$" >/dev/null 2>/dev/null; then
-			break
-		fi
-		sleep 0.1
-	done
-	gtts_speak "locked" true false true
-	gtts_speak "$INTERVAL" true false true
-	gtts_speak "$EDO" true false true
-	sleep 0.2
-	gtts_speak "$REPEAT_TOTAL" true false true
 	if [ "$REPEAT_TOTAL" == "1" ]; then
-		gtts_speak "loop" true false true
+		text="loop"
 	else
-		gtts_speak "loops" true false true
+		text="loops"
 	fi
+	gtts_speak_chain "locked" "$INTERVAL" "of" "$EDO" "and" "$REPEAT_TOTAL" "$text" &
 }
 
 say_unlocked_and_loops() {
-	while true; do
-		if ! ps aux | pgrep -f "^play.*$ALETHEIA/voices.*$" >/dev/null 2>/dev/null; then
-			break
-		fi
-		sleep 0.1
-	done
-	gtts_speak "unlocked" true false true
-	gtts_speak "$REPEAT_TOTAL" true false true
 	if [ "$REPEAT_TOTAL" == "1" ]; then
-		gtts_speak "loop" true false true
+		text="loop"
 	else
-		gtts_speak "loops" true false true 
+		text="loops"
 	fi
+	gtts_speak_chain "unlocked" "and" "$REPEAT_TOTAL" "$text" &
 }
 
 say_locked_and_no_loops() {
-	while true; do
-		if ! ps aux | pgrep -f "^play.*$ALETHEIA/voices.*$" >/dev/null 2>/dev/null; then
-			break
-		fi
-		sleep 0.1
-	done
-	gtts_speak "locked" true false true
-	gtts_speak "$(echo -ne "$INTERVAL" | sed "s/\-/negative /g")" true false true
-	gtts_speak "$EDO" true false true
-	gtts_speak "no loops" true false true
+	gtts_speak_chain "locked" "$(echo -ne "$INTERVAL" | sed "s/\-/negative /g")" "of" "$EDO" "and" "no loops" &
 }
 
 say_unlocked_and_no_loops() {
-	while true; do
-		if ! ps aux | pgrep -f "^play.*$ALETHEIA/voices.*$" >/dev/null 2>/dev/null; then
-			break
-		fi
-		sleep 0.1
-	done
-	gtts_speak "unlocked" true false true
-	gtts_speak "no loops" true false true
+	gtts_speak_chain "unlocked" "and" "no loops" &
 }
 
 jump_to_first_of_artist() {
@@ -10394,7 +10363,7 @@ main() {
 				gtts_speak "$TITLE" true
 				;;
 			'')
-				draw_banner "WAIT"
+				NO_WAIT=true
 				if [ "$LOCKED" == true ]; then
 					if [ "$REPEAT_CURRENT" -lt "1" ]; then
 						say_locked_and_no_loops
@@ -10408,6 +10377,7 @@ main() {
 						say_unlocked_and_loops
 					fi
 				fi
+				NO_WAIT=false
 				draw_pitch
 				draw_position
 				;;
