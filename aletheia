@@ -513,7 +513,7 @@ compute() {
 		gtts-cli " $1" -o "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 	else
 		gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
-		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed "$(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)" >/dev/null 2>/dev/null
+		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")" >/dev/null 2>/dev/null
 		rm -f "/tmp/_$2-tmp.mp3"
 	fi
 	if [ "$3" != true ]; then
@@ -1536,11 +1536,11 @@ less_precise() {
 	while [ "$EDO" -gt "$LOCKED_EDO" ]; do
 		INTERVAL="$((INTERVAL/2))"
 		EDO="$((EDO/2))"
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		draw_pitch
 		sleep 0.01
 	done
-	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+	echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	draw_pitch
 	INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 	INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
@@ -1557,14 +1557,14 @@ more_precise() {
 		if [ "$INTERVAL" -lt "$EDO_LIMIT" ]; then
 			INTERVAL="$((INTERVAL*2))"
 			EDO="$((EDO*2))"
-			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			draw_pitch
 			sleep 0.01
 		else
 			break
 		fi
 	done
-	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+	echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	draw_pitch
 	INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 	INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
@@ -1583,12 +1583,12 @@ zero_interval_jump() {
 		SAVED_EDO="$EDO"
 		INTERVAL="$DEFAULT_INTERVAL"
 		EDO="$SAVED_EDO"
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	else
 		if [ "$SAVED_INTERVAL" != "" ]; then
 			INTERVAL="$SAVED_INTERVAL"
 			EDO="$SAVED_EDO"
-			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		else
 			return
 		fi
@@ -1675,13 +1675,13 @@ repeat() {
 	if [ "$END_TIME" != "" ]; then
 		END_MARKER=$END_TIME
 		date_time=$(/usr/bin/time -p date +%s.%N 2>&1 | head -1)
-		date_time=$(calc "$date_time/1000000000000" | sed -e "s/\t//g" | cut -d'~' -f2)
-		timespent_timed=$(/usr/bin/time -p calc "10 + (1687968170.908741168-1687968192.276557242) * (0.35) + ($date_time * 0.35)" 2>&1 | head -1)
-		timespent_timed=$(calc "$timespent_timed/1000000000000" | sed -e "s/\t//g" | cut -d'~' -f2)
-		old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g" | cut -d'~' -f2)"
-		s="$(calc "1/(2^($INTERVAL/$EDO))" | sed -e "s/\t//g" | cut -d'~' -f2)"
+		date_time=$(calc -pd "$date_time/1000000000000")
+		timespent_timed=$(/usr/bin/time -p calc -pd "10 + (1687968170.908741168-1687968192.276557242) * (0.35) + ($date_time * 0.35)" 2>&1 | head -1)
+		timespent_timed=$(calc -pd "$timespent_timed/1000000000000")
+		old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
+		s="$(calc -pd "1/(2^($INTERVAL/$EDO))")"
 		orig_old_s=$old_s
-		time="$(calc "($END_TIME-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)"
+		time="$(calc -pd "($END_TIME-$START_MARKER)*($s)")"
 		input_char=""
 		START_MARKER="$(printf '%.2f' $START_MARKER)"
 		END_MARKER="$(printf '%.2f' $END_MARKER)"
@@ -1700,7 +1700,7 @@ repeat() {
 				if [ "$input_char" == "" ]; then
 					if [ "$space" -gt "0" ]; then
 						echo -e "pause" >"$ALETHEIA/pipe$$" &
-						read -rsn1 -t "$(calc "$space/20" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char
+						read -rsn1 -t "$(calc -pd "$space/20")" input_char
 						echo -e "pause" >"$ALETHEIA/pipe$$" &
 					fi
 				fi
@@ -1713,7 +1713,7 @@ repeat() {
 					num="$(echo -ne "$time" | cut -d'.' -f1)"
 					skip=false
 					while [ "$num" -gt "0" ]; do
-						old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
+						old_s="$(calc -pd "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
 						if [ "$skip" == false ]; then
 							if [ "$scale_down" == true ]; then
 								INTERVAL=$((INTERVAL-1))
@@ -1724,21 +1724,21 @@ repeat() {
 						old_time_before=$time_before
 						time_before=$(date +%s.%N)
 						if [ "$skip" == false ]; then
-							echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+							echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						else
 							skip=false
 						fi
 						time_after=$(date +%s.%N)
 						draw_pitch
-						orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
+						orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 						time_x=$(date +%s.%N)
-						timespent="$(calc "$timespent +($time_before-$old_time_before)*($old_s)+($time_x-$time_after)*($orig_old_s)+($date_time*2)*$old_s+($date_time*2)*$orig_old_s+$timespent_timed" | sed -e "s/\t//g" | cut -d'~' -f2)"
+						timespent="$(calc -pd "$timespent +($time_before-$old_time_before)*($old_s)+($time_x-$time_after)*($orig_old_s)+($date_time*2)*$old_s+($date_time*2)*$orig_old_s+$timespent_timed")"
 						s=$orig_old_s
 						old_s=$s
-						s="$(calc "1/$s" | sed -e "s/\t//g" | cut -d'~' -f2)"
+						s="$(calc -pd "1/$s")"
 
-						time=$(calc "($END_MARKER-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)
-						numberz=$(calc "($time-$timespent*$s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+						time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
+						numberz=$(calc -pd "($time-$timespent*$s)")
 						if [ "$(echo "$numberz <= 0" | bc)" == "1" ]; then
 							numberz=0
 						fi
@@ -1751,7 +1751,7 @@ repeat() {
 									skip=true
 								fi
 								time_y=$(date +%s.%N)
-								timespent="$(calc "$timespent + (($time_y-$time_x) * ($old_s)) + ($date_time * $old_s)" | sed -e "s/\t//g" | cut -d'~' -f2)"
+								timespent="$(calc -pd "$timespent + (($time_y-$time_x) * ($old_s)) + ($date_time * $old_s)")"
 								if [ "$WEB_CLIENT" == "0" ]; then
 									read -rsn1 -t "$(echo "$numberz/$num" | bc)" input_char
 								else
@@ -1818,29 +1818,29 @@ repeat() {
 				case $input_char in
 				'l')
 					if [ "$(echo -e "($END_MARKER+0.05)<$TOTAL_TIME" | bc)" == "1" ]; then
-						END_MARKER=$(calc "$END_MARKER+0.05" | sed -e "s/\t//g")
+						END_MARKER=$(calc -pd "$END_MARKER+0.05")
 					else
 						END_MARKER=$TOTAL_TIME
 					fi
 					;;
 				'h')
 					if [ "$(echo -e "(($END_MARKER-0.05) > $START_MARKER)" | bc)" == "1" ]; then
-						END_MARKER=$(calc "$END_MARKER-0.05" | sed -e "s/\t//g")
+						END_MARKER=$(calc -pd "$END_MARKER-0.05")
 					fi
 					;;
 				'L')
 					if [ "$(echo -e "($END_MARKER < $TOTAL_TIME-0.05)" | bc)" == "1" ]; then
-						END_MARKER=$(calc "$END_MARKER+0.01" | sed -e "s/\t//g")
+						END_MARKER=$(calc -pd "$END_MARKER+0.01")
 					fi
 					;;
 				'H')
 					if [ "$(echo -e "($END_MARKER > $START_MARKER+0.05)" | bc)" == "1" ]; then
-						END_MARKER=$(calc "$END_MARKER-0.01" | sed -e "s/\t//g")
+						END_MARKER=$(calc -pd "$END_MARKER-0.01")
 					fi
 					;;
 				esac
 
-				time=$(calc "($END_MARKER-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 
 				START_MARKER="$(printf '%.2f' "$START_MARKER")"
 				END_MARKER="$(printf '%.2f' "$END_MARKER")"
@@ -1848,7 +1848,7 @@ repeat() {
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 
-				if [ "$(echo -e "$(calc "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
+				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
 					echo "seek $START_MARKER 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rsn1 -t "$time" input_char
@@ -1856,11 +1856,11 @@ repeat() {
 						read -rsn1 -t "$time" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				else
-					echo "seek $(calc "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
+					echo "seek $(calc -pd "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
-						read -rsn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char
+						read -rsn1 -t "$(calc -pd "1.5*$s")" input_char
 					else
-						read -rsn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char <"$ALETHEIA/web_client_pipe$$"
+						read -rsn1 -t "$(calc -pd "1.5*$s")" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				fi
 				flagged=false
@@ -1868,22 +1868,22 @@ repeat() {
 				case $input_char in
 				's')
 					if [ "$(echo -e "(($START_MARKER-0.05) >= 0.0)" | bc)" == "1" ]; then
-						START_MARKER=$(calc "$START_MARKER-0.05" | sed -e "s/\t//g")
+						START_MARKER=$(calc -pd "$START_MARKER-0.05")
 					fi
 					;;
 				'f')
 					if [ "$(echo -e "(($START_MARKER+0.05) < $END_MARKER)" | bc)" == "1" ]; then
-						START_MARKER=$(calc "$START_MARKER+0.05" | sed -e "s/\t//g")
+						START_MARKER=$(calc -pd "$START_MARKER+0.05")
 					fi
 					;;
 				'S')
 					if [ "$(echo -e "(($START_MARKER-0.01) >= 0.0)" | bc)" == "1" ]; then
-						START_MARKER=$(calc "$START_MARKER-0.01" | sed -e "s/\t//g")
+						START_MARKER=$(calc -pd "$START_MARKER-0.01")
 					fi
 					;;
 				'F')
 					if [ "$(echo -e "(($START_MARKER+0.01) <= ($END_MARKER-0.05))" | bc)" == "1" ]; then
-						START_MARKER=$(calc "$START_MARKER+0.01" | sed -e "s/\t//g")
+						START_MARKER=$(calc -pd "$START_MARKER+0.01")
 					fi
 					;;
 				esac
@@ -1891,7 +1891,7 @@ repeat() {
 				if [ "$truth" == "1" ]; then
 					START_MARKER="0.0"
 				fi
-				time=$(calc "($END_MARKER-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 				START_MARKER="$(printf '%.2f' "$START_MARKER")"
 				END_MARKER="$(printf '%.2f' "$END_MARKER")"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
@@ -1991,7 +1991,7 @@ repeat() {
 				filename_without_ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | rev)"
 				rm -f "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
 				rm -f "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
-				ffmpeg -i "$FILENAME" -ss "$START_MARKER" -t "$(calc "$END_MARKER-$START_MARKER+0.265")" -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
+				ffmpeg -i "$FILENAME" -ss "$START_MARKER" -t "$(calc -pd "$END_MARKER-$START_MARKER+0.265")" -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
 				sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat1.$ext" trim 0 -0.180 >/dev/null 2>/dev/null
 				delay="$(echo "($space/20)" | bc)"
 				ffmpeg -i "$filename_without_ext.repeat1.$ext" -af "apad=pad_dur=$delay" "$filename_without_ext.repeat.$ext" >/dev/null 2>/dev/null
@@ -2135,10 +2135,10 @@ repeat() {
 					echo "mute" >"$ALETHEIA/pipe$$" &
 					MUTE=false
 				fi
-				orig_orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
+				orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				INTERVAL="$((-(INTERVAL)))"
-				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
-				orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
+				echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				draw_pitch
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
@@ -2172,7 +2172,7 @@ repeat() {
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
-				if [ "$(echo -e "$(calc "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
+				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
 					echo "seek $START_MARKER 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rn1 -t "$time" input_char
@@ -2180,11 +2180,11 @@ repeat() {
 						read -rn1 -t "$time" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				else
-					echo "seek $(calc "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
+					echo "seek $(calc -pd "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
-						read -rn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char
+						read -rn1 -t "$(calc -pd "1.5*$s")" input_char
 					else
-						read -rn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char <"$ALETHEIA/web_client_pipe$$"
+						read -rn1 -t "$(calc -pd "1.5*$s")" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				fi
 				flagged=false
@@ -2194,7 +2194,7 @@ repeat() {
 				gtts_speak "$space"
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
-				if [ "$(echo -e "$(calc "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
+				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
 					echo "seek $START_MARKER 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rn1 -t "$time" input_char
@@ -2202,24 +2202,24 @@ repeat() {
 						read -rn1 -t "$time" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				else
-					echo "seek $(calc "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
+					echo "seek $(calc -pd "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
-						read -rn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char
+						read -rn1 -t "$(calc -pd "1.5*$s")" input_char
 					else
-						read -rn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char <"$ALETHEIA/web_client_pipe$$"
+						read -rn1 -t "$(calc -pd "1.5*$s")" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				fi
 				flagged=false
 			elif [ "$input_char" == "k" ] || [ "$input_char" == "j" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				orig_orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
+				orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				if [ "$input_char" == "k" ]; then
 					pitch_up true
 				else
 					pitch_down true
 				fi
-				orig_old_s="$(calc "(2^($INTERVAL/$EDO))" | sed -e "s/\t//g")"
+				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				switch=true
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
@@ -2319,7 +2319,7 @@ repeat() {
 						START_MARKER="$(printf '%.2f' $START_MARKER)"
 						END_MARKER="$(printf '%.2f' $END_MARKER)"
 						
-						time=$(calc "($END_MARKER-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+						time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 						space="$(echo -ne "$REPEATS" | sed -n "${REPEAT_CURRENT}p" | cut -d '/' -f3)"
 						orig_space=$space
 						if [ "$space" == "" ]; then
@@ -2345,7 +2345,7 @@ repeat() {
 					flagged=false
 				fi
 			elif [ "$input_char" == "e" ]; then
-				if [ "$(echo -e "$(calc "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
+				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
 					echo "seek $START_MARKER 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rn1 -t "$time" input_char
@@ -2353,11 +2353,11 @@ repeat() {
 						read -rn1 -t "$time" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				else
-					echo "seek $(calc "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
+					echo "seek $(calc -pd "$END_MARKER-1.5") 2" >"$ALETHEIA/pipe$$" &
 					if [ "$WEB_CLIENT" == "0" ]; then
-						read -rn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char
+						read -rn1 -t "$(calc -pd "1.5*$s")" input_char
 					else
-						read -rn1 -t "$(calc "1.5*$s" | sed -e "s/\t//g" | cut -d'~' -f2)" input_char <"$ALETHEIA/web_client_pipe$$"
+						read -rn1 -t "$(calc -pd "1.5*$s")" input_char <"$ALETHEIA/web_client_pipe$$"
 					fi
 				fi
 				flagged=false
@@ -2576,7 +2576,7 @@ repeat() {
 						START_MARKER="$(echo -ne "$REPEATS" | sed -n "${REPEAT_CURRENT}p" | cut -d '/' -f1)"
 						END_MARKER="$(echo -ne "$REPEATS" | sed -n "${REPEAT_CURRENT}p" | cut -d '/' -f2)"
 						END_TIME=$END_MARKER
-						time=$(calc "($END_MARKER-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+						time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 						space="$(echo -ne "$REPEATS" | sed -n "${REPEAT_CURRENT}p" | cut -d '/' -f3)"
 					fi
 				else
@@ -2666,17 +2666,17 @@ repeat() {
 				flagged=false
 				if [ "$switch" == true ]; then
 					switch=false
-					timespent="$(calc "$timespent +($time_after-$old_time_before)*($old_s)+($time_x-$time_before)*($orig_old_s)+($date_time*3)*$orig_old_s+($date_time*1)*$orig_orig_old_s" | sed -e "s/\t//g" | cut -d'~' -f2)"
+					timespent="$(calc -pd "$timespent +($time_after-$old_time_before)*($old_s)+($time_x-$time_before)*($orig_old_s)+($date_time*3)*$orig_old_s+($date_time*1)*$orig_orig_old_s")"
 				else
-					timespent="$(calc "$timespent +($time_after-$old_time_before)*($orig_old_s)+($time_x-$time_before)*($orig_old_s)+($date_time*4)*$orig_old_s" | sed -e "s/\t//g" | cut -d'~' -f2)"
+					timespent="$(calc -pd "$timespent +($time_after-$old_time_before)*($orig_old_s)+($time_x-$time_before)*($orig_old_s)+($date_time*4)*$orig_old_s")"
 				fi
 				s=$orig_old_s
 				old_s=$s
-				s="$(calc "1/$s" | sed -e "s/\t//g" | cut -d'~' -f2)"
+				s="$(calc -pd "1/$s")"
 
-				time=$(calc "($END_MARKER-$START_MARKER)*($s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 				input_char=""
-				numberz=$(calc "($time-$timespent*$s)" | sed -e "s/\t//g" | cut -d'~' -f2)
+				numberz=$(calc -pd "($time-$timespent*$s)")
 				if [ "$(echo "$numberz <= 0" | bc)" == "1" ]; then
 					numberz=0
 				fi
@@ -2686,7 +2686,7 @@ repeat() {
 					else
 						time_y=$(date +%s.%N)
 						time_before=$time_y
-						timespent="$(calc "$timespent +(($time_y-$time_x)*($old_s))" | sed -e "s/\t//g" | cut -d'~' -f2)"
+						timespent="$(calc -pd "$timespent +(($time_y-$time_x)*($old_s))")"
 						if [ "$WEB_CLIENT" == "0" ]; then
 							read -rn1 -t "$numberz" input_char
 						else
@@ -2808,7 +2808,7 @@ zero_interval() {
 			elif [ "$c" == "" ]; then
 				old_int="$((old_int-1))"
 				INTERVAL="$((INTERVAL-1))"
-				echo -e "speed_set $(calc "2^($old_int/$old_edo)")" >"$ALETHEIA/pipe$$" &
+				echo -e "speed_set $(calc -pd "2^($old_int/$old_edo)")" >"$ALETHEIA/pipe$$" &
 			fi
 			draw_pitch 1
 		done
@@ -2852,7 +2852,7 @@ zero_interval() {
 			elif [ "$c" == "" ]; then
 				old_int="$((old_int+1))"
 				INTERVAL="$((INTERVAL+1))"
-				echo -e "speed_set $(calc "2^($old_int/$old_edo)")" >"$ALETHEIA/pipe$$" &
+				echo -e "speed_set $(calc -pd "2^($old_int/$old_edo)")" >"$ALETHEIA/pipe$$" &
 				draw_pitch 1
 			fi
 		done
@@ -3023,13 +3023,14 @@ scale_edo() {
 					INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 					INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
 					if [ "$flaggy" == false ]; then
-						temp="$(calc "$orig_edo/$EDO" | cut -d'~' -f2)"
-						INTERVAL="$(echo "$orig_interval/$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
+						temp="$(calc -pd "$orig_edo/$EDO")"
+						INTERVAL="$(calc -pd " $orig_interval/$temp")"
+						INTERVAL="${INTERVAL%%.*}"
 					fi
 					if [ "$EDO" == "1" ]; then
 						flaggy=true
 					fi
-					echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+					echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 					draw_pitch
 				fi
 				if [ "$EDO" == "$stopat" ]; then
@@ -3085,14 +3086,14 @@ scale_edo() {
 					INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
 
 					if [ "$flaggy" == false ]; then
-						temp="$(calc "$EDO/$orig_edo" | cut -d'~' -f2)"
+						temp="$(calc -pd "$EDO/$orig_edo")"
 						INTERVAL="$(echo "$orig_interval*$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
 					fi
 
 					if [ "$INTERVAL" == "0" ]; then
 						flaggy=true
 					fi
-					echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+					echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 					draw_pitch 2
 				fi
 				if [ "$EDO" == "$stopat" ]; then
@@ -4140,7 +4141,7 @@ scale() {
 				elif [ "$c" == "" ]; then
 					echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 					INTERVAL="$((INTERVAL-1))"
-					echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+					echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 					draw_pitch
 				fi
 				if [ "$INTERVAL" == "$stopat" ]; then
@@ -4203,7 +4204,7 @@ scale() {
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then	
 					INTERVAL="$((INTERVAL+1))"
-					echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+					echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 					draw_pitch
 				fi
 				if [ "$INTERVAL" == "$stopat" ]; then
@@ -4237,7 +4238,7 @@ scale_octave() {
 		if [ "$((INTERVAL-EDO))" -ge "-$(echo -n "$INTERVAL_LIMIT" | cut -d'.' -f1)" ]; then
 			if [ "$2" == true ]; then
 				INTERVAL=$((INTERVAL-EDO))
-				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+				echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 				draw_pitch
 			else
 				gtts_speak "scaling"
@@ -4258,7 +4259,7 @@ scale_octave() {
 						break
 					elif [ "$c" == "" ]; then
 						INTERVAL="$((INTERVAL-1))"
-						echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+						echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						draw_pitch
 						x=$((x+1))
 					fi
@@ -4270,7 +4271,7 @@ scale_octave() {
 		if [ "$((INTERVAL+EDO))" -le "$(echo -n "$INTERVAL_UPPER_LIMIT" | cut -d'.' -f1)" ]; then
 			if [ "$2" == true ]; then
 				INTERVAL=$((INTERVAL+EDO))
-				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+				echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 				draw_pitch
 			else
 				gtts_speak "scaling"
@@ -4291,7 +4292,7 @@ scale_octave() {
 						break
 					elif [ "$c" == "" ]; then
 						INTERVAL="$((INTERVAL+1))"
-						echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+						echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						draw_pitch
 						x=$((x+1))
 					fi
@@ -4324,7 +4325,7 @@ set_custom_int() {
 	fi
 	if [ "$interval_jump" != "" ]; then
 		PAUSE=false
-		echo -e "speed_set $(calc "2^($interval_jump/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($interval_jump/$EDO)")" >"$ALETHEIA/pipe$$" &
 		INTERVAL="$interval_jump"
 	else
 		gtts_speak "closed" true
@@ -4335,20 +4336,22 @@ set_custom_int() {
 
 toggle_mute() {
 	if [ "$MUTE" == false ]; then
+		echo -e "mute 1" >"$ALETHEIA/pipe$$" &
+		MUTE=true
+		draw_banner "MUTE"
 		gtts_speak "muted" true
 		if [ "$OS" == "Darwin" ]; then
 			osascript -e 'set volume with output muted'
 		elif [ "$OS" == "Linux" ]; then
 			pactl set-sink-mute @DEFAULT_SINK@ 1 >/dev/null 2>/dev/null
 		fi
-		MUTE=true
-		draw_banner "MUTE"
 	else
 		if [ "$OS" == "Linux" ]; then
 			pactl set-sink-mute @DEFAULT_SINK@ 0 >/dev/null 2>/dev/null
 		elif [ "$OS" == "Darwin" ]; then
 			osascript -e "set volume output volume $SYSTEM_VOLUME_LEFT"
 		fi
+		echo -e "mute 0" >"$ALETHEIA/pipe$$" &
 		gtts_speak "unmuted"
 		MUTE=false
 		draw_pitch
@@ -4374,7 +4377,7 @@ toggle_pause() {
 
 interval_to_zero() {
 	INTERVAL="0"
-	echo "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+	echo "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	LOCKED=false
 	draw_volume
 	draw_equalizer
@@ -4390,7 +4393,7 @@ reset_all_tuning() {
 	INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
 	echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
 	sleep $MPLAYER_WAIT_TIME
-	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+	echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	gtts_speak "reset"
 	draw_volume
 	draw_equalizer
@@ -4456,7 +4459,7 @@ reset_to_locked() {
 			sleep 0.05
 			echo -e "af_add scaletempo=speed=pitch" >"$ALETHEIA/pipe$$" &
 		fi
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		sleep $MPLAYER_WAIT_TIME
 		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 	else
@@ -4464,7 +4467,7 @@ reset_to_locked() {
 		EDO="$DEFAULT_EDO"
 		INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 		INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-		echo "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		VOLUME="$DEFAULT_VOLUME"
 		echo -e "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 	fi
@@ -4495,35 +4498,38 @@ set_custom_edo() {
 
 	reset_buffer
 	if [ "$new_edo" = "" ]; then
-		gtts_speak "closed" true
+		gtts_speak "closed"
 		draw_pitch
 		redraw_buffer
 		return
 	fi
 
 	if [ "$(isnum "$new_edo")" != "0" ]; then
-		gtts_speak "$new_edo" true
 		PAUSE=false
 		if [ "$new_edo" -lt "1" ]; then
 			return
 		fi
 		if [ "$new_edo" -gt "$EDO" ]; then
-			temp="$(calc "$new_edo/$EDO" | cut -d'~' -f2)"
-			INTERVAL="$(echo "$INTERVAL*$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
+			temp="$(calc -pd "$new_edo/$EDO")"
+			INTERVAL="$(calc -pd " $INTERVAL*$temp")"
+			INTERVAL="${INTERVAL%%.*}"
 		elif [ "$new_edo" -lt "$EDO" ]; then
-			temp="$(calc "$EDO/$new_edo" | cut -d'~' -f2 | bc)"
-			INTERVAL="$(echo "$INTERVAL/$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
+			temp="$(calc -pd "$EDO/$new_edo")"
+			INTERVAL="$(calc -pd " $INTERVAL/$temp")"
+			INTERVAL="${INTERVAL%%.*}"
 		else
 			draw_pitch
 			draw_position
 			return
 		fi
 
+		gtts_speak_chain "$INTERVAL" "$new_edo" &
+
 		EDO="$new_edo"
 		LOCKED_EDO="$EDO"
 		INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 		INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		LOCKED=false
 		draw_volume
 		draw_equalizer
@@ -4537,32 +4543,33 @@ double_precise() {
 	if [ "$EDO" -lt "$EDO_LIMIT" ]; then
 		INTERVAL=$((INTERVAL * 2))
 		EDO=$((EDO*2))
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		draw_pitch
 		INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 		INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-		gtts_speak "$EDO"
+		gtts_speak_chain "$INTERVAL" "$EDO" &
 	else
 		gtts_speak "limit"
 	fi
 }
 
 half_precise() {
-	old="$(calc "($INTERVAL/$EDO)")"
+	old="$(calc -pd "($INTERVAL/$EDO)")"
 	if [ "$((EDO % 2))" = "0" ]; then
 		new_edo="$((EDO/2))"
 		if [ "$new_edo" -ge "2" ]; then
-			temp="$(calc "$new_edo/$EDO" | cut -d'~' -f2)"
-			INTERVAL="$(echo "$INTERVAL*$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
+			temp="$(calc -pd "$new_edo/$EDO")"
+			INTERVAL="$(calc -pd " $INTERVAL*$temp")"
+			INTERVAL="${INTERVAL%%.*}"
 			if [ "$(isnum "$INTERVAL")" == "0" ]; then
 				INTERVAL=0
 			fi
 			EDO="$new_edo"
-			new="$(calc "($INTERVAL/$EDO)")"
-			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+			new="$(calc -pd "($INTERVAL/$EDO)")"
+			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 			INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-			gtts_speak "$EDO"
+			gtts_speak_chain "$INTERVAL" "$EDO" &
 		else
 			gtts_speak "limit"
 		fi
@@ -4593,7 +4600,7 @@ pitch_down() {
 	fi
 	if [ "$INTERVAL" -gt "-${INTERVAL_LIMIT%.*}" ]; then
 		INTERVAL=$((INTERVAL-1))
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 
 		LOCKED=false
 		if [ "$2" != true ]; then
@@ -4626,7 +4633,7 @@ pitch_up() {
 	fi
 	if [ "$INTERVAL" -lt "${INTERVAL_UPPER_LIMIT%.*}" ]; then
 		INTERVAL=$((INTERVAL+1))
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 
 		LOCKED=false
 		if [ "$2" != true ]; then
@@ -4657,7 +4664,7 @@ edo_down() {
 	fi
 	if [ "$EDO" -gt "1" ]; then
 		EDO=$((EDO-1))
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 		tmpz=$((EDO*2))
 		if [ "$INTERVAL" -gt "$tmpz" ] || [ "$INTERVAL" -lt "$((-tmpz))" ]; then
 			if [ "$INTERVAL" -lt "0" ]; then
@@ -4686,19 +4693,21 @@ set_default_edo() {
 	fi
 	new_edo="$DEFAULT_EDO"
 	if [ "$new_edo" -gt "$EDO" ]; then
-		temp="$(calc "$new_edo/$EDO" | cut -d'~' -f2)"
-		INTERVAL="$(echo "$INTERVAL*$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
+		temp="$(calc -pd "$new_edo/$EDO")"
+		INTERVAL="$(calc -pd " $INTERVAL*$temp")"
+		INTERVAL="${INTERVAL%%.*}"
 	elif [ "$new_edo" -lt "$EDO" ]; then
-		temp="$(calc "$EDO/$new_edo" | cut -d'~' -f2)"
-		INTERVAL="$(echo "$INTERVAL/$temp" | bc | cut -d'~' -f2 | cut -d'.' -f1)"
+		temp="$(calc -pd "$EDO/$new_edo")"
+		INTERVAL="$(calc -pd " $INTERVAL/$temp")"
+		INTERVAL="${INTERVAL%%.*}"
 	fi
 	EDO="$new_edo"
 	INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 	INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+	echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	LOCKED=false
 	draw_pitch 1
-	gtts_speak "$EDO"
+	gtts_speak_chain "$INTERVAL" "$EDO" &
 }
 
 edo_up() {
@@ -4719,7 +4728,7 @@ edo_up() {
 	fi
 	if [ "$EDO" -lt "2000000" ]; then
 		EDO=$((EDO+1))
-		echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+		echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 
 		LOCKED=false
 		draw_pitch 2
@@ -4904,14 +4913,14 @@ oscillate() {
 				else
 					NEGATIVE=true
 				fi
-				result="$(calc "abs($result)" | sed "s/\t//g")"
+				result="$(calc -pd "abs($result)")"
 			elif [ "$result" == "0" ]; then
 				if [ "$INTERVAL" -lt "0" ]; then
 					NEGATIVE=true
 				else
 					NEGATIVE=false
 				fi
-				result="$(calc "abs($INTERVAL)" | sed "s/\t//g")"
+				result="$(calc -pd "abs($INTERVAL)")"
 			fi
 		fi
 	fi
@@ -5000,7 +5009,7 @@ oscillate() {
 				INTERVAL="$((old_int+1))"
 				old_int="$((old_int+1))"
 			fi
-			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			draw_pitch
 			x="$((x+1))"
 		fi
@@ -5056,7 +5065,7 @@ oscillate() {
 			elif [ "$c" == "q" ] || [ "$c" == "" ]; then
 				break
 			elif [ "$c" == "" ]; then
-				echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+				echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			fi
 		fi
 
@@ -5091,6 +5100,11 @@ pcm_volume_change() {
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
+		else
+			VOLUME=0
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
+			draw_equalizer
+			draw_volume 1
 		fi
 	elif [ "$1" == "2" ]; then
 		if [ "$PAUSE" == true ]; then
@@ -5104,6 +5118,11 @@ pcm_volume_change() {
 		fi
 		if [ "$VOLUME" -le "95" ]; then
 			VOLUME="$((VOLUME+5))"
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
+			draw_equalizer
+			draw_volume 1
+		else
+			VOLUME=100
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -5211,6 +5230,12 @@ system_volume_change() {
 		fi
 	fi
 	get_system_volume
+	#if [ "$leftvolume" != "$rightvolume" ]; then
+	#	balance="$(calc -pd "($leftvolume - $rightvolume)/100")"
+	#	balance="${balance%% *}"
+	#	balance="${balance%%\t*}"
+	#	echo -e "balance $balance" >"$ALETHEIA/pipe$$" &
+	#fi
 	draw_volume 2 3
 }
 
@@ -6656,7 +6681,7 @@ load_loop_file() {
 			sleep 0.05
 			echo -e "loadfile '$filename_without_ext.repeat.$ext'" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
-			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
@@ -6702,7 +6727,7 @@ load_loop_file() {
 			sleep 0.05
 			echo -e "loadfile \"$FILENAME\"" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
-			echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			sleep 0.05
@@ -6721,7 +6746,7 @@ invert_int() {
 		MUTE=false
 	fi
 	INTERVAL="$((-(INTERVAL)))"
-	echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+	echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 	gtts_speak " $INTERVAL"
 	draw_pitch
 }
@@ -7306,7 +7331,7 @@ setup_screen() {
 			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
 				draw_banner "WAIT"
 				gtts-cli " $VOICE_PITCH" -o /tmp/voice-pitch${VOICE_PITCH}.mp3 >/dev/null 2>/dev/null
-				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)" >/dev/null 2>/dev/null
+				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")" >/dev/null 2>/dev/null
 				rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
 				draw_banner "VOICE"
 				draw_position
@@ -7320,7 +7345,7 @@ setup_screen() {
 			if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
 				draw_banner "WAIT"
 				gtts-cli " $VOICE_PITCH" -o /tmp/voice-pitch${VOICE_PITCH}.mp3
-				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc "2^($VOICE_PITCH/60)" | cut -d'~' -f2-)"
+				sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")"
 				rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
 				draw_banner "VOICE"
 				draw_position
@@ -9283,7 +9308,7 @@ main() {
 			VOLUME="$DEFAULT_VOLUME"
 		fi
 
-		FLAGS="-speed $(calc "2^($INTERVAL/$EDO)") -volume $VOLUME -af equalizer=$EQUALIZER,volnorm"
+		FLAGS="-speed $(calc -pd "2^($INTERVAL/$EDO)") -volume $VOLUME -af equalizer=$EQUALIZER,volnorm"
 
 		if [ "$_scaletempo_flag" == "1" ]; then
 			FLAGS="$FLAGS,scaletempo=speed=tempo"
@@ -9296,7 +9321,7 @@ main() {
 			SCALETEMPO=false
 		fi
 	else
-		FLAGS="-speed $(calc "2^($DEFAULT_INTERVAL/$DEFAULT_EDO)") -volume $VOLUME -af equalizer=$EQUALIZER,volnorm"
+		FLAGS="-speed $(calc -pd "2^($DEFAULT_INTERVAL/$DEFAULT_EDO)") -volume $VOLUME -af equalizer=$EQUALIZER,volnorm"
 	fi
 
 	if [ -e "$FILENAME.repeats" ]; then
@@ -9594,6 +9619,7 @@ main() {
 					echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
 					sleep $MPLAYER_WAIT_TIME
 					percent="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2)"
+					gtts_speak_chain "$percent" "percent" &
 					if [ "$(isnum "$percent")" == "0" ]; then
 						percent=1
 					fi
@@ -9606,11 +9632,11 @@ main() {
 					tput cup $LINES
 					echo -ne "$BLUE_BLACK${PADDING}00$WHITE_BLACK:${BLUE_BLACK}00 "
 					echo -ne "${BLUE_BLACK}[$WHITE_BLACK"
-					percent=$(calc "$percent/100*$total_+1" | sed -e "s/\t//g" | cut -d'.' -f1)
+					percent=$(calc -pd "$percent/100*$total_+1")
+					percent="${percent%%.*}"
 					if [ "$percent" -gt "$total_" ]; then
 						percent="$total_"
 					fi
-					gtts_speak "progress bar"
 					printf '%*s' $percent | tr " " "="
 					printf '%*s' $((total_ - percent)) ""
 					echo -ne "$BLUE_BLACK] "
@@ -9619,11 +9645,11 @@ main() {
 					else
 						echo -ne "$BLUE_BLACK$hours$WHITE_BLACK:$BLUE_BLACK$minutes$WHITE_BLACK:$BLUE_BLACK$seconds$PADDING"
 					fi
-					if [ "$(echo -ne "$minutes" | cut -c 1)" == "0" ]; then
-						minutes="$(echo -ne "$minutes" | cut -c 2)"
+					if [ "${minutes:0:1}" == "0" ]; then
+						minutes="${minutes:1:1}"
 					fi
-					if [ "$(echo -ne "$seconds" | cut -c 1)" == "0" ]; then
-						seconds="$(echo -ne "$seconds" | cut -c 2)"
+					if [ "${seconds:0:1}" == "0" ]; then
+						seconds="${seconds:1:1}"
 					fi
 					total_seconds_tt=$((minutes * 60 + seconds))
 					tput cup $LINES 8
@@ -9641,10 +9667,13 @@ main() {
 						fi
 						echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
 						sleep $MPLAYER_WAIT_TIME
-						percent="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2)"
+						percent="$(tail -1 "$ALETHEIA/mplayer_output")"
+						percent="${percent#*=}"
 						echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 						sleep $MPLAYER_WAIT_TIME
-						tmpq="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2 | cut -d'.' -f1)"
+						tmpq="$(tail -1 "$ALETHEIA/mplayer_output")"
+						tmpq="${tmpq#*=}"
+						tmpq="${tmpq%%.*}"
 						tput cup $LINES 1
 						if [ "$(isnum "$tmpq")" == "1" ]; then
 							dateo="$(date -u -d @"$tmpq" +%M:%S)"
@@ -9654,7 +9683,7 @@ main() {
 							percent=$total_
 							skip2=true
 						fi
-						echo -ne "$BLUE$(echo -ne "$dateo" | cut -d':' -f1)$WHITE:$BLUE$(echo -ne "$dateo" | cut -d':' -f2)"
+						echo -ne "$BLUE${dateo%%:*}$WHITE:$BLUE${dateo##*:}"
 						if [ "$skip2" == false ]; then
 							tput cup $LINES $((COLUMNS-6))
 							if [ "$INTERVAL" -lt "0" ]; then
@@ -9670,9 +9699,10 @@ main() {
 							fi
 							if [ "$skip" == false ]; then
 								if [ "$neg" == true ]; then
-									total_seconds_dateo="$(calc "$total_seconds_tt * (2 * $int / $EDO)" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1)"
+									total_seconds_dateo="$(calc -pd "$total_seconds_tt * (2 * $int / $EDO)")"
+									total_seconds_dateo="${total_seconds_dateo%%.*}"
 								else
-									total_seconds_dateo="$(calc "$total_seconds_tt * (($int / $EDO)/2)" | cut -d'	' -f2 | cut -d'~' -f2 | cut -d'.' -f1)"
+									total_seconds_dateo="$(calc -pd "$total_seconds_tt * (($int / $EDO)/2)")"
 									total_seconds_dateo=$((total_seconds_tt-total_seconds_dateo))
 								fi
 								new_minutes=$((total_seconds_dateo / 60))
@@ -9688,7 +9718,8 @@ main() {
 							if [ "$(isnum "$percent")" == "0" ]; then
 								percent=$total_
 							fi
-							percent=$(calc "$percent/100*$total_+1" | sed -e "s/\t//g" | cut -d'.' -f1)
+							percent=$(calc -pd "$percent/100*$total_+1")
+							percent="${percent%%.*}"
 							if [ "$percent" -gt "$total_" ]; then
 								percent="$total_"
 							fi
@@ -10028,7 +10059,7 @@ main() {
 							INTERVAL="$((old_int+1))"
 							old_int="$((old_int+1))"
 						fi
-						echo -e "speed_set $(calc "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
+						echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 						draw_pitch
 						x="$((x+1))"
 					fi
