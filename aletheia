@@ -10588,21 +10588,9 @@ main() {
 				system_volume_change true 1 1
 				;;
 			'!')
-				if [ "$PAUSE" == true ]; then
-					PAUSE=false
-					draw_pitch
-				fi
-				if [ "$MUTE" == true ]; then
-					echo "mute" >"$ALETHEIA/pipe$$" &
-					MUTE=false
-					draw_pitch
-				fi
-				if [ "$VOLUME" -ge "1" ]; then
-					VOLUME="$((VOLUME-1))"
-					echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
-					gtts_speak "$VOLUME"
-					draw_equalizer
-					draw_volume
+				pcm_volume_change "$input"
+				if [ "$?" != "200" ]; then
+					return $?
 				fi
 				;;
 			'1')
