@@ -86,7 +86,7 @@ export CURRENT_POSITION=""
 PANELS_ENABLED=true
 MENTIONED=false
 BANNER_WAIT_TIME=0.6
-MPLAYER_WAIT_TIME=0.1
+MPLAYER_WAIT_TIME=0.15
 
 LINE_CHAR="\033(0"
 LINE_CHAR_END="\033(B"
@@ -4547,7 +4547,7 @@ double_precise() {
 		draw_pitch
 		INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 		INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-		gtts_speak_chain "$INTERVAL" "$EDO" &
+		gtts_speak "$EDO"
 	else
 		gtts_speak "limit"
 	fi
@@ -4569,7 +4569,7 @@ half_precise() {
 			echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
 			INTERVAL_LIMIT=$(echo "$EDO * 2.6" | bc)
 			INTERVAL_UPPER_LIMIT=$(echo "$EDO * 2.1" | bc)
-			gtts_speak_chain "$INTERVAL" "$EDO" &
+			gtts_speak "$EDO"
 		else
 			gtts_speak "limit"
 		fi
