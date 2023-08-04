@@ -5186,6 +5186,7 @@ set_system_volume() {
 }
 
 system_volume_change() {
+	get_system_volume
 	leftvolume=${SYSTEM_VOLUME_LEFT%\%}
 	rightvolume=${SYSTEM_VOLUME_RIGHT%\%}
 	if [ "$leftvolume" == "" ]; then
@@ -9380,7 +9381,7 @@ main() {
 	fi
 	# shellcheck disable=SC2086
 	# In this case, we want word splitting to expand $FLAGS for use by mplayer
-	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -ao pulse -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output" 2>/dev/null &
+	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output" 2>/dev/null &
 
 	MPLAYER_PID="$!"
 
