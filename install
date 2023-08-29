@@ -40,6 +40,7 @@ check_dep iconv
 check_dep mplayer
 check_dep parallel
 check_dep sqlite3
+check_dep isnum
 
 if [ "$QUIT" == true ]; then
 	echo -ne "\n${RED}Error: Unresolved dependencies$NOCOLOR\n"

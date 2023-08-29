@@ -4,7 +4,7 @@ Aletheia is a command-line media player with a wide range of features designed t
 
 The dependencies needed to run Aletheia are:
 
-bash, pactl, calc, bc, gtts-cli, espeak-ng, sox, ffmpeg, ffprobe, mplayer, parallel, sqlite3
+bash, pactl, calc, bc, gtts-cli, espeak-ng, sox, ffmpeg, ffprobe, mplayer, parallel, sqlite3, isnum
 
 To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' and confirm to save. Changing themes, voice settings, and the option to cache metadata tags is avaliable in the Setup screen on the main menu.
 
