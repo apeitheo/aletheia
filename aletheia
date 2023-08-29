@@ -2982,7 +2982,7 @@ scale_edo() {
 		orig_edo=$EDO
 		orig_interval=$INTERVAL
 		while [ "$edo_change" != "$original_edo" ]; do
-			if [ "$downwards" == true ]; then # && [ "$edo_change" -lt "$original_edo" ]; then
+			if [ "$downwards" == true ]; then
 				draw_pitch 2
 				read -rsn1 -t "$time" c
 				ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null
@@ -3962,7 +3962,8 @@ scale() {
 	fi
 
 	if [ "$interval_change" = "J" ]; then
-		if [ "$INTERVAL" -le "-$(echo -n "$INTERVAL_LIMIT" | cut -d'.' -f1)" ]; then
+		limit="-${INTERVAL_LIMIT%%.*}"
+		if [ "$INTERVAL" -le "$limit" ]; then
 			gtts_speak "scale closed"
 			RIGHT_BANNER_WIDTH=0
 			draw_pitch
@@ -3972,9 +3973,10 @@ scale() {
 		gtts_speak "scaling"
 		backwards=true
 		time=2.5
-		interval_change="$((INTERVAL-EDO))"
+		interval_change="$limit"
 	elif [ "$interval_change" = "K" ]; then
-		if [ "$INTERVAL" -ge "$(echo -n "$INTERVAL_UPPER_LIMIT" | cut -d'.' -f1)" ]; then
+		limit="${INTERVAL_UPPER_LIMIT%%.*}"
+		if [ "$INTERVAL" -ge "$limit" ]; then
 			gtts_speak "scale closed"
 			RIGHT_BANNER_WIDTH=0
 			draw_pitch
@@ -3984,9 +3986,10 @@ scale() {
 		gtts_speak "scaling"
 		backwards=false
 		time=2.5
-		interval_change="$((INTERVAL+EDO))"
+		interval_change="$limit"
 	elif [ "$interval_change" == "j" ]; then
-		if [ "$INTERVAL" -le "-$(echo -n "$INTERVAL_LIMIT" | cut -d'.' -f1)" ]; then
+		limit="-${INTERVAL_LIMIT%%.*}"
+		if [ "$INTERVAL" -le "$limit" ]; then
 			gtts_speak "scale closed"
 			RIGHT_BANNER_WIDTH=0
 			draw_pitch
@@ -3996,9 +3999,10 @@ scale() {
 		gtts_speak "scaling"
 		backwards=true
 		time=$SCALE_SPEED
-		interval_change="$((INTERVAL-EDO))"
+		interval_change="$limit"
 	elif [ "$interval_change" == "k" ]; then
-		if [ "$INTERVAL" -ge "$(echo -n "$INTERVAL_UPPER_LIMIT" | cut -d'.' -f1)" ]; then
+		limit="${INTERVAL_UPPER_LIMIT%%.*}"
+		if [ "$INTERVAL" -ge "$limit" ]; then
 			gtts_speak "scale closed"
 			RIGHT_BANNER_WIDTH=0
 			draw_pitch
@@ -4008,7 +4012,7 @@ scale() {
 		gtts_speak "scaling"
 		backwards=false
 		time=$SCALE_SPEED
-		interval_change="$((INTERVAL+EDO))"
+		interval_change="$limit"
 	elif [ "$interval_change" == "d" ]; then
 		toggle_voice
 		draw_pitch
@@ -4092,7 +4096,7 @@ scale() {
 		orig_int="$INTERVAL"
 		c=""
 		while [ "$interval_change" != "$orig_int" ]; do
-			if [ "$interval_change" -le "$orig_int" ] || [ "$BACKWORDS" == true ]; then
+			if [ "$interval_change" -le "$orig_int" ] || [ "$backwards" == true ]; then
 				draw_pitch 1
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -rsn1 -t "$SCALE_SPEED" c
@@ -4111,18 +4115,14 @@ scale() {
 					gtts_speak "scale closed"
 					break
 				elif [ "$c" == "c" ]; then
-					if [ "$c" == "c" ]; then
-						sleep "$SCALE_SPEED"
-						gtts_speak "order reversed"
-					fi
-					if [ "$backwards" == true ] && [ "$c" != "c" ]; then
-						INTERVAL="$((INTERVAL-1))"
-					elif [ "$backwards" == true ] && [ "$c" == "c" ]; then
+					sleep "$SCALE_SPEED"
+					gtts_speak "order reversed"
+					if [ "$backwards" == true ]; then
 						backwards=false
 						interval_change="$((interval_change * -1))"
 					else 
 						backwards=true
-						interval_change="$((interval_change*-1))"
+						interval_change="$((interval_change * -1))"
 						INTERVAL="$((INTERVAL-1))"
 					fi
 				elif [ "$c" == "J" ]; then
@@ -4175,10 +4175,8 @@ scale() {
 					gtts_speak "scale closed"
 					break
 				elif [ "$c" == "c" ] || [ "$backwards" == true ]; then
-					if [ "$c" == "c" ]; then
-						sleep "$SCALE_SPEED"
-						gtts_speak "order reversed"
-					fi
+					sleep "$SCALE_SPEED"
+					gtts_speak "order reversed"
 					if [ "$backwards" == true ] && [ "$c" != "c" ]; then
 						INTERVAL="$((INTERVAL-1))"
 					elif [ "$backwards" == true ] && [ "$c" == "c" ]; then
