@@ -1019,9 +1019,8 @@ j  Scale Down
 k  Scale Up
 o  Double EDO
 m  Halve EDO
-c  Reverse Direction
-y  $DEFAULT_EDO-EDO
-v  Toggle Pitch"
+c  Reverse
+y  $DEFAULT_EDO-EDO"
 
 HELP="Basic Controls
 i  Menu
@@ -1944,11 +1943,37 @@ repeat() {
 						gtts_speak "scaling"
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=false
-					elif [ "$inputchar" == "u" ] || [ "$inputchar" == "q" ] || [ "$inputchar" == "" ]; then
+					elif [ "$inputchar" == "u" ] || [ "$inputchar" == "q" ]; then
 						gtts_speak "scale closed"
 						draw_pitch
 						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=true
+					elif [ "$inputchar" == $'\e' ]; then
+						read -rn2 -t 0.03 key
+						case $key in
+						'[B')
+							scale_down=true
+							scale=true
+							input_char=""
+							gtts_speak "scaling"
+							draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+							flagged=false
+							;;
+						'[A')
+							scale_down=false
+							scale=true
+							input_char=""
+							gtts_speak "scaling"
+							draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+							flagged=false
+							;;
+						*)
+							gtts_speak "scale closed"
+							draw_pitch
+							draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+							flagged=true
+							;;
+						esac
 					fi
 				fi
 			elif [ "$input_char" == "q" ]; then
@@ -2655,6 +2680,44 @@ repeat() {
 				draw_loop
 				input_char="$t"
 				flagged=true
+			elif [ "$input_char" == $'\e' ]; then
+				read -rn2 -t 0.03 key
+				case $key in
+				'[B')
+					old_time_before=$time_before
+					time_before=$(date +%s.%N)
+					orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
+					if [ "$input_char" == "k" ]; then
+						pitch_up true
+					else
+						pitch_down true
+					fi
+					orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
+					switch=true
+					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+					flagged=true
+					;;
+				'[A')
+					old_time_before=$time_before
+					time_before=$(date +%s.%N)
+					orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
+					if [ "$input_char" == "k" ]; then
+						pitch_up true
+					else
+						pitch_down true
+					fi
+					orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
+					switch=true
+					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+					flagged=true
+					;;
+				*)
+					if [ "$LOOP" == false ]; then
+						echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
+					fi
+					break
+					;;
+				esac
 			else
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
@@ -3276,6 +3339,7 @@ draw_menu() {
 }
 
 main_menu() {
+	kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 	pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 	z=""
 	old_LINES=$LINES
@@ -3396,6 +3460,7 @@ main_menu() {
 			continue
 		fi
 		if [ "$z" == "j" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$MUSIC_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
@@ -3420,6 +3485,7 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "k" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
 				if [ "$MUSIC_SELECTION" != "1" ]; then
@@ -3444,6 +3510,7 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "l" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			if [ "$SELECTION" == "1" ]; then
 				MUSIC_RIGHT_WINDOW=true
@@ -3464,6 +3531,7 @@ main_menu() {
 			z=""
 			continue
 		elif [ "$z" == "h" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			echo -ne "$WHITE"
 			MUSIC_RIGHT_WINDOW=false
@@ -3761,18 +3829,89 @@ main_menu() {
 			read -rn2 -t 0.03 key
 			case $key in
 			'[B')
-				if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
-					SELECTION="$((SELECTION+1))"
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+				if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+					if [ "$MUSIC_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						MUSIC_SELECTION=$((MUSIC_SELECTION+1))
+					fi
+				elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
+					if [ "$SOUND_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						SOUND_SELECTION=$((SOUND_SELECTION+1))
+					fi
+				elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+					if [ "$VIDEO_SELECTION" != "$TOTAL_OPTS_MUSIC_SUBMENU" ]; then
+						VIDEO_SELECTION=$((VIDEO_SELECTION+1))
+					fi
+				else
+					if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
+						SELECTION="$((SELECTION+1))"
+					else
+						SELECTION="1"
+					fi
 				fi
 				tagged=false
 				z=""
 				continue
 				;;
 			'[A')
-				if [ "$SELECTION" -gt "1" ]; then
-					SELECTION="$((SELECTION-1))"
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+				if [ "$MUSIC_RIGHT_WINDOW" == true ]; then
+					if [ "$MUSIC_SELECTION" != "1" ]; then
+						MUSIC_SELECTION=$((MUSIC_SELECTION-1))
+					fi
+				elif [ "$SOUND_RIGHT_WINDOW" == true ]; then
+					if [ "$SOUND_SELECTION" != "1" ]; then
+						SOUND_SELECTION=$((SOUND_SELECTION-1))
+					fi
+				elif [ "$VIDEO_RIGHT_WINDOW" == true ]; then
+					if [ "$VIDEO_SELECTION" != "1" ]; then
+						VIDEO_SELECTION=$((VIDEO_SELECTION-1))
+					fi
+				else
+					if [ "$SELECTION" -gt "1" ]; then
+						SELECTION="$((SELECTION-1))"
+					else
+						SELECTION="$TOTAL_OPTS"
+					fi
 				fi
 				tagged=false
+				z=""
+				continue
+				;;
+			'[C')
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+				if [ "$SELECTION" == "1" ]; then
+					MUSIC_RIGHT_WINDOW=true
+					SOUND_RIGHT_WINDOW=false
+					VIDEO_RIGHT_WINDOW=false
+					MUSIC_SELECTION=1
+				#elif [ "$SELECTION" == "2" ]; then
+				#	SOUND_RIGHT_WINDOW=true
+				#	MUSIC_RIGHT_WINDOW=false
+				#	VIDEO_RIGHT_WINDOW=false
+				#	SOUND_SELECTION=1
+				#elif [ "$SELECTION" == "3" ]; then
+				#	VIDEO_RIGHT_WINDOW=true
+				#	SOUND_RIGHT_WINDOW=false
+				#	MUSIC_RIGHT_WINDOW=false
+				#	VIDEO_SELECTION=1
+				fi
+				z=""
+				continue
+				;;
+			'[D')
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+				echo -ne "$WHITE"
+				MUSIC_RIGHT_WINDOW=false
+				SOUND_RIGHT_WINDOW=false
+				VIDEO_RIGHT_WINDOW=false
+				MUSIC_SELECTION=1
+				SOUND_SELECTION=1
+				VIDEO_SELECTION=1
 				z=""
 				continue
 				;;
@@ -6928,6 +7067,7 @@ queue_help_screen() {
 			empty_pane "$((number_per_page + 2))"
 		fi
 
+		local inputchar=
 		read -rsn1 inputchar
 		if [ "$inputchar" = "j" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -6955,16 +7095,53 @@ queue_help_screen() {
 		elif [ "$inputchar" == "d" ]; then
 			echo -e "$QUEUE_HELP" | sed -n "$pos,$((pos+number_per_page-1))p" | sed "s/$/\n/g" | sed "s/[A-Z][A-Za-z]/\L&/g" | sed "s/\\/[A-Z]/\L&/g" | sed "s/[Aa] /&\n\n/g" | sed "s/I /I \n\n/g" | sed "s/  /\n\n/g" | sed "s/$/\n\n/g" | espeak-ng --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
+		elif [ "$inputchar" == $'\e' ]; then
+			read -rn2 -t 0.03 key
+			case $key in
+			'[B')
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				if [ "$FLAGGED" == true ]; then
+					continue
+				fi
+				pos="$((pos+number_per_page))"
+				if [ "$pos" -gt "$QUEUE_HELP_LENGTH" ]; then
+					pos="$((QUEUE_HELP_LENGTH-number_per_page-1))"
+				fi
+				;;
+			'[A')
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				if [ "$pos" == "1" ]; then
+					continue
+				else
+					FLAGGED=false
+				fi
+				if [ "$number_per_page" -lt "$original_number_per_page" ]; then
+					number_per_page="$original_number_per_page"
+				fi
+				pos="$((pos-number_per_page))"
+				if [ "$pos" -le "0" ]; then
+					pos=1
+				fi
+				;;
+			*)
+				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				gtts_speak "closed" true
+				number_per_page="$original_number_per_page"
+				draw_volume
+				draw_equalizer
+				draw_banner "PLAYLIST"
+				draw_position
+				return
+				;;
+			esac
 		else
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			draw_volume
 			draw_equalizer
-			draw_pitch
+			draw_banner "PLAYLIST"
 			draw_position
-			redraw_buffer
-			empty_pane $((number_per_page+2))
 			return
 		fi
 	done
@@ -6995,7 +7172,7 @@ scale_help_screen() {
 		fi
 		original_number_per_page=$number_per_page
 
-		echo -ne "$NOCOLOR${SCALE_HELP_BUFFER[$page]}"
+		echo -ne "$NOCOLOR${SCALE_HELP_BUFFER[page]}"
 
 		helpbuflines=$(echo -ne "${SCALE_HELP_BUFFER[page]}" | grep -cvE "^$")
 		if [ "$helpbuflines" -lt "$original_number_per_page" ]; then
@@ -7024,6 +7201,7 @@ scale_help_screen() {
 			fi
 		fi
 
+		local inputchar=
 		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -7053,7 +7231,7 @@ scale_help_screen() {
 			empty_pane
 			draw_banner "SCALE"
 			draw_banner "HELP" false true
-		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
@@ -7074,12 +7252,15 @@ scale_help_screen() {
 				;;
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				gtts_speak "closed" true
 				number_per_page="$original_number_per_page"
 				return
 				;;
 			esac
 		else
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			return
@@ -7311,6 +7492,7 @@ setup_screen() {
 			fi
 		fi
 
+		local inputchar=
 		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -7438,6 +7620,7 @@ setup_screen() {
 				;;
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				number_per_page="$original_number_per_page"
 				if [ "$1" != true ]; then
 					redraw_screen
@@ -7447,6 +7630,7 @@ setup_screen() {
 			esac
 		else
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			if [ "$1" != true ]; then
@@ -7491,8 +7675,8 @@ render() {
 	fi
 
 	pos=1
-	while [ "$pos" -lt "$length" ]; do
-		buf=""
+	while [ "$pos" -le "$length" ]; do
+		unset buf
 		if [ "$((length-pos))" -lt "$number_per_page" ]; then
 			number_per_page=$((length-pos+1))
 			FLAGGED=true
@@ -7645,6 +7829,7 @@ loop_help_screen() {
 			fi
 		fi
 
+		local inputchar=
 		read -rsn1 inputchar <&1
 		if [ "$inputchar" = "j" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
@@ -7675,7 +7860,7 @@ loop_help_screen() {
 			draw_banner "HELP" false false true
 			tput cup $LINES $((COLUMNS-12))
 			echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
-		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
@@ -7696,6 +7881,7 @@ loop_help_screen() {
 				;;
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				gtts_speak "closed" true
 				number_per_page="$original_number_per_page"
 				return
@@ -7807,7 +7993,7 @@ help_screen() {
 			page=0
 			reset_dimensions
 			empty_pane
-		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ] || [ "$inputchar" == "" ]; then
+		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
@@ -7836,6 +8022,7 @@ help_screen() {
 				;;
 			*)
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				gtts_speak "closed" true
 				number_per_page="$original_number_per_page"
 				if [ "$initial_screen" == false ]; then
@@ -7849,6 +8036,7 @@ help_screen() {
 			esac
 		else
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			return
@@ -9063,7 +9251,6 @@ print_queue() {
 			continue
 		elif [ "$inputchar" == "?" ]; then
 			queue_help_screen
-			continue
 		elif [ "$inputchar" == "x" ]; then
 			if [ "$TOTAL_QUEUE" == "1" ]; then
 				continue
