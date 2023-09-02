@@ -11277,7 +11277,7 @@ while (( (POSITION <= TOTAL_QUEUE) && (POSITION >= 1) )); do
 		POSITION_WIDTH=$((${#POSITION} + ${#TOTAL_QUEUE} + 1 + (${#CORNER_DIVIDER}*2)))
 		RIGHT_BANNER_WIDTH=$POSITION_WIDTH
 	elif [ "$RETURN" == "$RETURN_LOOP_ARTIST" ]; then
-		new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "1,${POSITION}d" | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
+		new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "1,${POSITION}d" | grep -ni "/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
 		if [ "$new_POSITION" != "" ]; then
 			POSITION="$((new_POSITION+POSITION))"
 		else
@@ -11289,7 +11289,7 @@ while (( (POSITION <= TOTAL_QUEUE) && (POSITION >= 1) )); do
 					POSITION=$((POSITION+1))
 				fi
 			else
-				POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
+				POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
 			fi
 		fi
 	elif [ "$RETURN" == "$RETURN_LOOP_ARTIST_BACK" ]; then
@@ -11299,11 +11299,11 @@ while (( (POSITION <= TOTAL_QUEUE) && (POSITION >= 1) )); do
 				POSITION=$((POSITION-1))
 			fi
 		else
-			new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "${POSITION},${TOTAL_QUEUE}d" | tac | grep -ni "\/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
+			new_POSITION="$(printf '%s\n' "${queue_array[@]}" | sed "${POSITION},${TOTAL_QUEUE}d" | tac | grep -ni "/$LOOP_ARTIST_NAME -" | head -1 | cut -d':' -f1)"
 			if [ "$new_POSITION" != "" ]; then
 				POSITION="$((POSITION-new_POSITION))"
 			else
-				POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "\/$LOOP_ARTIST_NAME -" | tail -1 | cut -d':' -f1)"
+				POSITION="$(printf '%s\n' "${queue_array[@]}" | grep -ni "/$LOOP_ARTIST_NAME -" | tail -1 | cut -d':' -f1)"
 			fi
 		fi
 	elif [ "$RETURN" == "$RETURN_TRACK_RANDOM" ]; then
