@@ -7570,6 +7570,7 @@ setup_screen() {
 				if [ "$in_menu" != true ]; then
 					reset_buffer
 					redraw_buffer
+					draw_pitch
 				else
 					draw_banner "MENU"
 				fi
@@ -10997,12 +10998,6 @@ fi
 if [ ! -d "$VIDEODIR" ]; then
 	mkdir -p "$VIDEODIR"
 fi
-
-rm -f "$ALETHEIA"/pipe* >/dev/null 2>/dev/null
-
-mkfifo "$ALETHEIA/pipe$$"
-
-exec 3<> "$ALETHEIA/pipe$$"
 
 if [ "$1" == "--server" ]; then
 	WEB_CLIENT=1
