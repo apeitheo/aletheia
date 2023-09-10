@@ -76,7 +76,7 @@ export TMP_BUFFER=()
 export TWO_COLUMN=false
 export OUTPUT=""
 
-SCALE_SPEED=0.2
+SCALE_SPEED=0.618
 DEFAULT_SCALE_SPEED=$SCALE_SPEED
 export DIMENSIONS_RESET=false
 export SELECT_REPEAT_FILE=false
@@ -7025,7 +7025,7 @@ queue_help_screen() {
 		number_per_page="$((LINES-4))"
 	fi
 
-	FLAGGED=false
+	local FLAGGED=false
 	if [ "$QUEUE_HELP_LENGTH" -le "$number_per_page" ]; then
 		number_per_page="$QUEUE_HELP_LENGTH"
 		FLAGGED=true
@@ -9462,6 +9462,9 @@ save_settings() {
 }
 
 main() {
+	rm -f "$ALETHEIA"/pipe* >/dev/null 2>/dev/null
+	mkfifo "$ALETHEIA/pipe$$"
+	exec 3<> "$ALETHEIA/pipe$$"
 	PAUSE=false
 	MUTE=false
 	LOCKED=false
@@ -9889,10 +9892,16 @@ main() {
 									total_seconds_dateo="${total_seconds_dateo%%.*}"
 								else
 									total_seconds_dateo="$(calc -pd "$total_seconds_tt * (($int / $EDO)/2)")"
+									total_seconds_dateo="${total_seconds_dateo%%.*}"
 									total_seconds_dateo=$((total_seconds_tt-total_seconds_dateo))
 								fi
-								new_minutes=$((total_seconds_dateo / 60))
-								new_seconds=$((total_seconds_dateo % 60))
+								if [ "${total_seconds_dateo:0:1}" == "-" ]; then
+									new_minutes=0
+									new_seconds=0
+								else
+									new_minutes=$((total_seconds_dateo / 60))
+									new_seconds=$((total_seconds_dateo % 60))
+								fi
 							else
 								new_minutes=$minutes
 								new_seconds=$seconds
