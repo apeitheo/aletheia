@@ -2070,7 +2070,7 @@ repeat() {
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				read_corner
 				if [ "$REPEAT_ONLY" == true ]; then
-					gtts_speak "back. playlist loop mode"
+					gtts_speak "back. loop mode"
 				else
 					gtts_speak "back. loop editor"
 				fi
@@ -2436,7 +2436,7 @@ repeat() {
 					RIGHT_BANNER_WIDTH="${#text}"
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_banner "$text" false true
-					gtts_speak "playlist loop mode"
+					gtts_speak "loop mode"
 					sleep $BANNER_WAIT_TIME
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -2447,7 +2447,7 @@ repeat() {
 					RIGHT_BANNER_WIDTH="${#text}"
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_banner "$text" false true
-					gtts_speak "playlist loop mode off"
+					gtts_speak "loop mode off"
 					sleep $BANNER_WAIT_TIME
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -3735,7 +3735,7 @@ main_menu() {
 			tput el
 			tput cup $((LINES-2))
 			tput el
-			setup_screen "$initial_screen"
+			setup_screen "$initial_screen" true
 			if [ "$initial_screen" == false ]; then
 				redraw_buffer
 			fi
@@ -4054,7 +4054,7 @@ main_menu() {
 						tput cup $((LINES-2))
 						tput el
 					fi
-					setup_screen "$initial_screen"
+					setup_screen "$initial_screen" true
 				elif [ "${OPT[$SELECTION]}" == "Help" ]; then
 					tput cup 1
 					tput el
@@ -7623,7 +7623,7 @@ setup_screen() {
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				number_per_page="$original_number_per_page"
-				if [ "$1" != true ]; then
+				if [ "$1" != true ] && [ "$2" != true ]; then
 					redraw_screen
 				fi
 				return
@@ -7635,7 +7635,11 @@ setup_screen() {
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			if [ "$1" != true ]; then
-				redraw_screen
+				if [ "$inputchar" == "i" ]; then
+					main_menu
+				elif [ "$2" != true ]; then
+					redraw_screen
+				fi
 			fi
 			return
 		fi
@@ -9581,9 +9585,10 @@ main() {
 	if [ "$REPEAT_ONLY" == true ]; then
 		repeat
 		repeat_tmp=$?
-		gtts_speak "loop editor closed. main screen" true
 		if [ "$repeat_tmp" != "200" ]; then
 			return $repeat_tmp
+		else
+			gtts_speak "loop closed. main screen"
 		fi
 	else
 		draw_pitch
@@ -10104,7 +10109,7 @@ main() {
 			'6')
 				repeat
 				repeat_tmp="$?"
-				gtts_speak "loop editor closed. main screen" true
+				gtts_speak "loop closed. main screen" true
 				if [ "$repeat_tmp" != "200" ] && [ "$repeat_tmp" != "300" ]; then
 					return $repeat_tmp
 				fi
@@ -10689,9 +10694,9 @@ main() {
 					if [ "$ARTIST" != "$last" ]; then
 						IFS=$'\n'
 						if [ "$ARTIST" != "" ]; then
-							tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$ARTIST \- " | tail -1 | cut -d':' -f1)"
+							tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "/$ARTIST - " | tail -1 | cut -d':' -f1)"
 						else
-							tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$TITLE" | tail -1 | cut -d':' -f1)"
+							tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "/$TITLE" | tail -1 | cut -d':' -f1)"
 						fi
 						unset IFS
 						JUMP="$((tmpq+1))"
@@ -10705,17 +10710,17 @@ main() {
 				if [ "$SHUFFLED" == false ]; then
 					IFS=$'\n'
 					if [ "$ARTIST" != "" ]; then
-						tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$ARTIST \- " | head -1 | cut -d':' -f1)"
+						tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "/$ARTIST - " | head -1 | cut -d':' -f1)"
 					else
-						tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$TITLE" | head -1 | cut -d':' -f1)"
+						tmpq="$(printf '%s\n' "${queue_array[@]}" | grep -n "/$TITLE" | head -1 | cut -d':' -f1)"
 					fi
 					if [ "$tmpq" -gt "1" ]; then
 						last_artist="$(echo -ne "${queue_array[$((tmpq-2))]}" | rev | cut -d'/' -f1 | cut -d'.' -f2- | rev)"
 						if [ "$(echo -ne "$last_artist" | grep " - ")" != "" ]; then
 							last_artist="$(echo -ne "$last_artist" | sed "s/ - //g" | cut -d'' -f1)"
-							JUMP="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$last_artist \- " | head -1 | cut -d':' -f1)"
+							JUMP="$(printf '%s\n' "${queue_array[@]}" | grep -n "/$last_artist - " | head -1 | cut -d':' -f1)"
 						else
-							JUMP="$(printf '%s\n' "${queue_array[@]}" | grep -n "\/$last_artist" | head -1 | cut -d':' -f1)"
+							JUMP="$(printf '%s\n' "${queue_array[@]}" | grep -n "/$last_artist" | head -1 | cut -d':' -f1)"
 						fi
 					fi
 					unset IFS
@@ -10875,7 +10880,7 @@ main() {
 				;;
 			'')
 				REPEAT_ONLY=true
-				gtts_speak "playlist loop mode" true
+				gtts_speak "loop mode" true
 				JUMP="$POSITION"
 				kill "$MPLAYER_PID"
 				return $RETURN_JUMP
