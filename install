@@ -17,7 +17,7 @@ echo -ne "${BLUE}Checking for dependencies...\n\n"
 check_dep() {
 	local dependency_name="$1"
 
-	echo -ne "${NOCOLOR}checking for $dependency_name... "
+	echo -ne "${NOCOLOR}Checking for $dependency_name... "
 
 	if [ "$(which "$dependency_name" 2>/dev/null)" == "" ]; then
 		echo -e "${RED}no"
@@ -51,6 +51,8 @@ if [ ! -w "$DESTDIR" ]; then
 	echo -e "\n${RED}Error:$NOCOLOR Need root permission to install in $DESTDIR"
 	exit 1
 fi
+
+echo -ne "\n${NOCOLOR}Installing... $NOCOLOR"
 
 DESTDIR=${DESTDIR%/}
 
@@ -88,20 +90,21 @@ for i in $(seq 0 $((${#FILES[@]}-1))); do
 done
 
 if ! $FAIL; then
+	echo -ne "${GREEN}done$NOCOLOR"
 	if ! mandb >/dev/null 2>/dev/null; then
 		echo "${YELLOW}Warning:$NOCOLOR mandb failed"
 	fi
 
-	echo -e "\n${GREEN}Aletheia installed in:$NOCOLOR\n"
+	echo -e "\n"
 
 	for i in $(seq 0 $((${#FILES[@]}-1))); do
 		echo "${FILES[i]}"
 	done
 
 	if [ "$DESTDIR" != "/usr/local" ] && [ "$DESTDIR" != "/usr/local/" ]; then
-		echo -e "\n${GREEN}Use DESTDIR=${DESTDIR} ./uninstall to remove$NOCOLOR"
+		echo -e "\n${NOCOLOR}Use ${GREEN}DESTDIR=${DESTDIR} ./uninstall$NOCOLOR to remove"
 	else
-		echo -e "\n${GREEN}Use ./uninstall to remove$NOCOLOR"
+		echo -e "\n${NOCOLOR}Use ${GREEN}./uninstall$NOCOLOR to remove"
 	fi
 	exit 0
 else
