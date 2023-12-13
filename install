@@ -11,8 +11,7 @@ DESTDIR=${DESTDIR:-/usr/local}
 QUIT=false
 USER="$(whoami)"
 
-echo -ne "${GREEN}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n\n"
-echo -ne "${BLUE}Checking for dependencies...\n\n"
+echo -e "${GREEN}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n"
 
 check_dep() {
 	local dependency_name="$1"
@@ -91,8 +90,11 @@ done
 
 if ! $FAIL; then
 	echo -ne "${GREEN}done$NOCOLOR"
+	echo -ne "\n\n${NOCOLOR}Updating man pages... $NOCOLOR"
 	if ! mandb >/dev/null 2>/dev/null; then
-		echo "${YELLOW}Warning:$NOCOLOR mandb failed"
+		echo -ne "${RED}failed$NOCOLOR"
+	else
+		echo -ne "${GREEN}done$NOCOLOR"
 	fi
 
 	echo -e "\n"
@@ -108,6 +110,6 @@ if ! $FAIL; then
 	fi
 	exit 0
 else
-	echo -e "\n${RED}Install not successful.$NOCOLOR\n"
+	echo -e "${RED}failed$NOCOLOR"
 	exit 1
 fi
