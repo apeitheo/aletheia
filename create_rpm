@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=6
+REVISION=7
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
 
@@ -23,14 +23,18 @@ mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/applications"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
 
 cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 cp "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
 cp "$SRCDIR/aletheia.desktop" "$TMPDIR/rpmbuild/SOURCES/usr/share/applications/"
 cp "$SRCDIR/aletheia.png" "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
+cp "$SRCDIR/themes/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
+cp "$SRCDIR/aletheia.spec" "$TMPDIR/rpmbuild/SPECS/"
 
-echo -e "Summary: A CLI media player with pitch controls and voice feedback\nName: aletheia\nVersion: ${VERSION}\nRelease: ${REVISION}%{?dist}\nLicense: GPL3\nBuildArch: %{_arch}\nURL: http://www.patreon.com/aletheia_project\nRequires: mplayer\nRequires: pulseaudio-utils\nRequires: calc\nRequires: bc\nRequires: gtts\nRequires: espeak-ng\nRequires: sox\nRequires: ffmpeg\nRequires: parallel\nRequires: sqlite\n\n%description\nA command-line media player with pitch and speed controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.\n\n%install\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/usr/bin/aletheia\" %{buildroot}/%{_bindir}/aletheia\ninstall -D -m 755 \"$TMPDIR/rpmbuild/SOURCES/usr/bin/aletheia_desktop_launcher\" %{buildroot}/%{_bindir}/aletheia_desktop_launcher\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1/aletheia.1\" %{buildroot}/%{_mandir}/man1/aletheia.1\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/usr/share/applications/aletheia.desktop\" %{buildroot}/%{_datadir}/applications/aletheia.desktop\ninstall -D -m 644 \"$TMPDIR/rpmbuild/SOURCES/usr/share/icons/aletheia.png\" %{buildroot}/%{_datadir}/icons/aletheia.png\n\n%files\n%attr(0755, root, root) %{_bindir}/aletheia\n%attr(0755, root, root) %{_bindir}/aletheia_desktop_launcher\n%attr(0644, root, root) %{_mandir}/man1/aletheia.1.gz\n%attr(0644, root, root) %{_datadir}/applications/aletheia.desktop\n%attr(0644, root, root) %{_datadir}/icons/aletheia.png\n\n%changelog\n* $(date +"%a %b %e %Y") Brad Hermanson ${VERSION}-${REVISION}\n- Initial package release" >"$TMPDIR"/rpmbuild/SPECS/aletheia.spec
+sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"/usr/share/aletheia/\"#g" "$TMPDIR/rpmbuild/SOURCES/usr/bin/aletheia"
+sed -i "s/%%DATE%%/$(date +"%a %b %e %Y")/g;s/%%VERSION%%/$VERSION/g;s/%%REVISION%%/$REVISION/g;s/%%TMPDIR%%/${TMPDIR//\//\\\/}/g" "$TMPDIR/rpmbuild/SPECS/aletheia.spec"
 
 cd "$TMPDIR" || exit 1
 rpmbuild -bb rpmbuild/SPECS/aletheia.spec

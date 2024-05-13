@@ -30,11 +30,11 @@ fi
 run_gnome() {
 	/usr/libexec/gnome-terminal-server --app-id=org.gnome.aletheia --class=org.gnome.aletheia --name=org.gnome.aletheia >/dev/null 2>/dev/null &
 	sleep 0.1
-	gnome-terminal --app-id=org.gnome.aletheia --hide-menubar --geometry=48x15 -- "$ALETHEIA_PATH"
+	gnome-terminal --app-id=org.gnome.aletheia --hide-menubar --geometry=48x13 -- "$ALETHEIA_PATH"
 }
 
 run_xfce4() {
-	/usr/bin/xfce4-terminal --geometry=48x15 --title=Aletheia --icon=/usr/share/icons/aletheia.png --color-text=white --color-bg=black --command="$ALETHEIA_PATH"
+	/usr/bin/xfce4-terminal --geometry=48x13 --title=Aletheia --icon=/usr/share/icons/aletheia.png --color-text=white --color-bg=black --command="$ALETHEIA_PATH"
 }
 
 run_konsole() {
@@ -42,11 +42,11 @@ run_konsole() {
 }
 
 run_xterm() {
-	xterm +sb -title Aletheia -geometry 48x15 -bg black -fg white -e "$ALETHEIA_PATH"
+	xterm +sb -title Aletheia -geometry 48x13 -bg black -fg white -e "$ALETHEIA_PATH"
 }
 
 run_urxvt() {
-	urxvt +sb -title Aletheia -geometry 48x15 -bg black -fg white -e "$ALETHEIA_PATH"
+	urxvt +sb -title Aletheia -geometry 48x13 -bg black -fg white -e "$ALETHEIA_PATH"
 }
 
 run_alacritty() {
@@ -58,7 +58,7 @@ run_kitty() {
 }
 
 run_mate() {
-	mate-terminal --class=org.gnome.aletheia --name=org.gnome.aletheia --hide-menubar --geometry 48x15 --title Aletheia -e "$ALETHEIA_PATH"
+	mate-terminal --class=org.gnome.aletheia --name=org.gnome.aletheia --hide-menubar --geometry 48x16 --title Aletheia -e "$ALETHEIA_PATH"
 }
 
 # If no TERMINAL= line set in ~/.aletheia/config, run what's available,

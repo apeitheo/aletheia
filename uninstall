@@ -5,6 +5,24 @@ BLUE="\033[1;36m"
 NOCOLOR="\033[0m"
 
 DESTDIR=${DESTDIR:-/usr/local}
+if [ "$1" == "--destdir" ]; then
+	if [ -d "$2" ]; then
+		DESTDIR=$2
+	else
+		echo -ne "\n${RED}Error: Not a directory$NOCOLOR\n"
+		exit 1
+	fi
+fi
+
+if [ "${1:0:10}" == "--destdir=" ]; then
+	dir=${1:10}
+	if [ -d "$dir" ]; then
+		DESTDIR=$dir
+	else
+		echo -ne "\n${RED}Error: Not a directory$NOCOLOR\n"
+		exit 1
+	fi
+fi
 
 if [ ! -w "$DESTDIR" ]; then
 	echo -e "${RED}Error:$NOCOLOR Need root permission to uninstall from $DESTDIR"
@@ -16,16 +34,34 @@ FILES[1]="${DESTDIR}/bin/aletheia_desktop_launcher"
 FILES[2]="${DESTDIR}/share/man/man1/aletheia.1"
 FILES[3]="${DESTDIR}/share/applications/aletheia.desktop"
 FILES[4]="${DESTDIR}/share/icons/aletheia.png"
+if [ -d "$DESTDIR/share/aletheia/themes/" ]; then
+	FILES+=("${DESTDIR}/share/aletheia/themes/"*)
+fi
 
 FAIL=false
 for i in $(seq 0 $((${#FILES[@]}-1))); do
 	if ! rm -f "${FILES[i]}" >/dev/null 2>/dev/null; then
-		echo -e "${RED}Failed:${NOCOLOR} ${FILES[i]} not deleted." 
+		echo -e "${RED}Failed:${NOCOLOR} ${FILES[i]} not deleted."
 		FAIL=true
 	else
 		echo "rm -f \"${FILES[i]}\""
 	fi
 done
+
+if [ -e "$DESTDIR/share/aletheia" ]; then
+	if [ -z "$(ls -1 "$DESTDIR/share/aletheia/themes")" ]; then
+		if ! rmdir "$DESTDIR/share/aletheia/themes" >/dev/null 2>/dev/null; then
+			echo -e "${RED}Failed:${NOCOLOR} Empty directory $DESTDIR/share/aletheia/themes/ not deleted."
+			FAIL=true
+		fi
+	fi
+	if [ -z "$(ls -1 "$DESTDIR/share/aletheia")" ]; then
+		if ! rmdir "$DESTDIR/share/aletheia" >/dev/null 2>/dev/null; then
+			echo -e "${RED}Failed:${NOCOLOR} Empty directory $DESTDIR/share/aletheia/ not deleted."
+			FAIL=true
+		fi
+	fi
+fi
 
 if $FAIL; then
 	echo -e "${RED}Uninstall not successful$NOCOLOR"

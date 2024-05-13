@@ -24,8 +24,9 @@ List of installed files when using ./install:
 /usr/local/share/man/man1/aletheia.1
 /usr/local/share/applications/aletheia.desktop
 /usr/local/share/icons/aletheia.png
+/usr/local/share/aletheia/themes/*
 
-DESTDIR=/path/to/directory ./install to install somewhere other than /usr/local
+./install --destdir /path/to/directory to install somewhere other than /usr/local
 
 List of installed files for DEB/RPM packages:
 
@@ -34,6 +35,7 @@ List of installed files for DEB/RPM packages:
 /usr/share/man/man1/aletheia.1.gz
 /usr/share/applications/aletheia.desktop
 /usr/share/icons/aletheia.png
+/usr/share/aletheia/themes/*
 
 List of installed files for Slackware package:
 
@@ -42,6 +44,7 @@ List of installed files for Slackware package:
 /usr/man/man1/aletheia.1.gz
 /usr/share/applications/aletheia.desktop
 /usr/share/icons/aletheia.png
+/usr/share/aletheia/themes/*
 
 Patreon: https://www.patreon.com/aletheia_project
 GitHub: https://www.github.com/apeitheo/aletheia
