@@ -1,0 +1,5 @@
+#!/bin/bash
+
+man -t ./aletheia.1 >aletheia.1.ps
+ps2pdf aletheia.1.ps manual.pdf
+rm -f aletheia.1.ps

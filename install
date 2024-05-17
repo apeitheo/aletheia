@@ -34,7 +34,7 @@ check_dep() {
 
 	echo -ne "${NOCOLOR}Checking for $dependency_name... "
 
-	if [ "$(which "$dependency_name" 2>/dev/null)" == "" ]; then
+	if [ ! -x "$(command -v "$dependency_name")" ]; then
 		echo -e "${RED}no"
 		QUIT=true
 	else
