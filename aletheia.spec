@@ -14,6 +14,8 @@ Requires: sox
 Requires: ffmpeg
 Requires: parallel
 Requires: sqlite
+Requires: perl-Image-ExifTool
+Requires: id3v2
 
 %description
 A command-line media player with pitch and tempo controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.
@@ -30,6 +32,7 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Ember" 
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Forest" "%{buildroot}/%{_datadir}/aletheia/themes/Forest"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Midnight" "%{buildroot}/%{_datadir}/aletheia/themes/Midnight"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Mint" "%{buildroot}/%{_datadir}/aletheia/themes/Mint"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Nordic" "%{buildroot}/%{_datadir}/aletheia/themes/Nordic"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Oasis" "%{buildroot}/%{_datadir}/aletheia/themes/Oasis"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Slate" "%{buildroot}/%{_datadir}/aletheia/themes/Slate"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Solarized" "%{buildroot}/%{_datadir}/aletheia/themes/Solarized"
@@ -48,6 +51,7 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Verdant
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Forest
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Midnight
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Mint
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Nordic
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Oasis
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Slate
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Solarized

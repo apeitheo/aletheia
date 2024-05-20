@@ -56,6 +56,8 @@ check_dep mplayer
 check_dep parallel
 check_dep sqlite3
 check_dep isnum
+check_dep id3v2
+check_dep exiftool
 
 if [ "$QUIT" == true ]; then
 	echo -ne "\n${RED}Error: Unresolved dependencies$NOCOLOR\n"

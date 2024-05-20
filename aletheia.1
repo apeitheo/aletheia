@@ -251,6 +251,10 @@ Sort the current queue by file path/name while continuing to play the current fi
 Shuffle the current queue while continuing to play the current file in position 1 of the queue.
 
 .TP
+.B g
+Edit id3v2 metadata for the current file or current selection in the queue view (';').
+
+.TP
 .B O
 Opens a menu that gives the choice between editing .locked ("Lock") files, .repeats ("Loop") files, the current playlist ("Queue"), and the config ("Config"). Uses VIM for editing.
 
@@ -392,7 +396,7 @@ Scale EDO either down or up. Input should be an EDO or either 'j' or 'k'. Automa
 Scale to interval 0, or scale back to previous interval.
 
 .TP
-.B g
+.B ^Y 
 Scale to the invert of current interval.
 
 .TP
@@ -509,10 +513,6 @@ Toggles the display of panels on the top and bottom of screen, as well as a pane
 Swaps the two primary colors.
 
 .TP
-.B ^Y
-Toggles color versus black and white.
-
-.TP
 .B ^A
 Opens a menu with a selection of themes found in ~/.aletheia/themes/ or the system directory (Default: /usr/local/share/aletheia/themes/). If two files of the same name exist, the theme in the user's home directory is used instead.
 
@@ -545,12 +545,32 @@ Optional directory for themes.
 Format of ~/.aletheia/config is KEY=VALUE separated by newline. '#' not required for hex color codes.
 
 .TP
+.B MUSIC_DIR=
+Music directory. (Default: $HOME/Music/).
+
+.TP
+.B SOUND_DIR=
+Sound directory. (Default: $HOME/Sounds/).
+
+.TP
+.B VIDEO_DIR=
+Video directory. (Default: $HOME/Videos/).
+
+.TP
 .B VOICE_ENABLED=
 Status of voice feedback. If ESPEAK_DIGITAL_VOICE is not set to true, Aletheia will use gTTS which sends filenames to the Internet to generate voice clips as they appear. (Default: false).
 
 .TP
 .B DEFAULT_EQUALIZER=
 Specifies the default equalizer setting, either for a 3-band or a 10-band equalizer. The numbers range from -12 to 12 and are separated by colons. For a 10-band equalizer, the first three numbers represent bass, the next four numbers represent midrange, and the last three numbers represent treble. (Default: 0:0:0).
+
+.TP
+.B DEFAULT_INTERVAL=
+Uses this interval by default. (Default: 0).
+
+.TP
+.B DEFAULT_EDO=
+Uses this EDO by default. (Default: 60).
 
 .TP
 .B VOICE_PITCH=
@@ -573,8 +593,8 @@ Limits master volume level. (Default: 100).
 In lieu of full voice feedback, speak only track title. Input: true or false. (Default: false).
 
 .TP
-.B COLORS_ENABLED=
-Toggle whether to display a black and white interface or color. Input: true or false. (Default: true).
+.B THEME_ENABLED=
+Toggle whether to use a theme or the COLOR options in ~/.aletheia/config. Input: true or false. (Default: true).
 
 .TP
 .B PANELS_ENABLED=
@@ -586,19 +606,19 @@ Volume of voice feedback. Input: 0.0 to 1.0. (Default: 0.3).
 
 .TP
 .B COLOR_HIGHLIGHT=
-Hex color code for the primary color. Only used when THEME_FILE is not specified. (Default: ).
+Hex color code for the primary color. THEME_ENABLED needs to be set. (Default: ).
 
 .TP
 .B COLOR_UNSELECTED=
-Hex color code for the secondary color. Only used when THEME_FILE is not specified. (Default: ).
+Hex color code for the secondary color. THEME_ENABLED needs to be set. (Default: ).
 
 .TP
 .B COLOR_PANEL=
-Hex color code for the panel color. Only used when THEME_FILE is not specified. (Default: ).
+Hex color code for the panel color. THEME_ENABLED needs to be set. (Default: ).
 
 .TP
 .B COLOR_BACKGROUND=
-Hex color code for the background color. Only used when THEME_FILE is not specified. Set this to 'transparent' to allow for transparency. (Default: ).
+Hex color code for the background color. THEME_ENABLED needs to be set. Set this to 'transparent' to allow for transparency. (Default: ).
 
 .TP
 .B THEME_FILE=

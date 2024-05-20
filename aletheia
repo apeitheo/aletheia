@@ -29,7 +29,9 @@ AUDIO_FORMATS="mp3,flac,ogg,wav,wma"
 VIDEO_FORMATS="mkv,mp4,avi,webm,mpg,mpeg"
 NO_HELP=${NO_HELP:-false}
 USE_TAGS=true
-THEME_FILE="Forest"
+PARALLEL_CACHE_ENABLED=false
+THEME_FILE="Slate"
+THEME_ENABLED=true
 
 ALETHEIA="$HOME/.aletheia"
 MUSICDIR=${MUSICDIR:-"$HOME/Music/"}
@@ -90,22 +92,6 @@ LINE_CHAR="\033(0"
 LINE_CHAR_END="\033(B"
 ESC="\033["
 NOCOLOR="${ESC}0m"
-
-if [ "$COLORS_ENABLED" == false ]; then
-	BLUE_BLACK="${ESC}1;37;1;40m"
-	RED="${ESC}1;37m"
-	BLUE="${ESC}1;37m"
-else
-	RED="${ESC}1;31m"
-	BLUE="${ESC}1;34m"
-	if [ "$PANELS_ENABLED" == true ]; then
-		BLUE_BLACK="${ESC}1;34;1;40m"
-		WHITE_BLACK="${ESC}1;37;1;40m"
-	else
-		BLUE_BLACK="${ESC}1;34m"
-		WHITE_BLACK="${ESC}1;37m"
-	fi
-fi
 
 RETURN_NEXT="0"
 RETURN_QUIT="1"
@@ -212,6 +198,8 @@ check_dep mplayer
 check_dep parallel
 check_dep sqlite3
 check_dep isnum
+check_dep id3v2
+check_dep exiftool
 
 if [ "$QUIT" == true ]; then
 	stty echo
@@ -249,49 +237,55 @@ check_colors() {
 	fi
 	if [ -n "$CONFIG" ]; then
 		value="$(read_config "COLOR_BACKGROUND" "$CONFIG" false true)"
-		if [ "$value" != "" ]; then
-			if [ "${value,,}" == "transparent" ]; then
-				NOCOLOR="${ESC}0m"
-			else
-				color="${value#"#"}"
-				red=$((16#${color:0:2}))
-				green=$((16#${color:2:2}))
-				blue=$((16#${color:4:2}))
-				NOCOLOR="${ESC}0;48;2;${red};${green};${blue}m"
-			fi
+		if [ "$value" == "" ]; then
+			value="ffffff"
+		fi
+		if [ "${value,,}" == "transparent" ]; then
+			NOCOLOR="${ESC}0m"
+		else
+			color="${value#"#"}"
+			red=$((16#${color:0:2}))
+			green=$((16#${color:2:2}))
+			blue=$((16#${color:4:2}))
+			NOCOLOR="${ESC}0;48;2;${red};${green};${blue}m"
 		fi
 
 		value="$(read_config "COLOR_HIGHLIGHT" "$CONFIG" false true)"
-		if [ "$value" != "" ]; then
-			color="${value#"#"}"
-			red=$((16#${color:0:2}))
-			green=$((16#${color:2:2}))
-			blue=$((16#${color:4:2}))
+		if [ "$value" == "" ]; then
+			value="cccccc"
+		fi
+		color="${value#"#"}"
+		red=$((16#${color:0:2}))
+		green=$((16#${color:2:2}))
+		blue=$((16#${color:4:2}))
 
-			BLUE="${ESC}1;38;2;${red};${green};${blue}m"
-			if [ "$PANELS_ENABLED" == true ]; then
-				BLUE_BLACK="${ESC}1;38;2;${red};${green};${blue};1;40m"
-			else
-				BLUE_BLACK="${ESC}1;38;2;${red};${green};${blue}m"
-			fi
+		BLUE="${ESC}1;38;2;${red};${green};${blue}m"
+		if [ "$PANELS_ENABLED" == true ]; then
+			BLUE_BLACK="${ESC}1;38;2;${red};${green};${blue};1;40m"
+		else
+			BLUE_BLACK="${ESC}1;38;2;${red};${green};${blue}m"
 		fi
 
 		value="$(read_config "COLOR_UNSELECTED" "$CONFIG" false true)"
-		if [ "$value" != "" ]; then
-			color="${value#"#"}"
-			red=$((16#${color:0:2}))
-			green=$((16#${color:2:2}))
-			blue=$((16#${color:4:2}))
+		if [ "$value" == "" ]; then
+			value="333333"
+		fi
+		color="${value#"#"}"
+		red=$((16#${color:0:2}))
+		green=$((16#${color:2:2}))
+		blue=$((16#${color:4:2}))
 
-			WHITE="${ESC}1;38;2;${red};${green};${blue}m"
-			if [ "$PANELS_ENABLED" == true ]; then
-				WHITE_BLACK="${ESC}1;38;2;${red};${green};${blue};1;40m"
-			else
-				WHITE_BLACK="${ESC}1;38;2;${red};${green};${blue}m"
-			fi
+		WHITE="${ESC}1;38;2;${red};${green};${blue}m"
+		if [ "$PANELS_ENABLED" == true ]; then
+			WHITE_BLACK="${ESC}1;38;2;${red};${green};${blue};1;40m"
+		else
+			WHITE_BLACK="${ESC}1;38;2;${red};${green};${blue}m"
 		fi
 
 		value="$(read_config "COLOR_PANEL" "$CONFIG" false true)"
+		if [ "$value" == "" ]; then
+			value="000000"
+		fi
 		if [ "$value" != "" ]; then
 			COLOR_PANEL="$value"
 
@@ -330,6 +324,35 @@ check_config() {
 				USE_TAGS="$value"
 				if [ "$USE_TAGS" != true ] && [ "$USE_TAGS" != false ]; then
 					USE_TAGS=false
+				fi
+			fi
+
+			value="$(read_config "PARALLEL_CACHE_ENABLED")"
+			if [ "$value" != "" ]; then
+				PARALLEL_CACHE_ENABLED="$value"
+				if [ "$PARALLEL_CACHE_ENABLED" != true ] && [ "$PARALLEL_CACHE_ENABLED" != false ]; then
+					PARALLEL_CACHE_ENABLED=false
+				fi
+			fi
+
+			value="$(read_config "MUSIC_DIR" "" true)"
+			if [ "$value" != "" ]; then
+				if [ -d "$value" ]; then
+					MUSICDIR="$value"
+				fi
+			fi
+
+			value="$(read_config "SOUND_DIR" "" true)"
+			if [ "$value" != "" ]; then
+				if [ -d "$value" ]; then
+					SOUNDDIR="$value"
+				fi
+			fi
+
+			value="$(read_config "VIDEO_DIR" "" true)"
+			if [ "$value" != "" ]; then
+				if [ -d "$value" ]; then
+					VIDEODIR="$value"
 				fi
 			fi
 
@@ -471,20 +494,21 @@ check_config() {
 				WHITE_BLACK="${ESC}1;37m"
 			fi
 
-			value="$(read_config "COLORS_ENABLED")"
+			value="$(read_config "THEME_ENABLED")"
 			if [ "$value" != "" ]; then
-				COLORS_ENABLED="$value"
-				if [ "$COLORS_ENABLED" != true ] && [ "$COLORS_ENABLED" != false ]; then
-					COLORS_ENABLED=true
+				THEME_ENABLED="$value"
+				if [ "$THEME_ENABLED" != true ] && [ "$THEME_ENABLED" != false ]; then
+					THEME_ENABLED=true
 				fi
 			fi
 
 			value="$(read_config "THEME_FILE" "" true)"
 			if [ "$value" != "" ]; then
 				THEME_FILE="$value"
-				if [ "$COLORS_ENABLED" == true ]; then
-					check_colors true
-				fi
+			fi
+
+			if [ "$THEME_ENABLED" == true ] && [ -n "$THEME_FILE" ]; then
+				check_colors true
 			else
 				check_colors
 			fi
@@ -492,21 +516,64 @@ check_config() {
 	fi
 }
 
-check_config
-if [ "$THEME_FILE" != "" ]; then
-	check_colors true
+EXAMPLE_CONFIG="#MUSIC_DIR=/home/<username>/Music/
+#SOUND_DIR=/home/<username>/Sounds/
+#VIDEO_DIR=/home/<username>/Videos/
+
+#AUDIO_FORMATS=mp3,flac,wav,ogg,wma
+#VIDEO_FORMATS=mpg,wmv,avi
+#USE_TAGS=true
+#PARALLEL_CACHE_ENABLED=false
+
+#VOICE_ENABLED=false
+#ESPEAK_DIGITAL_VOICE=true
+#VOICE_PITCH=0
+#VOICE_VOLUME=0.85
+#ONLY_VOICE_TITLES=false
+
+#DEFAULT_INTERVAL=0
+#DEFAULT_EDO=60
+#DEFAULT_EQUALIZER=0:0:0
+
+#DEFAULT_VOLUME=50
+#LIMIT_MASTER_VOLUME=100
+
+#COLOR_HIGHLIGHT=ffffff
+#COLOR_UNSELECTED=cccccc
+#COLOR_PANEL=333333
+#COLOR_BACKGROUND=000000
+
+#THEME_ENABLED=true
+#THEME_FILE=Slate
+
+#NO_VERTICAL_PADDING=false
+#PANELS_ENABLED=true
+#TERMINAL=gnome-terminal
+#NO_HELP=false"
+
+if [ ! -e "$ALETHEIA/config" ]; then
+	echo -ne "$EXAMPLE_CONFIG" | sed "s/<username>/$(whoami)/g" >"$ALETHEIA/config"
 fi
 
-if [ "$COLORS_ENABLED" == false ]; then
-	COLORS_ENABLED=false
-	PANELS_ENABLED=true
-	BLUE_BLACK="${ESC}1;37;48;2;51;51;51m"
-	WHITE_BLACK="${ESC}1;37;48;2;51;51;51m"
-	COLOR_ACCENT="${ESC}1;38;2;51;51;51m"
-	RED="${ESC}1;37m"
-	BLUE="${ESC}1;37m"
-	WHITE="${ESC}1;37m"
-	NOCOLOR="${ESC}1;48;2;0;0;0m"
+check_config
+if [ "$THEME_FILE" != "" ]; then
+	if [ "$THEME_ENABLED" == true ]; then
+		check_colors true
+	else
+		check_colors
+	fi
+fi
+
+VIMRC="syntax match Key /^[A-Z].*=/
+syntax match Value /[^=]*$/
+highlight Key   ctermfg=cyan
+highlight Value ctermfg=green
+highlight Normal ctermbg=black
+highlight NonText ctermfg=darkgrey"
+
+
+if [ ! -e "$ALETHEIA/vimrc" ]; then
+	echo -e "$VIMRC" >"$ALETHEIA/vimrc"
 fi
 
 if [ -z "$NO_VERTICAL_PADDING" ]; then
@@ -516,21 +583,30 @@ fi
 # shellcheck disable=SC2317
 # Function used indirectly via GNU parallel to extract metadata
 extract_metadata() {
-	time=$(ffprobe -i "$1" -show_entries format=duration -v quiet -of csv="p=0" | cut -d'.' -f1)
+	file=$1
+	time=$(ffprobe -i "$file" -show_entries format=duration -v quiet -of csv="p=0" | cut -d'.' -f1)
 	line=$(exiftool -Artist -Title -Album -TrackNumber "$1")
-	artist="$(echo -ne "$line" | grep -E "^Artist")"
-	song="$(echo -ne "$line" | grep -E "^Title")"
-	i="${1##*/}"
-	i="${i//\'/''}"
+	artist="$(echo -n "$line" | grep -E "^Artist")"
+	song="$(echo -n "$line" | grep -E "^Title")"
+	i="${file##*/}"
+	i="${i//\'/\'\'}"
 	if [ "$artist" == "" ] && [ "$song" == "" ]; then
-		echo -ne "INSERT OR REPLACE INTO music (filename, time) VALUES ('${i//\'/\\\'}', '$time');"
+		if [ "$2" == true ]; then
+			echo -ne "INSERT OR REPLACE INTO music (filename, time) VALUES ('$i', '$time');" >>"$ALETHEIA/useless_out"
+		else
+			echo -ne "INSERT OR REPLACE INTO music (filename, time) VALUES ('$i', '$time');"
+		fi
 		return
 	fi
-	album="$(echo -ne "$line" | grep -E "^Album")"
-	tracknum="$(echo -ne "$line" | grep -E "^Track Number")"
+	album="$(echo -n "$line" | grep -E "^Album")"
+	tracknum="$(echo -n "$line" | grep -E "^Track Number")"
 	artist="${artist##*: }"
 	song="${song##*: }"
-	echo -e ": $artist - $song" >/dev/stderr
+	if [ "$2" == true ]; then
+		echo ": $artist - $song" >>"$ALETHEIA/useless"
+	else
+		echo ": $artist - $song" >/dev/stderr
+	fi
 	album="${album##*: }"
 	tracknum="${tracknum##*: }"
 	artist="${artist//\'/\'\'}"
@@ -539,58 +615,120 @@ extract_metadata() {
 	tracknum="${tracknum//\'/\'\'}"
 	((index++))
 
-	echo -ne "INSERT OR REPLACE INTO music (filename, artist, song, album, number, time) VALUES ('${i}', '${artist//\'/''}', '${song//\'/''}', '${album//\'/''}', '${tracknum//\'/''}', '$time');"
+	if [ "$2" == true ]; then
+		echo -ne "INSERT OR REPLACE INTO music (filename, artist, song, album, number, time) VALUES ('$i', '$artist', '$song', '$album', '$tracknum', '$time');" >>"$ALETHEIA/useless_out"
+	else
+		echo -ne "INSERT OR REPLACE INTO music (filename, artist, song, album, number, time) VALUES ('$i', '$artist', '$song', '$album', '$tracknum', '$time');"
+	fi
 }
 
 cache_metadata() {
 	export db_file="$ALETHEIA/music.db"
-	if [ -e "$db_file" ]; then
-		mv "$db_file" "$db_file.backup"
+	if [ -z "$1" ]; then
+		if [ -e "$db_file" ]; then
+			mv "$db_file" "$db_file.backup"
+		fi
+	else
+		if [ -e "$ALETHEIA/filelist_unique_fullpath.tmp" ]; then
+			rm -f "$ALETHEIA/filelist_unique_fullpath.tmp"
+		fi
+		find "$MUSICDIR" -type f -regex "$regex" | sort >"$ALETHEIA/filelist_sorted_fullpath.tmp"
+		while IFS= read -r filename; do
+			tmp_filename=${filename//\[/\\\[}
+			tmp_filename=${tmp_filename//\]/\\\]}
+			grep "$tmp_filename" "$ALETHEIA/filelist_sorted_fullpath.tmp" >>"$ALETHEIA/filelist_unique_fullpath.tmp"
+		done <"$1"
+	fi
+	if [ -e "$ALETHEIA/filelist_sorted_fullpath.tmp" ]; then
+		rm -f "$ALETHEIA/filelist_sorted_fullpath.tmp"
 	fi
 	sqlite3 "$db_file" "CREATE TABLE IF NOT EXISTS music (filename TEXT PRIMARY KEY, artist TEXT, song TEXT, album TEXT, number TEXT, time TEXT);"
 
-	AUDIO_FORMATS="mp3,flac,ogg"
 	regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 
-	mapfile -t music_array < <(find "$MUSICDIR" -type f -iregex "$regex")
+	if [ -n "$1" ]; then
+		mapfile -t music_array < <(cat "$ALETHEIA/filelist_unique_fullpath.tmp")
+	else
+		mapfile -t music_array < <(find "$MUSICDIR" -type f -iregex "$regex")
+	fi
 
 	rm -f "$ALETHEIA/useless" >/dev/null 2>/dev/null
 	rm -f "$ALETHEIA/useless_out" >/dev/null 2>/dev/null
+	rm -f "$ALETHEIA/cancel.tmp" >/dev/null 2>/dev/null
+	rm -f "$ALETHEIA/finished.tmp" >/dev/null 2>/dev/null
 	touch "$ALETHEIA/useless"
+	touch "$ALETHEIA/useless_out"
 	export -f extract_metadata
 	gtts_speak "Caching metadata. This may take a while."
-	parallel -j0 extract_metadata {} ::: "${music_array[@]}" >>"$ALETHEIA/useless_out" 2>>"$ALETHEIA/useless" &
-	parallel_pid=$!
+	key=
+	parallel_pid=
+	if [ "$PARALLEL_CACHE_ENABLED" == true ]; then
+		parallel -j0 extract_metadata {} ::: "${music_array[@]}" >>"$ALETHEIA/useless_out" 2>>"$ALETHEIA/useless" &
+		parallel_pid=$!
+	else
+		count=1
+		total=${#music_array[@]}
+		for music_file in "${music_array[@]}"; do
+			extract_metadata "$music_file" true
+			if [ "$count" == "$total" ]; then
+				touch "$ALETHEIA/finished.tmp"
+			fi
+			((count++))
+			if [ -e "$ALETHEIA/cancel.tmp" ]; then
+				rm -f "$ALETHEIA/cancel.tmp"
+				break
+			fi
+		done &
+	fi
 	clear
 	tail -f "$ALETHEIA/useless" | grep -E "^:" &
+	tail_pid=$!
 
 	while true; do
-		read -rsn1 -t 0.5 key
+		read -rsn1 -t 1 key
 		if [ "$key" == "q" ]; then
-			kill "$parallel_pid" >/dev/null 2>/dev/null
+			touch "$ALETHEIA/cancel.tmp"
+			if [ -n "$parallel_pid" ]; then
+				kill "$parallel_pid" >/dev/null 2>/dev/null
+			fi
 			if [ -e "$db_file.backup" ]; then
 				mv "$db_file.backup" "$db_file"
 			fi
 			break
 		elif [ "$key" == $'\e' ]; then
+			touch "$ALETHEIA/cancel.tmp"
 			read -rsn3 -t 0.001
-			kill "$parallel_pid" >/dev/null 2>/dev/null
+			if [ -n "$parallel_pid" ]; then
+				kill "$parallel_pid" >/dev/null 2>/dev/null
+			fi
 			if [ -e "$db_file.backup" ]; then
 				mv "$db_file.backup" "$db_file"
 			fi
 			break
 		fi
-		if ! ps -p $parallel_pid >/dev/null 2>/dev/null; then
-			if [ -e "$db_file.backup" ]; then
-				rm -f "$db_file.backup"
+		if [ -n "$parallel_pid" ]; then
+			if ! ps -p "$parallel_pid" >/dev/null 2>/dev/null; then
+				if [ -e "$db_file.backup" ]; then
+					rm -f "$db_file.backup" >/dev/null 2>/dev/null
+				fi
+				break
 			fi
+		elif [ -e "$ALETHEIA/finished.tmp" ]; then
+			rm -f "$db_file.backup" >/dev/null 2>/dev/null
 			break
 		fi
 	done
 
+	kill "$tail_pid"
+	tail_pid=
+	if [ -e "$ALETHEIA/filelist_unique_fullpath.tmp" ]; then
+		rm -f "$ALETHEIA/filelist_unique_fullpath.tmp"
+	fi
+
 	line="$(<"$ALETHEIA/useless_out")"
 	echo -ne "BEGIN;${line};END;" >"$ALETHEIA/music.sql"
 	sqlite3 "$db_file" <"$ALETHEIA/music.sql"
+	rm -f "$ALETHEIA/music.sql"
 	gtts_speak "finished"
 }
 
@@ -1113,8 +1251,7 @@ c  Cache Tags
 Customization
 ^A  Select Theme
 ^P  Toggle Panels
-^O  Invert Color
-^Y  Toggle Color"
+^O  Swap Color"
 
 
 QUEUE_HELP="Queue Controls
@@ -1199,7 +1336,7 @@ u  INT Up/Down
 U  EDO Up/Down
 -  Octave Down
 =  Octave Up
-g  Inverse INT
+^Y  Inverse INT
 G  Oscillate
 Balance Controls
 {  1% Left Up
@@ -1263,8 +1400,7 @@ W  Add Downloads
 Advanced Controls
 ^A  Select Theme
 ^P  Toggle Panels
-^O  Invert Color
-^Y  Toggle Color
+^O  Swap Color
 z  Redraw Screen
 ~  Sleep mode
 |  Vanish Editor"
@@ -1321,8 +1457,6 @@ draw_wait() {
 	gtts_speak "wait" false true
 }
 
-draw_wait
-
 draw_banner() {
 	if [ "$3" != true ]; then
 		LEFT=true
@@ -1370,6 +1504,124 @@ draw_banner() {
 		fi
 	fi
 }
+
+# shellcheck disable=SC2317
+# trap function
+cleanup() {
+	if [ -n "$ESPEAK_PID" ]; then
+		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+	fi
+	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+		if [ -e "$ALETHEIA/espeak.pid" ]; then
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+			rm -f "$ALETHEIA/espeak.pid" >/dev/null 2>/dev/null
+		fi
+	fi
+	if [ "$USE_GTTS" == true ]; then
+		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+	fi
+	if [ -n "$tail_pid" ]; then
+		kill "$tail_pid" >/dev/null 2>/dev/null
+	fi
+	if [ ! -e "$ALETHEIA/finished.tmp" ] && [ "$METADATA_FINISHED" == false ]; then
+		touch "$ALETHEIA/cancel.tmp"
+	else
+		rm -f "$ALETHEIA/finished.tmp"
+		rm -f "$ALETHEIA/cancel.tmp" >/dev/null 2>/dev/null
+	fi
+	rm -f "$ALETHEIA"/useless{,_out}
+	rm -f "$ALETHEIA"/start
+	rm -f "$ALETHEIA"/mplayer_output{,_stderr}
+	pkill -f "^tail -f.*useless" >/dev/null 2>/dev/null
+	tmp_volume_left="$(echo "$SYSTEM_VOLUME_LEFT" | cut -d'%' -f1)"
+	tmp_volume_right="$(echo "$SYSTEM_VOLUME_RIGHT" | cut -d'%' -f1)"
+	if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
+		pactl set-sink-volume @DEFAULT_SINK@ "$SYSTEM_VOLUME_LEFT" >/dev/null 2>/dev/null
+	elif [ "$tmp_volume_left" -lt "$tmp_volume_right" ]; then
+		pactl set-sink-volume @DEFAULT_SINK@ "$SYSTEM_VOLUME_RIGHT" >/dev/null 2>/dev/null
+	fi
+	echo -ne "${ESC}0m"
+	clear
+	tput cnorm
+	stty ixon
+	stty echo
+	rm -f "$ALETHEIA/pipe$$" >/dev/null 2>/dev/null
+	rm -f "$ALETHEIA/web_client_pipe$$" >/dev/null 2>/dev/null
+	kill "$MPLAYER_PID" 2>/dev/null >/dev/null
+	exit 0
+}
+
+# shellcheck disable=SC2317
+# trap function
+cleanup_sigint() {
+	if [ -n "$ESPEAK_PID" ]; then
+		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+	fi
+	kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+		if [ -e "$ALETHEIA/espeak.pid" ]; then
+			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+			rm -f "$ALETHEIA/espeak.pid" >/dev/null 2>/dev/null
+		fi
+	fi
+	if [ "$USE_GTTS" == true ]; then
+		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+	fi
+	if [ "$WEB_CLIENT" == "1" ]; then
+		kill "$NODE_PID" >/dev/null 2>/dev/null
+	fi
+	if [ -n "$tail_pid" ]; then
+		kill "$tail_pid" >/dev/null 2>/dev/null
+	fi
+	if [ ! -e "$ALETHEIA/finished.tmp" ] && [ "$METADATA_FINISHED" == false ]; then
+		touch "$ALETHEIA/cancel.tmp"
+	else
+		rm -f "$ALETHEIA/finished.tmp"
+		rm -f "$ALETHEIA/cancel.tmp" >/dev/null 2>/dev/null
+	fi
+	rm -f "$ALETHEIA"/useless{,_out}
+	rm -f "$ALETHEIA"/start
+	rm -f "$ALETHEIA"/mplayer_output{,_stderr}
+	pkill -f "^tail -f.*useless" >/dev/null 2>/dev/null
+	echo -ne "$NOCOLOR"
+	clear
+	tput cnorm
+	stty ixon
+	stty echo
+	rm -f "$ALETHEIA/pipe$$" >/dev/null 2>/dev/null
+	rm -f "$ALETHEIA/web_client_pipe$$" >/dev/null 2>/dev/null
+	exit 1
+}
+
+trap cleanup EXIT
+trap cleanup_sigint SIGINT
+
+update_metadata_db() {
+	METADATA_FINISHED=false
+	draw_wait
+	if [ "$USE_TAGS" == true ]; then
+		if [ ! -e "$ALETHEIA/music.db" ]; then
+			echo -n "" >"$ALETHEIA/filelist_unique.tmp"
+			echo -n "" >"$ALETHEIA/cachelist_sorted.tmp"
+		else
+			sqlite3 "$ALETHEIA/music.db" "SELECT filename FROM music;" >"$ALETHEIA/cachelist.tmp"
+			sort "$ALETHEIA/cachelist.tmp" >"$ALETHEIA/cachelist_sorted.tmp"
+		fi
+
+		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
+		find "$MUSICDIR" -type f -regex "$regex" >"$ALETHEIA/filelist.tmp"
+		rev <"$ALETHEIA/filelist.tmp" | cut -d'/' -f1 | rev | sort | uniq >"$ALETHEIA/filelist_sorted.tmp"
+
+		diff -u "$ALETHEIA/filelist_sorted.tmp" "$ALETHEIA/cachelist_sorted.tmp" | grep -E '^-[^-]' | sed 's/^-//' >"$ALETHEIA/filelist_unique.tmp"
+		if [ -n "$(cat "$ALETHEIA/filelist_unique.tmp")" ]; then #|| [ "$skip" == true ]; then
+			cache_metadata "$ALETHEIA/filelist_unique.tmp"
+		fi
+		rm -f "$ALETHEIA/cachelist"{,_sorted,_unique}".tmp" "$ALETHEIA/filelist"{,_sorted,_unique}".tmp"
+	fi
+	METADATA_FINISHED=true
+}
+
+update_metadata_db
 
 set_loop() {
 	local force_enable=$1
@@ -1602,7 +1854,7 @@ about() {
 	echo -ne "$NOCOLOR"
 	draw_banner "ABOUT"
 	tput cup $LINES $((COLUMNS-${#PADDING}))
-	echo -ne "$BLUE_BLACK${PADDING}"
+	echo -ne "$NOCOLOR${PADDING}"
 	empty_pane
 	lines_divided=$((LINES/2))
 	cols_divided=$((COLUMNS/2))
@@ -3789,6 +4041,10 @@ theme_submenu() {
 	draw_equalizer
 	draw_banner "THEME"
 	draw_position
+	THEME_FILE="${OPT[$SELECTION]}"
+	THEME_ENABLED=true
+	_save_setting "THEME_ENABLED" "$THEME_ENABLED"
+	echo -e "$CONFIG" >"$ALETHEIA/config"
 
 	up() {
 		if [ -n "$ESPEAK_PID" ]; then
@@ -3807,6 +4063,7 @@ theme_submenu() {
 			_offset_=$((TOTAL_OPTS-LINES+4))
 		fi
 		THEME_FILE="${OPT[$SELECTION]}"
+		THEME_ENABLED=true
 		check_colors true
 		draw_volume
 		draw_equalizer
@@ -3839,6 +4096,7 @@ theme_submenu() {
 			_offset_=0
 		fi
 		THEME_FILE="${OPT[$SELECTION]}"
+		THEME_ENABLED=true
 		check_colors true
 		draw_volume
 		draw_equalizer
@@ -3859,12 +4117,10 @@ theme_submenu() {
 			draw_banner "WAIT"
 			echo -ne "$NOCOLOR"
 			reset_dimensions
-			if [ "$initial_screen" != true ]; then
+			if [ "$2" != true ]; then
 				reset_buffer
 			fi
 			_save_setting "THEME_FILE" "$THEME_FILE"
-			COLORS_ENABLED=true
-			_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
 			echo -e "$CONFIG" >"$ALETHEIA/config"
 		fi
 		if [ "$1" != true ]; then
@@ -3936,7 +4192,7 @@ theme_submenu() {
 			down
 			continue
 		elif [ "$z" == "q" ] || [ "$z" == "i" ] || [ "$z" == "" ] || [ "$z" == "h" ]; then
-			left "$3"
+			left "$3" "$initial_screen"
 			return
 		elif [ "$z" == "8" ]; then
 			system_volume_change false 3 3
@@ -4069,7 +4325,7 @@ theme_submenu() {
 				continue
 				;;
 			*)
-				left "$3"
+				left "$3" "$initial_screen"
 				;;
 			esac
 		elif [ "$z" == "" ]; then
@@ -4082,9 +4338,11 @@ theme_submenu() {
 			case $SELECTION in
 			*)
 				THEME_FILE="${OPT[$SELECTION]}"
+				THEME_ENABLED=true
 				_save_setting "THEME_FILE" "$THEME_FILE"
-				COLORS_ENABLED=true
-				_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
+				_save_setting "THEME_ENABLED" "$THEME_ENABLED"
+				THEME_ENABLED=true
+				_save_setting "THEME_ENABLED" "$THEME_ENABLED"
 				echo -e "$CONFIG" >"$ALETHEIA/config"
 				check_colors true
 
@@ -4492,7 +4750,7 @@ edit_submenu() {
 	fi
 
 	local OPT=( )
-	OPT=( "" "Lock" "Queue" "Loop" "Config" )
+	OPT=( "" "Tag" "Lock" "Loop" "Queue" "Config" )
 	unset "OPT[0]"
 	local SELECTION="1"
 	pad_=1
@@ -4789,12 +5047,16 @@ edit_submenu() {
 					fi
 					draw_banner "EDIT"
 					draw_position
+				elif [ "${OPT[$SELECTION]}" == "Tag" ]; then
+					tag_mp3 "$1"
+					draw_banner "EDIT"
+					draw_position
 				elif [ "${OPT[$SELECTION]}" == "Loop" ]; then
 					if [ -z "$FILENAME" ]; then
 						draw_banner "N/A"
 						sleep $BANNER_WAIT_TIME
 					else
-						vim "$FILENAME.repeats"
+						vim -c "silent edit $FILENAME.repeats | source $ALETHEIA/vimrc"
 						if [ -e "$FILENAME.repeats" ]; then
 							REPEATS=$(<"$FILENAME.repeats")
 							REPEAT_CURRENT=1
@@ -4833,7 +5095,7 @@ edit_submenu() {
 						draw_banner "N/A"
 						sleep $BANNER_WAIT_TIME
 					else
-						vim "$FILENAME.locked"
+						vim -c "silent edit $FILENAME.locked | source $ALETHEIA/vimrc"
 						if [ -e "$FILENAME.locked" ]; then
 							CONTENTS=$(<"$FILENAME.locked")
 							LOCK_TOTAL=$(wc -l <<<"$CONTENTS")
@@ -4844,7 +5106,7 @@ edit_submenu() {
 					draw_banner "EDIT"
 					draw_position
 				elif [ "${OPT[$SELECTION]}" == "Config" ]; then
-					vim "$ALETHEIA/config"
+					vim -c "silent edit $ALETHEIA/config | source $ALETHEIA/vimrc"
 					tput civis
 					check_config true
 					draw_volume
@@ -4878,7 +5140,7 @@ edit_playlist_vim() {
 	gtts_speak "edit playlist"
 	echo -e "$(printf '%s\n' "${queue_array[@]}")" >"$ALETHEIA/queue"
 	cp "$ALETHEIA/queue" "$ALETHEIA/queue.old"
-	vim +"$POSITION" "$ALETHEIA/queue"
+	vim -c "silent edit $ALETHEIA/queue | source $ALETHEIA/vimrc" +"$POSITION"
 	diff "$ALETHEIA"/queue "$ALETHEIA"/queue.old >/dev/null 2>/dev/null
 	if [ "$?" == "1" ]; then
 		unset queue_array
@@ -5166,8 +5428,10 @@ main_menu() {
 			menu_start_over=true
 			z=""
 			continue
-		elif [ "$z" == "" ]; then
-			toggle_colors true
+		elif [ "$z" == "g" ]; then
+			if [ "$initial_screen" == false ]; then
+				tag_mp3 false
+			fi
 			z=""
 			continue
 		elif [ "$z" == "" ]; then
@@ -7547,68 +7811,6 @@ reset_buffer() {
 	done
 }
 
-# shellcheck disable=SC2317
-# trap function
-cleanup_sigint() {
-	if [ -n "$ESPEAK_PID" ]; then
-		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-	fi
-	kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
-		if [ -e "$ALETHEIA/espeak.pid" ]; then
-			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
-			rm -f "$ALETHEIA/espeak.pid" >/dev/null 2>/dev/null
-		fi
-	fi
-	if [ "$USE_GTTS" == true ]; then
-		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-	fi
-	if [ "$WEB_CLIENT" == "1" ]; then
-		kill "$NODE_PID" >/dev/null 2>/dev/null
-	fi
-	echo -ne "$NOCOLOR"
-	clear
-	tput cnorm
-	stty ixon
-	stty echo
-	rm -f "$ALETHEIA/pipe$$" >/dev/null 2>/dev/null
-	rm -f "$ALETHEIA/web_client_pipe$$" >/dev/null 2>/dev/null
-	exit 1
-}
-
-# shellcheck disable=SC2317
-# trap function
-cleanup() {
-	if [ -n "$ESPEAK_PID" ]; then
-		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-	fi
-	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
-		if [ -e "$ALETHEIA/espeak.pid" ]; then
-			kill "$(cat "$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
-			rm -f "$ALETHEIA/espeak.pid" >/dev/null 2>/dev/null
-		fi
-	fi
-	if [ "$USE_GTTS" == true ]; then
-		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
-	fi
-	tmp_volume_left="$(echo "$SYSTEM_VOLUME_LEFT" | cut -d'%' -f1)"
-	tmp_volume_right="$(echo "$SYSTEM_VOLUME_RIGHT" | cut -d'%' -f1)"
-	if [ "$tmp_volume_left" -gt "$tmp_volume_right" ]; then
-		pactl set-sink-volume @DEFAULT_SINK@ "$SYSTEM_VOLUME_LEFT" >/dev/null 2>/dev/null
-	elif [ "$tmp_volume_left" -lt "$tmp_volume_right" ]; then
-		pactl set-sink-volume @DEFAULT_SINK@ "$SYSTEM_VOLUME_RIGHT" >/dev/null 2>/dev/null
-	fi
-	echo -ne "${ESC}0m"
-	clear
-	tput cnorm
-	stty ixon
-	stty echo
-	rm -f "$ALETHEIA/pipe$$" >/dev/null 2>/dev/null
-	rm -f "$ALETHEIA/web_client_pipe$$" >/dev/null 2>/dev/null
-	kill "$MPLAYER_PID" 2>/dev/null >/dev/null
-	exit 0
-}
-
 redraw_buffer() {
 	echo -ne "$NOCOLOR"
 	if [ "$NO_VERTICAL_PADDING" == true ]; then
@@ -7706,7 +7908,7 @@ toggle_panels() {
 	if [ "$PANELS_ENABLED" == true ]; then
 		gtts_speak "panels disabled"
 		PANELS_ENABLED=false
-		if [ "$COLORS_ENABLED" == false ]; then
+		if [ "$THEME_ENABLED" == false ]; then
 			BLUE_BLACK="${ESC}1;37m"
 			WHITE_BLACK="${ESC}1;37m"
 		else
@@ -7716,7 +7918,7 @@ toggle_panels() {
 	else
 		gtts_speak "panels enabled"
 		PANELS_ENABLED=true
-		if [ "$COLORS_ENABLED" == false ]; then
+		if [ "$THEME_ENABLED" == false ]; then
 			BLUE_BLACK="${ESC}1;37;1;40m"
 			WHITE_BLACK="${ESC}1;37;1;40m"
 		else
@@ -7736,42 +7938,6 @@ toggle_panels() {
 		draw_pitch
 	fi
 	draw_position
-}
-
-toggle_colors() {
-	draw_wait false
-	if [ "$COLORS_ENABLED" == true ]; then
-		COLORS_ENABLED=false
-		PANELS_ENABLED=true
-		BLUE_BLACK="${ESC}1;37;48;2;51;51;51m"
-		WHITE_BLACK="${ESC}1;37;48;2;51;51;51m"
-		RED="${ESC}1;37m"
-		BLUE="${ESC}1;37m"
-		COLOR_ACCENT="${ESC}1;38;2;51;51;51m"
-		WHITE="${ESC}1;37m"
-		NOCOLOR="${ESC}1;48;2;0;0;0m"
-	else
-		COLORS_ENABLED=true
-		check_colors true
-	fi
-	render_all_help_screens
-	if [ "$1" != true ]; then
-		reset_buffer
-	fi
-	draw_volume
-	draw_equalizer
-	if [ "$1" != true ]; then
-		redraw_buffer
-		draw_pitch
-	else
-		draw_banner "MENU"
-	fi
-	draw_position
-	if [ "$COLORS_ENABLED" == false ]; then
-		gtts_speak "color disabled"
-	else
-		gtts_speak "color enabled"
-	fi
 }
 
 invert_colors() {
@@ -8143,14 +8309,14 @@ get_metadata() {
 			line="${queue_array[$((pos-1))]##*/}"
 			line="${line%.*}"
 
-			#if [[ "$line" == *" - "* ]]; then
-			#	artist="${line%% - *}"
-			#	song="${line##* - }"
-			#	line="$artist - $song"
-			#else
+			if [[ "$line" == *" - "* ]]; then
+				artist="${line%% - *}"
+				song="${line##* - }"
+				#line="$artist - $song"
+			else
 				line="${queue_array[$((pos-1))]##*/}"
 				line="${line%.*}"
-			#fi
+			fi
 		else
 			if [ "$album" == "" ]; then
 				line="$artist  $song"
@@ -8163,11 +8329,11 @@ get_metadata() {
 		line=${line##*/}
 		line=${line%.*}
 
-		#if [[ "$line" == *" - "* ]]; then
-		#	artist="${line%% - *}"
-		#	song="${line##* - }"
-		#	line="$artist - $song"
-		#fi
+		if [[ "$line" == *" - "* ]]; then
+			artist="${line%% - *}"
+			song="${line##* - }"
+			#line="$artist - $song"
+		fi
 		SONG_LENGTH=0
 	fi
 	echo -ne "$line"
@@ -8405,6 +8571,12 @@ seek_right() {
 delete() {
 	local permanent=$1
 	local yesno
+	if [ -n "$2" ]; then
+		local POSITION="$2"
+		local FILENAME="$3"
+		local TITLE="${FILENAME##*/}"
+		TITLE="${TITLE%.*}"
+	fi
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
 	fi
@@ -8488,16 +8660,18 @@ delete() {
 			queue_array[i-1]=${queue_array[$i]}
 		done
 
-		kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-		if [ "$POSITION" == "$TOTAL_QUEUE" ]; then
-			JUMP="1"
-			POSITION="1"
-			draw_position
-			TOTAL_QUEUE="$((TOTAL_QUEUE-1))"
-			return $RETURN_JUMP
-		else
-			TOTAL_QUEUE="$((TOTAL_QUEUE-1))"
-			return $RETURN_RESTART
+		if [ -z "$2" ]; then
+			kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+			if [ "$POSITION" == "$TOTAL_QUEUE" ]; then
+				JUMP="1"
+				POSITION="1"
+				draw_position
+				TOTAL_QUEUE="$((TOTAL_QUEUE-1))"
+				return $RETURN_JUMP
+			else
+				TOTAL_QUEUE="$((TOTAL_QUEUE-1))"
+				return $RETURN_RESTART
+			fi
 		fi
 	fi
 	return 200
@@ -8511,6 +8685,157 @@ insert() {
 	redraw_buffer
 	draw_pitch
 	draw_position
+}
+
+tag_mp3() {
+	initial_screen=$1
+	if [ -n "$2" ]; then
+		local FILENAME="$2"
+	fi
+	if [ "$initial_screen" == true ]; then
+		draw_banner "N/A"
+		sleep $BANNER_WAIT_TIME
+	else
+		local _ext="${FILENAME##*.}"
+		_ext="${_ext,,}"
+		if [ "$_ext" == "mp3" ]; then
+			line="$(exiftool -Artist -Title -Album -Track -Genre -Year -Comment -AudioBitrate "$FILENAME")"
+			_artist="$(echo -ne "$line" | grep -E "^Artist" | cut -d':' -f2- | sed -e 's/^ //')"
+			_title="$(echo -ne "$line" | grep -E "^Title" | cut -d':' -f2- | sed -e 's/^ //')"
+			_album="$(echo -ne "$line" | grep -E "^Album" | cut -d':' -f2- | sed -e 's/^ //')"
+			_tracknumber="$(echo -ne "$line" | grep -E "^Track" | cut -d':' -f2 | sed -e 's/^ //')"
+			if [ "${_tracknumber//\// }" != "${_tracknumber}" ]; then
+				_totaltracks="${_tracknumber#*/}"
+				_tracknumber="${_tracknumber%/*}"
+			fi
+			_genre="$(echo -ne "$line" | grep -E "^Genre" | cut -d':' -f2- | sed -e 's/^ //')"
+			_year="$(echo -ne "$line" | grep -E "^Year" | cut -d':' -f2- | sed -e 's/^ //')"
+			_comment="$(echo -ne "$line" | grep -E "^Comment" | cut -d':' -f2- | sed -e 's/^ //')"
+			_bitrate="$(echo -ne "$line" | grep -E "^Audio Bitrate" | cut -d':' -f2 | sed -e 's/^ //')"
+			if [ -z "$_artist" ]; then
+				_artist=" "
+			fi
+			if [ -z "$_title" ]; then
+				_title=" "
+			fi
+			if [ -z "$_album" ]; then
+				_album=" "
+			fi
+			if [ -z "$_tracknumber" ]; then
+				_tracknumber=" "
+			fi
+			if [ -z "$_genre" ]; then
+				_genre=" "
+			fi
+			if [ -z "$_year" ]; then
+				_year=" "
+			fi
+			if [ -z "$_genre" ]; then
+				_genre=" "
+			fi
+			if [ -z "$_comment" ]; then
+				_comment=" "
+			fi
+			if [ -z "$_totaltracks" ]; then
+				_totaltracks=" "
+			fi
+
+			cat <<EOF >"$ALETHEIA/media.$$.tag"
+#FILE  = ${FILENAME##*/}
+#RATE  = $_bitrate
+
+ARTIST = $_artist
+TITLE  = $_title
+ALBUM  = $_album
+YEAR   = $_year
+TRACK  = $_tracknumber
+TOTAL  = $_totaltracks
+GENRE  = $_genre
+NOTES  = $_comment
+EOF
+			cp "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
+			vim -c "silent edit $ALETHEIA/media.$$.tag | source $ALETHEIA/vimrc | execute 'norm! 4G9l'"
+			tput civis
+			if [ -e "$ALETHEIA/media.$$.tag" ] && [ -n "$(diff "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig")" ]; then
+				_append=""
+				while read -r line; do
+					item="${line%%=*}"
+					item="${item%% *}"
+					text="${line#*=}"
+					text="${text# }"
+					if [ "$text" = "" ]; then
+						text=" "
+					fi
+					if [ "$item" == "ARTIST" ]; then
+						id3v2 --artist "$text" "$FILENAME"
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_artist="$text"
+					elif [ "$item" == "TITLE" ]; then
+						id3v2 --song "$text" "$FILENAME"
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_title="$text"
+					elif [ "$item" == "ALBUM" ]; then
+						id3v2 --album "$text" "$FILENAME"
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_album="$text"
+					elif [ "$item" == "TRACK" ]; then
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_tracknumber="$text"
+					elif [ "$item" == "GENRE" ]; then
+						id3v2 --genre "$text" "$FILENAME"
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_genre="$text"
+					elif [ "$item" == "YEAR" ]; then
+						id3v2 --year "$text" "$FILENAME"
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_year="$text"
+					elif [ "$item" == "NOTES" ]; then
+						id3v2 --comment "$text" "$FILENAME"
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_comment="$text"
+					elif [ "$item" == "TOTAL" ]; then
+						if [ "$text" = " " ]; then
+							text=""
+						fi
+						_totaltracks="$text"
+					fi
+				done <"$ALETHEIA/media.$$.tag"
+				str=
+				if [ -n "$_tracknumber" ] && [ -n "$_totaltracks" ]; then
+					if [ "$(isnum "$_tracknumber")" == "1" ] && [ "$_tracknumber" -gt "0" ] && [ "$(isnum "$_totaltracks")" == "1" ] && [ "$_totaltracks" -ge "1" ]; then
+						str="$_tracknumber/$_totaltracks"
+					fi
+				else
+					if [ -n "$_tracknumber" ]; then
+						str="$_tracknumber"
+					else
+						str=
+					fi
+				fi
+				id3v2 --track "$str" "$FILENAME"
+				_file=${FILENAME##*/}
+				sqlite3 "$ALETHEIA/music.db" "UPDATE music SET artist = '${_artist//\'/\'\'}', song = '${_title//\'/\'\'}', album = '${_album//\'/\'\'}', number = '${_tracknumber//\'/\'\'}' WHERE filename = '${_file//\'/\'\'}';"
+				if [ "$3" != true ]; then
+					reset_buffer
+				fi
+			fi
+		fi
+		rm -f "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
+	fi
 }
 
 draw_pitch() {
@@ -8849,6 +9174,7 @@ add_downloaded() {
 		if [ "$1" != "noposition" ]; then
 			draw_position
 		fi
+		update_metadata_db
 		reset_buffer
 		redraw_buffer
 	else
@@ -8863,9 +9189,6 @@ add_downloaded() {
 		return
 	fi
 	touch -m "$ALETHEIA/start"
-	#if [ "$SHUFFLED" == false ]; then
-	#	sort_queue
-	#fi
 }
 
 read_corner() {
@@ -9065,8 +9388,6 @@ setup_screen() {
 			toggle_panels "$initial_screen"
 		elif [ "$inputchar" == "" ]; then
 			invert_colors  "$initial_screen"
-		elif [ "$inputchar" == "" ]; then
-			toggle_colors "$initial_screen"
 		elif [ "$inputchar" == "" ]; then
 			if [ "$USE_TAGS" == true ]; then
 				draw_banner "FILENAME"
@@ -9869,7 +10190,11 @@ search_queue() {
 		echo -ne "$NOCOLOR$BUFFER"
 		
 		if [ "$number_per_page" -lt "$original_number_per_page" ]; then
-			empty_pane "$((number_per_page+2))"
+			if [ "$NO_VERTICAL_PADDING" == true ]; then
+				empty_pane "$((number_per_page+1))"
+			else
+				empty_pane "$((number_per_page+2))"
+			fi
 		fi
 		draw_banner "SEARCH"
 		printf '%*s' $((COLUMNS - 14)) ""
@@ -11007,6 +11332,31 @@ print_queue() {
 				USE_TAGS=true
 			fi
 			sleep $BANNER_WAIT_TIME
+		elif [ "$inputchar" == "g" ]; then
+			tag_mp3 false "${queue_array[current-1]}" true
+			continue
+		elif [ "$inputchar" == "D" ]; then
+			if [ "$current" == "$POSITION" ]; then
+				delete false
+			else
+				delete false "$current" "${queue_array[current-1]}"
+			fi
+			ret=$?
+			if [ "$ret" != "200" ]; then
+				return "$ret"
+			fi
+			continue
+		elif [ "$inputchar" == "" ]; then
+			if [ "$current" == "$POSITION" ]; then
+				delete true
+			else
+				delete true "$current" "${queue_array[current-1]}"
+			fi
+			ret=$?
+			if [ "$ret" != "200" ]; then
+				return "$ret"
+			fi
+			continue
 		elif [ "$inputchar" == "s" ]; then
 			start_search
 			if [ "$?" == "$RETURN_JUMP" ]; then
@@ -11253,7 +11603,7 @@ save_settings() {
 		_save_setting "VOICE_VOLUME" "$VOICE_VOLUME"
 		_save_setting "PANELS_ENABLED" "$PANELS_ENABLED"
 		_save_setting "ONLY_VOICE_TITLES" "$ONLY_VOICE_TITLES"
-		_save_setting "COLORS_ENABLED" "$COLORS_ENABLED"
+		_save_setting "THEME_ENABLED" "$THEME_ENABLED"
 		_save_setting "DEFAULT_EQUALIZER" "$DEFAULT_EQUALIZER"
 		_save_setting "USE_TAGS" "$USE_TAGS"
 		if [ "$VOICE_ENABLED" == true ]; then
@@ -12151,7 +12501,7 @@ main() {
 			'G')
 				oscillate
 				;;
-			'g')
+			'')
 				if [ "$INTERVAL" == "0" ]; then
 					continue
 				fi
@@ -12248,6 +12598,10 @@ main() {
 				;;
 			'W')
 				add_downloaded
+				draw_volume
+				draw_equalizer
+				draw_pitch
+				draw_position
 				;;
 			'J')
 				edo_down
@@ -12463,8 +12817,6 @@ main() {
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					return "$RETURN_JUMP"
 				fi
-				draw_banner "MENU"
-				draw_position
 				;;
 			',')
 				if [ "$USE_GTTS" == true ]; then
@@ -12691,11 +13043,17 @@ main() {
 					return $RETURN_JUMP
 				fi
 				;;
-			'')
-				toggle_colors
+			'g')
+				tag_mp3 false
+				redraw_buffer
 				;;
 			'')
 				invert_colors
+				;;
+			'')
+				update_metadata_db
+				reset_buffer
+				redraw_buffer
 				;;
 			'')
 				toggle_panels true
@@ -12771,9 +13129,6 @@ main() {
 		esac
 	done
 }
-
-trap cleanup EXIT
-trap cleanup_sigint SIGINT
 
 if [ ! -d "$ALETHEIA/voices/" ]; then
 	mkdir "$ALETHEIA/voices/"
