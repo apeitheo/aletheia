@@ -4,21 +4,12 @@ CWD="$(pwd)"
 SRCDIR="${SRCDIR:-..}"
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
 
-if [ "$1" == "--release" ]; then
-	append[0]="--exclude=.git"
-	append[1]="--exclude=.github"
-fi
-
 cd "$SRCDIR" || exit 1
 if [ ! -d "aletheia-$VERSION" ]; then
 	echo "Error: Source directory should be named aletheia-$VERSION"
 	exit 1
 fi
 
-tar -czvf "$CWD/aletheia-$VERSION.tar.gz" "${append[0]}" "${append[1]}" --exclude="aletheia-$VERSION.tar.gz" --owner "$(whoami)" --group "$(groups | cut -d' ' -f1)" "aletheia-$VERSION/"
+tar -czvf "$CWD/aletheia-$VERSION.tar.gz" --exclude=.git --exclude=.github --exclude="aletheia-$VERSION.tar.gz" --owner "$(whoami)" --group "$(groups | cut -d' ' -f1)" "aletheia-$VERSION/"
 
-if [ "$1" != "--release" ]; then
-	echo
-	echo "Warning: .git and .github included."
-	echo "Use $0 --release for release"
-fi
+echo -e "\n$CWD/aletheia-$VERSION.tar.gz\n"

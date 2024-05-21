@@ -4,6 +4,8 @@ RED="\033[1;31m"
 BLUE="\033[1;36m"
 NOCOLOR="\033[0m"
 
+echo -e "\n${BLUE}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n$NOCOLOR"
+
 DESTDIR=${DESTDIR:-/usr/local}
 if [ "$1" == "--destdir" ]; then
 	if [ -d "$2" ]; then
@@ -34,8 +36,12 @@ FILES[1]="${DESTDIR}/bin/aletheia_desktop_launcher"
 FILES[2]="${DESTDIR}/share/man/man1/aletheia.1"
 FILES[3]="${DESTDIR}/share/applications/aletheia.desktop"
 FILES[4]="${DESTDIR}/share/icons/aletheia.png"
+FILES[5]="${DESTDIR}/share/aletheia/example.config"
 if [ -d "$DESTDIR/share/aletheia/themes/" ]; then
 	FILES+=("${DESTDIR}/share/aletheia/themes/"*)
+fi
+if [ -d "$DESTDIR/share/aletheia/vimrc/" ]; then
+	FILES+=("${DESTDIR}/share/aletheia/vimrc/"*)
 fi
 
 FAIL=false
@@ -55,6 +61,12 @@ if [ -e "$DESTDIR/share/aletheia" ]; then
 			FAIL=true
 		fi
 	fi
+	if [ -z "$(ls -1 "$DESTDIR/share/aletheia/vimrc")" ]; then
+		if ! rmdir "$DESTDIR/share/aletheia/vimrc" >/dev/null 2>/dev/null; then
+			echo -e "${RED}Failed:${NOCOLOR} Empty directory $DESTDIR/share/aletheia/vimrc/ not deleted."
+			FAIL=true
+		fi
+	fi
 	if [ -z "$(ls -1 "$DESTDIR/share/aletheia")" ]; then
 		if ! rmdir "$DESTDIR/share/aletheia" >/dev/null 2>/dev/null; then
 			echo -e "${RED}Failed:${NOCOLOR} Empty directory $DESTDIR/share/aletheia/ not deleted."
@@ -64,9 +76,9 @@ if [ -e "$DESTDIR/share/aletheia" ]; then
 fi
 
 if $FAIL; then
-	echo -e "${RED}Uninstall not successful$NOCOLOR"
+	echo -e "\n${RED}Uninstall not successful$NOCOLOR\n"
 	exit 1
 else
-	echo -e "${BLUE}Aletheia uninstalled${BLUE}"
+	echo -e "\n${BLUE}Aletheia uninstalled${BLUE}\n"
 	exit 0
 fi

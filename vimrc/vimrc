@@ -1,0 +1,9 @@
+syntax match envComment /^\s*#.*$/
+syntax match envKeyValue /^\s*\w\+\s*=\s*.\+$/
+syntax match envKey /^\s*\zs\w\+\ze\s*=/
+syntax match envValue /=\s*\zs.\+$/
+highlight envComment ctermfg=grey
+highlight envKey ctermfg=green
+highlight envValue ctermfg=cyan
+highlight link envKeyValue Normal
+highlight EndOfBuffer ctermfg=darkgrey

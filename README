@@ -2,11 +2,22 @@ Welcome to Aletheia 0.9.6!
 
 Aletheia is a command-line media player with a wide range of features designed to make it easy to adjust pitch and tempo in real-time using customizable intervals, allowing precise control over the playback speed and tonality of media files. It also supports loop creation with customizable start and end points for seamless looping. Aletheia has optional voice feedback and the ability to play videos, import downloads, and export playlists and loops. In addition, it offers various scaling features to smoothly transition between separate intervals.
 
-The dependencies needed to run Aletheia are:
+Dependencies:
 
-bash, pactl, calc, bc, gtts-cli, espeak-ng, sox, ffmpeg, ffprobe, mplayer, parallel, sqlite3, isnum, id3v2, exiftool
+bash, bc, calc, espeak-ng, exiftool, ffmpeg, ffprobe, id3v2, mplayer, pactl, sox, sqlite3, vim
 
-To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' and confirm to save. Voice settings and the option to cache metadata tags is avaliable in the Setup screen.
+Optional dependencies:
+
+gtts-cli (USE_GTTS=true in ~/.aletheia/config enables natural-sounding voice feedback when VOICE_ENABLED is true)
+play     (Needed for gtts-cli)
+parallel (PARALLEL_CACHE_ENABLED=true enables parallel metadata caching to speed things up)
+         (PARALLEL_CACHE_JOBS=[0-9]+ sets the number of tags to scan in parallel)
+
+Slackware users should make sure to install exiftool, id3v2, and sqlite3 from SlackBuilds.org.
+
+To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' to save your choice.
+
+If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (https://pypi.org/project/gTTS/) that downloads voice clips based on the Google Assistant voice.
 
 If your distribution isn't listed below, you can use the provided install and uninstall scripts:
 
@@ -16,7 +27,9 @@ Uninstall: ./uninstall
 
 Debian Package: ./create_deb
 Fedora Package: ./create_rpm
-Slackware Package: ./create_archive --release && ./aletheia.SlackBuild
+Slackware Package: ./create_archive && ./aletheia.SlackBuild
+
+Use ./install --destdir /path/to/directory to install somewhere other than /usr/local or use the DESTDIR environment variable.
 
 List of installed files when using ./install:
 
@@ -26,8 +39,7 @@ List of installed files when using ./install:
 /usr/local/share/applications/aletheia.desktop
 /usr/local/share/icons/aletheia.png
 /usr/local/share/aletheia/themes/*
-
-./install --destdir /path/to/directory to install somewhere other than /usr/local
+/usr/local/share/aletheia/vimrc/*
 
 List of installed files for DEB/RPM packages:
 
@@ -37,6 +49,7 @@ List of installed files for DEB/RPM packages:
 /usr/share/applications/aletheia.desktop
 /usr/share/icons/aletheia.png
 /usr/share/aletheia/themes/*
+/usr/share/aletheia/vimrc/*
 
 List of installed files for Slackware package:
 
@@ -46,6 +59,7 @@ List of installed files for Slackware package:
 /usr/share/applications/aletheia.desktop
 /usr/share/icons/aletheia.png
 /usr/share/aletheia/themes/*
+/usr/share/aletheia/vimrc/*
 
 Patreon: https://www.patreon.com/aletheia_project
 GitHub: https://www.github.com/apeitheo/aletheia

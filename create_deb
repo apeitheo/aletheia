@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=7
+REVISION=8
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -17,16 +17,18 @@ if [ -e "$TMPDIR" ]; then
 	rm -rf "$TMPDIR"
 fi
 
-mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/ "$TMPDIR"/usr/share/applications/ "$TMPDIR"/usr/share/aletheia/themes/
+mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/ "$TMPDIR"/usr/share/applications/ "$TMPDIR"/usr/share/aletheia/themes/ "$TMPDIR"/usr/share/aletheia/vimrc/
 
-echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer, parallel, sqlite3, libimage-exiftool-perl, id3v2\nSection: sound\nHomepage: https://github.com/apeitheo/aletheia\nDescription: A CLI media player with speed controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer, parallel, sqlite3, libimage-exiftool-perl, id3v2, vim\nSection: sound\nHomepage: https://github.com/apeitheo/aletheia\nDescription: A CLI media player with speed controls and voice feedback." >"$TMPDIR"/DEBIAN/control
 
 install -m 755 "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
 install -m 755 "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/usr/bin/"
 install -m 644 "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
 install -m 644 "$SRCDIR/aletheia.desktop" "$TMPDIR/usr/share/applications/"
 install -m 644 "$SRCDIR/aletheia.png" "$TMPDIR/usr/share/icons/"
+install -m 644 "$SRCDIR/example.config" "$TMPDIR/usr/share/aletheia/"
 install -m 644 "$SRCDIR/themes/"* "$TMPDIR/usr/share/aletheia/themes/"
+install -m 644 "$SRCDIR/vimrc/"* "$TMPDIR/usr/share/aletheia/vimrc/"
 
 sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"/usr/share/aletheia/\"#g" "$TMPDIR/usr/bin/aletheia"
 
@@ -35,9 +37,9 @@ chown -R root:root "$TMPDIR"
 dpkg-deb --build "$TMPDIR"
 if [ -e "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" ]; then
 	mv "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" "$SRCDIR"
-	echo "Moved aletheia_${VERSION}-${REVISION}_all.deb to $SRCDIR"
+	echo -e "\n$SRCDIR/aletheia_${VERSION}-${REVISION}_all.deb\n"
 else
-	echo -e "${RED}Error:$NOCOLOR Package creation not successful."
+	echo -e "\n${RED}Error:$NOCOLOR Package creation not successful.\n"
 	exit 1
 fi
 

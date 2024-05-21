@@ -1,0 +1,5 @@
+syntax match MyField /\v[^/]+/
+syntax match MySlash /\//
+highlight MyField ctermfg=cyan
+highlight MySlash ctermfg=green
+highlight EndOfBuffer ctermfg=darkgrey

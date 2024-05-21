@@ -1,0 +1,5 @@
+syntax match Path /^\(.*\/\)\+/
+syntax match File /[^\/]*$/
+highlight Path ctermfg=cyan
+highlight File ctermfg=green
+highlight EndOfBuffer ctermfg=darkgrey

@@ -3,6 +3,7 @@
 GREEN="\033[1;32m"
 NOCOLOR="\033[0m"
 RED="\033[1;31m"
+YELLOW="\033[1;33m"
 
 DESTDIR=${DESTDIR:-/usr/local}
 if [ "$1" == "--destdir" ]; then
@@ -25,42 +26,66 @@ if [ "${1:0:10}" == "--destdir=" ]; then
 fi
 
 QUIT=false
+WARN=false
 USER="$(whoami)"
 
-echo -e "${GREEN}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n"
+echo -e "\n${GREEN}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n"
 
 check_dep() {
 	local dependency_name="$1"
+	local only_warn="$2"
 
 	echo -ne "${NOCOLOR}Checking for $dependency_name... "
 
 	if [ ! -x "$(command -v "$dependency_name")" ]; then
-		echo -e "${RED}no"
-		QUIT=true
+		if [ "$only_warn" != true ]; then
+			echo -e "${RED}no"
+			QUIT=true
+		else
+			echo -e "${YELLOW}no"
+			WARN=true
+		fi
 	else
 		echo -e "${GREEN}yes"
 	fi
 }
 
-check_dep pactl
-check_dep calc
+check_dep bash
 check_dep bc
-check_dep gtts-cli
-check_dep play
+check_dep calc
 check_dep espeak-ng
-check_dep sox
-check_dep ffprobe
-check_dep ffmpeg
-check_dep iconv
-check_dep mplayer
-check_dep parallel
-check_dep sqlite3
-check_dep isnum
-check_dep id3v2
 check_dep exiftool
+check_dep ffmpeg
+check_dep ffprobe
+check_dep iconv
+check_dep id3v2
+check_dep mplayer
+check_dep pactl
+check_dep sox
+check_dep sqlite3
+check_dep vim
 
-if [ "$QUIT" == true ]; then
-	echo -ne "\n${RED}Error: Unresolved dependencies$NOCOLOR\n"
+echo -e "\nOptional dependencies:\n"
+
+check_dep gtts-cli true
+check_dep parallel true
+check_dep play true
+
+if [ "$WARN" == true ]; then
+	echo -ne "\n${YELLOW}Warning: ${NOCOLOR}Optional dependencies missing.\n\n"
+	echo -ne "${YELLOW}Continue anyway [${GREEN}y${YELLOW}/${RED}n${YELLOW}]? "
+	read -rsn1 key
+	if [ "$key" != "y" ] && [ "$key" != "Y" ]; then
+		if [ "$key" == $'\e' ]; then
+			read -rsn3 -t 0.001
+		fi
+		echo
+		exit 1
+	else
+		echo
+	fi
+elif [ "$QUIT" == true ]; then
+	echo -ne "\n${RED}Error: ${NOCOLOR}Missing dependencies.\n\n"
 	exit 1
 fi
 
@@ -78,6 +103,7 @@ mkdir -p "$DESTDIR/bin/"
 mkdir -p "$DESTDIR/share/man/man1/"
 mkdir -p "$DESTDIR/share/applications/"
 mkdir -p "$DESTDIR/share/aletheia/themes/"
+mkdir -p "$DESTDIR/share/aletheia/vimrc/"
 mkdir -p "$DESTDIR/share/icons/"
 
 if ! install -m 755 aletheia "$DESTDIR/bin/"; then
@@ -98,6 +124,12 @@ fi
 if ! install -m 644 ./themes/* "$DESTDIR/share/aletheia/themes/"; then
 	FAIL=true
 fi
+if ! install -m 644 ./vimrc/* "$DESTDIR/share/aletheia/vimrc/"; then
+	FAIL=true
+fi
+if ! install -m 644 example.config "$DESTDIR/share/aletheia/"; then
+	FAIL=true
+fi
 
 sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"${DESTDIR}/share/aletheia/\"#g" "$DESTDIR/bin/aletheia"
 
@@ -106,6 +138,8 @@ FILES[1]="${DESTDIR}/bin/aletheia_desktop_launcher"
 FILES[2]="${DESTDIR}/share/man/man1/aletheia.1"
 FILES[3]="${DESTDIR}/share/applications/aletheia.desktop"
 FILES[4]="${DESTDIR}/share/icons/aletheia.png"
+FILES[5]="${DESTDIR}/share/aletheia/example.config"
+FILES+=("${DESTDIR}/share/aletheia/vimrc/"*)
 FILES+=("${DESTDIR}/share/aletheia/themes/"*)
 
 for i in $(seq 0 $((${#FILES[@]}-1))); do
@@ -114,7 +148,7 @@ done
 
 if ! $FAIL; then
 	echo -ne "${GREEN}done$NOCOLOR"
-	echo -ne "\n\n${NOCOLOR}Updating man pages... $NOCOLOR"
+	echo -ne "\n${NOCOLOR}Updating man pages... $NOCOLOR"
 	if ! mandb >/dev/null 2>/dev/null; then
 		echo -ne "${RED}failed$NOCOLOR"
 	else
@@ -124,13 +158,16 @@ if ! $FAIL; then
 	echo -e "\n"
 
 	for i in $(seq 0 $((${#FILES[@]}-1))); do
-		echo "${FILES[i]}"
+		path="${FILES[i]%/*}"
+		file="${FILES[i]##*/}"
+		#echo "${FILES[i]}"
+		echo -e "$NOCOLOR$path/$GREEN$file"
 	done
 
 	if [ "$DESTDIR" != "/usr/local" ] && [ "$DESTDIR" != "/usr/local/" ]; then
-		echo -e "\n${NOCOLOR}Use ${GREEN}./uninstall --destdir $DESTDIR$NOCOLOR to remove"
+		echo -e "\n${NOCOLOR}Use ${GREEN}./uninstall --destdir $DESTDIR$NOCOLOR to remove.\n"
 	else
-		echo -e "\n${NOCOLOR}Use ${GREEN}./uninstall$NOCOLOR to remove"
+		echo -e "\n${NOCOLOR}Use ${GREEN}./uninstall$NOCOLOR to remove.\n"
 	fi
 	exit 0
 else

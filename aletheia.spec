@@ -16,16 +16,21 @@ Requires: parallel
 Requires: sqlite
 Requires: perl-Image-ExifTool
 Requires: id3v2
+Requires: vim
 
 %description
 A command-line media player with pitch and tempo controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.
 
 %install
-install -D -m 755 "%%TMPDIR%%/rpmbuild/SOURCES/usr/bin/aletheia" %{buildroot}/%{_bindir}/aletheia
-install -D -m 755 "%%TMPDIR%%/rpmbuild/SOURCES/usr/bin/aletheia_desktop_launcher" %{buildroot}/%{_bindir}/aletheia_desktop_launcher
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/man/man1/aletheia.1" %{buildroot}/%{_mandir}/man1/aletheia.1
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/applications/aletheia.desktop" %{buildroot}/%{_datadir}/applications/aletheia.desktop
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/icons/aletheia.png" %{buildroot}/%{_datadir}/icons/aletheia.png
+install -D -m 755 "%%TMPDIR%%/rpmbuild/SOURCES/usr/bin/aletheia" "%{buildroot}/%{_bindir}/aletheia"
+install -D -m 755 "%%TMPDIR%%/rpmbuild/SOURCES/usr/bin/aletheia_desktop_launcher" "%{buildroot}/%{_bindir}/aletheia_desktop_launcher"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/man/man1/aletheia.1" "%{buildroot}/%{_mandir}/man1/aletheia.1"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/applications/aletheia.desktop" "%{buildroot}/%{_datadir}/applications/aletheia.desktop"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/icons/aletheia.png" "%{buildroot}/%{_datadir}/icons/aletheia.png"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.lock" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.lock"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.queue" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.queue"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/example.config" "%{buildroot}/%{_datadir}/aletheia/example.config"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Aether" "%{buildroot}/%{_datadir}/aletheia/themes/Aether"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Desert" "%{buildroot}/%{_datadir}/aletheia/themes/Desert"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Ember" "%{buildroot}/%{_datadir}/aletheia/themes/Ember"
@@ -45,6 +50,10 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Verdant
 %attr(0644, root, root) %{_mandir}/man1/aletheia.1.gz
 %attr(0644, root, root) %{_datadir}/applications/aletheia.desktop
 %attr(0644, root, root) %{_datadir}/icons/aletheia.png
+%attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc
+%attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.lock
+%attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.queue
+%attr(0644, root, root) %{_datadir}/aletheia/example.config
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Aether
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Desert
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Ember

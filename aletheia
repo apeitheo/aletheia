@@ -19,7 +19,6 @@
 PROGRAM_NAME="aletheia"
 VERSION="0.9.6"
 ALETHEIA_DATA_DIR="."
-ESPEAK_DIGITAL_VOICE=${ESPEAK_DIGITAL_VOICE:-true}
 MAIN_REFRESH_TIME=${REFRESH_TIME:-0.2}
 MPLAYER_PATH=${MPLAYER_PATH:-""}
 if [ "$MPLAYER_PATH" != "" ] && [ "${MPLAYER_PATH: -1}" != "/" ]; then
@@ -30,6 +29,7 @@ VIDEO_FORMATS="mkv,mp4,avi,webm,mpg,mpeg"
 NO_HELP=${NO_HELP:-false}
 USE_TAGS=true
 PARALLEL_CACHE_ENABLED=false
+PARALLEL_CACHE_JOBS="4"
 THEME_FILE="Slate"
 THEME_ENABLED=true
 
@@ -162,6 +162,8 @@ SONG_LENGTH=""
 PADDING=" "
 
 VOICE_ENABLED=false
+ESPEAK_DIGITAL_VOICE=${ESPEAK_DIGITAL_VOICE:-true}
+USE_GTTS=${USE_GTTS:-false}
 VOICE_PITCH=0
 VOICE_VOLUME=0.85
 ESPEAK_VOICE_VOLUME=$(bc <<<"$VOICE_VOLUME*100")
@@ -174,38 +176,6 @@ get_system_volume() {
 	SYSTEM_VOLUME_LEFT=${SYSTEM_VOLUME_LEFT// /}
 	SYSTEM_VOLUME_RIGHT=${SYSTEM_VOLUME_RIGHT// /}
 }
-
-check_dep() {
-	local dep=$1
-	if [ ! -x "$(command -v "$dep")" ]; then
-		echo -e "${RED}Not found: ${NOCOLOR}$dep"
-		QUIT=true
-	fi
-}
-
-QUIT=false
-check_dep pactl
-check_dep calc
-check_dep bc
-check_dep gtts-cli
-check_dep play
-check_dep espeak-ng
-check_dep sox
-check_dep ffprobe
-check_dep ffmpeg
-check_dep iconv
-check_dep mplayer
-check_dep parallel
-check_dep sqlite3
-check_dep isnum
-check_dep id3v2
-check_dep exiftool
-
-if [ "$QUIT" == true ]; then
-	stty echo
-	tput cnorm
-	exit 1
-fi
 
 if [ ! -d "$ALETHEIA" ]; then
 	mkdir -p "$ALETHEIA"
@@ -303,6 +273,32 @@ check_colors() {
 	fi
 }
 
+is_num() {
+	if [[ "$1" =~ ^-?[0-9]+(\.[0-9]*)?$ ]]; then
+		if [[ "$1" == *"."* ]]; then
+			echo -n "2"
+		else
+			echo -n "1"
+		fi
+	else
+		echo -n "0"
+	fi
+}
+
+check_dep() {
+	local dep="$1"
+
+	if [ ! -x "$(command -v "$dep")" ]; then
+		if [ -n "$2" ]; then
+			echo -e "${ESC}1;33mMissing optional dependency ${NOCOLOR}$dep"
+			sleep 1s
+		else
+			echo -e "${ESC}1;31mMissing dependency ${NOCOLOR}$dep"
+		fi
+		QUIT=true
+	fi
+}
+
 check_config() {
 	path="$ALETHEIA/config"
 	if [ -e "$path" ]; then
@@ -332,6 +328,23 @@ check_config() {
 				PARALLEL_CACHE_ENABLED="$value"
 				if [ "$PARALLEL_CACHE_ENABLED" != true ] && [ "$PARALLEL_CACHE_ENABLED" != false ]; then
 					PARALLEL_CACHE_ENABLED=false
+				fi
+				if [ "$PARALLEL_CACHE_ENABLED" == true ]; then
+					QUIT=false
+					check_dep parallel true
+					sleep 3s
+					if [ "$QUIT" == true ]; then
+						PARALLEL_CACHE_ENABLED=false
+					fi
+				fi
+				if [ "$PARALLEL_CACHE_ENABLED" == true ]; then
+					value="$(read_config "PARALLEL_CACHE_JOBS")"
+					if [ "$value" != "" ]; then
+						PARALLEL_CACHE_JOBS="$value"
+						if [ "$(is_num "$PARALLEL_CACHE_JOBS")" != "1" ] || [ "$PARALLEL_CACHE_JOBS" -lt "0" ]; then
+							PARALLEL_CACHE_JOBS="4"
+						fi
+					fi
 				fi
 			fi
 
@@ -377,7 +390,7 @@ check_config() {
 			value="$(read_config "LIMIT_MASTER_VOLUME")"
 			if [ "$value" != "" ]; then
 				LIMIT_MASTER_VOLUME="$value"
-				if [ "$(isnum "$value")" != "1" ] || [ "$value" -gt "100" ]; then
+				if [ "$(is_num "$value")" != "1" ] || [ "$value" -gt "100" ]; then
 					LIMIT_MASTER_VOLUME=100
 				fi
 				if [ "$LIMIT_MASTER_VOLUME" -lt "0" ]; then
@@ -388,7 +401,7 @@ check_config() {
 			value="$(read_config "DEFAULT_EDO")"
 			if [ "$value" != "" ]; then
 				DEFAULT_EDO="$value"
-				if [ "$(isnum "$value")" != "1" ] || [ "$value" -le "0" ]; then
+				if [ "$(is_num "$value")" != "1" ] || [ "$value" -le "0" ]; then
 					DEFAULT_EDO=60
 				fi
 			fi
@@ -396,7 +409,7 @@ check_config() {
 			value="$(read_config "DEFAULT_INTERVAL")"
 			if [ "$value" != "" ]; then
 				DEFAULT_INTERVAL="$value"
-				if [ "$(isnum "$value")" != "1" ] || [ "$(bc <<<"$value < -($DEFAULT_EDO*2.6)")" == "1" ] || [ "$(bc <<<"$value > ($DEFAULT_EDO*2.1)")" == "1" ]; then
+				if [ "$(is_num "$value")" != "1" ] || [ "$(bc <<<"$value < -($DEFAULT_EDO*2.6)")" == "1" ] || [ "$(bc <<<"$value > ($DEFAULT_EDO*2.1)")" == "1" ]; then
 					DEFAULT_INTERVAL=0
 				fi
 			fi
@@ -429,7 +442,7 @@ check_config() {
 			value="$(read_config "DEFAULT_VOLUME")"
 			if [ "$value" != "" ]; then
 				DEFAULT_VOLUME="$value"
-				if [ "$(isnum "$value")" != "1" ] || [ "$value" -gt "100" ] || [ "$value" -lt "0" ]; then
+				if [ "$(is_num "$value")" != "1" ] || [ "$value" -gt "100" ] || [ "$value" -lt "0" ]; then
 					DEFAULT_VOLUME=50
 				fi
 			fi
@@ -439,6 +452,22 @@ check_config() {
 				VOICE_ENABLED="$value"
 				if [ "$VOICE_ENABLED" != true ] && [ "$VOICE_ENABLED" != false ]; then
 					VOICE_ENABLED=false
+				fi
+			fi
+
+			value="$(read_config "USE_GTTS")"
+			if [ "$value" != "" ]; then
+				USE_GTTS="$value"
+				if [ "$USE_GTTS" != true ] && [ "$USE_GTTS" != false ]; then
+					USE_GTTS=false
+				fi
+				if [ "$USE_GTTS" == true ]; then
+					QUIT=false
+					check_dep gtts-cli true
+					check_dep play true
+					if [ "$QUIT" == true ]; then
+						USE_GTTS=false
+					fi
 				fi
 			fi
 
@@ -453,7 +482,7 @@ check_config() {
 			value="$(read_config "VOICE_PITCH")"
 			if [ "$value" != "" ]; then
 				VOICE_PITCH="$value"
-				if [ "$(isnum "$value")" != "1" ] || [ "$(bc <<<"$value < ($DEFAULT_EDO*2.6)")" == "1" ] || [ "$(bc <<<"$value > ($DEFAULT_EDO*2.1)")" == "1" ]; then
+				if [ "$(is_num "$value")" != "1" ] || [ "$(bc <<<"$value < ($DEFAULT_EDO*2.6)")" == "1" ] || [ "$(bc <<<"$value > ($DEFAULT_EDO*2.1)")" == "1" ]; then
 					VOICE_PITCH=0
 				fi
 			fi
@@ -464,7 +493,7 @@ check_config() {
 				ESPEAK_VOICE_VOLUME=$(bc <<<"$VOICE_VOLUME*100")
 				if [ "$VOICE_VOLUME" == "0" ] || [ "$VOICE_VOLUME" == "0.0" ]; then
 					VOICE_ENABLED=false
-				elif [ "$(isnum "$value")" != "1" ] && [ "$(isnum "$value")" != "2" ] || [ "$(bc <<<"$value < 0")" == "1" ] || [ "$(bc <<<"$value > 1.0")" == "1" ]; then
+				elif [ "$(is_num "$value")" != "1" ] && [ "$(is_num "$value")" != "2" ] || [ "$(bc <<<"$value < 0")" == "1" ] || [ "$(bc <<<"$value > 1.0")" == "1" ]; then
 					VOICE_VOLUME=0.85
 					ESPEAK_VOICE_VOLUME=$(bc <<<"$VOICE_VOLUME*100")
 				fi
@@ -475,6 +504,9 @@ check_config() {
 				ESPEAK_DIGITAL_VOICE="$value"
 				if [ "$ESPEAK_DIGITAL_VOICE" != true ] && [ "$ESPEAK_DIGITAL_VOICE" != false ]; then
 					ESPEAK_DIGITAL_VOICE=true
+				fi
+				if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+					USE_GTTS=false
 				fi
 			fi
 
@@ -516,43 +548,28 @@ check_config() {
 	fi
 }
 
-EXAMPLE_CONFIG="#MUSIC_DIR=/home/<username>/Music/
-#SOUND_DIR=/home/<username>/Sounds/
-#VIDEO_DIR=/home/<username>/Videos/
+QUIT=false
+check_dep pactl
+check_dep calc
+check_dep bc
+check_dep espeak-ng
+check_dep sox
+check_dep ffprobe
+check_dep ffmpeg
+check_dep iconv
+check_dep mplayer
+check_dep sqlite3
+check_dep id3v2
+check_dep exiftool
 
-#AUDIO_FORMATS=mp3,flac,wav,ogg,wma
-#VIDEO_FORMATS=mpg,wmv,avi
-#USE_TAGS=true
-#PARALLEL_CACHE_ENABLED=false
-
-#VOICE_ENABLED=false
-#ESPEAK_DIGITAL_VOICE=true
-#VOICE_PITCH=0
-#VOICE_VOLUME=0.85
-#ONLY_VOICE_TITLES=false
-
-#DEFAULT_INTERVAL=0
-#DEFAULT_EDO=60
-#DEFAULT_EQUALIZER=0:0:0
-
-#DEFAULT_VOLUME=50
-#LIMIT_MASTER_VOLUME=100
-
-#COLOR_HIGHLIGHT=ffffff
-#COLOR_UNSELECTED=cccccc
-#COLOR_PANEL=333333
-#COLOR_BACKGROUND=000000
-
-#THEME_ENABLED=true
-#THEME_FILE=Slate
-
-#NO_VERTICAL_PADDING=false
-#PANELS_ENABLED=true
-#TERMINAL=gnome-terminal
-#NO_HELP=false"
+if [ "$QUIT" == true ]; then
+	stty echo
+	tput cnorm
+	exit 1
+fi
 
 if [ ! -e "$ALETHEIA/config" ]; then
-	echo -ne "$EXAMPLE_CONFIG" | sed "s/<username>/$(whoami)/g" >"$ALETHEIA/config"
+	sed "s/<username>/$(whoami)/g" <"$ALETHEIA_DATA_DIR/example.config" >"$ALETHEIA/config"
 fi
 
 check_config
@@ -562,18 +579,6 @@ if [ "$THEME_FILE" != "" ]; then
 	else
 		check_colors
 	fi
-fi
-
-VIMRC="syntax match Key /^[A-Z].*=/
-syntax match Value /[^=]*$/
-highlight Key   ctermfg=cyan
-highlight Value ctermfg=green
-highlight Normal ctermbg=black
-highlight NonText ctermfg=darkgrey"
-
-
-if [ ! -e "$ALETHEIA/vimrc" ]; then
-	echo -e "$VIMRC" >"$ALETHEIA/vimrc"
 fi
 
 if [ -z "$NO_VERTICAL_PADDING" ]; then
@@ -663,7 +668,13 @@ cache_metadata() {
 	key=
 	parallel_pid=
 	if [ "$PARALLEL_CACHE_ENABLED" == true ]; then
-		parallel -j0 extract_metadata {} ::: "${music_array[@]}" >>"$ALETHEIA/useless_out" 2>>"$ALETHEIA/useless" &
+		local jobs=
+		if [ -n "$PARALLEL_CACHE_JOBS" ]; then
+			jobs="$PARALLEL_CACHE_JOBS"
+		else
+			jobs=4
+		fi
+		parallel -j"$jobs" extract_metadata {} ::: "${music_array[@]}" >>"$ALETHEIA/useless_out" 2>>"$ALETHEIA/useless" &
 		parallel_pid=$!
 	else
 		count=1
@@ -764,7 +775,7 @@ gtts_speak_chain() {
 		fi
 		espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 "$list" &
 		echo -ne "$!" >"$ALETHEIA/espeak.pid"
-	else
+	elif [ "$USE_GTTS" == true ]; then
 		if [ "$NO_WAIT" != true ]; then
 			if (( $# > 2 )); then
 				gtts_speak "please wait"
@@ -809,7 +820,7 @@ gtts_speak_chain() {
 }
 
 gtts_speak() {
-	if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
+	if [ "$USE_GTTS" == true ] && [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
 		if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
 			return
 		fi
@@ -868,8 +879,6 @@ if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
 		espeak_say "$1" "$2" "$3" "$4"
 	}
 	USE_GTTS=false
-else
-	USE_GTTS=true
 fi
 
 draw_vanish_indicator() {
@@ -1135,7 +1144,9 @@ vanish() {
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			fi
-			pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			if [ "$USE_GTTS" == true ]; then
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			fi
 			espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 " $inputnew" &
 			ESPEAK_PID="$!"
 		elif [ "$char" == "" ]; then
@@ -1910,7 +1921,7 @@ set_scale_speed() {
 		tmp="$(read_line)"
 	fi
 
-	if [ "$(isnum "$tmp")" != "0" ]; then
+	if [ "$(is_num "$tmp")" != "0" ]; then
 		SCALE_SPEED=$tmp
 		gtts_speak "scale speed set"
 	else
@@ -2007,7 +2018,7 @@ repeat() {
 	echo "get_time_length" >"$ALETHEIA/pipe$$" &
 	sleep $MPLAYER_WAIT_TIME
 	TOTAL_TIME="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
-	if [ "$(isnum "$TOTAL_TIME")" == "0" ] || [ "$(echo -e "$TOTAL_TIME < 0.1" | bc)" == "1" ]; then
+	if [ "$(is_num "$TOTAL_TIME")" == "0" ] || [ "$(echo -e "$TOTAL_TIME < 0.1" | bc)" == "1" ]; then
 		TOTAL_TIME=0.1
 	fi
 	if [ "$REPEAT_ONLY" == true ]; then
@@ -2024,7 +2035,7 @@ repeat() {
 			else
 				START_MARKER="$(echo -ne "$repeats" | head -1 | cut -d '/' -f1)"
 			fi
-			if [ "$(isnum "$START_MARKER")" == "0" ] || [ "$(echo -e "$START_MARKER < 0" | bc)" == "1" ]; then
+			if [ "$(is_num "$START_MARKER")" == "0" ] || [ "$(echo -e "$START_MARKER < 0" | bc)" == "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
 				sleep $BANNER_WAIT_TIME
@@ -2041,7 +2052,7 @@ repeat() {
 			else
 				END_TIME="$(echo -ne "$repeats" | head -1 | cut -d '/' -f2)"
 			fi
-			if [ "$(isnum "$END_TIME")" == "0" ] || [ "$(echo -e "$END_TIME < 0" | bc)" == "1" ]; then
+			if [ "$(is_num "$END_TIME")" == "0" ] || [ "$(echo -e "$END_TIME < 0" | bc)" == "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
 				sleep $BANNER_WAIT_TIME
@@ -2061,7 +2072,7 @@ repeat() {
 			if [ "$BACK" == true ]; then
 				BACK=false
 			fi
-			if [ "$(isnum "$space")" != "1" ]; then
+			if [ "$(is_num "$space")" != "1" ]; then
 				gtts_speak "loop file error"
 				draw_banner "ERROR"
 				sleep $BANNER_WAIT_TIME
@@ -2445,7 +2456,7 @@ repeat() {
 				else
 					number_repeats=0
 				fi
-				if [ "$(isnum "$number_repeats")" != "1" ]; then
+				if [ "$(is_num "$number_repeats")" != "1" ]; then
 					toggle_pause true
 					old_time_before=$time_before
 					time_before=$(date +%s.%N)
@@ -2462,7 +2473,7 @@ repeat() {
 						delay="$(calc -pd "($space/20)")"
 					fi
 					ffmpeg -i "$FILENAME" -ss "$START_MARKER" -t "$(calc -pd "$END_MARKER-$START_MARKER")" -c copy "$filename_without_ext.repeat0.$ext" >/dev/null 2>/dev/null
-					if [ "$(isnum "$number_repeats")" == "1" ] && [ "${number_repeats:0:1}" != "-" ]; then
+					if [ "$(is_num "$number_repeats")" == "1" ] && [ "${number_repeats:0:1}" != "-" ]; then
 						sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat1.$ext" pad 0 "$delay" repeat "$number_repeats" speed "$(calc -pd "2^($INTERVAL/$EDO)")" >/dev/null 2>/dev/null
 					else
 						sox "$filename_without_ext.repeat0.$ext" "$filename_without_ext.repeat1.$ext" pad 0 "$delay" speed "$(calc -pd "2^($INTERVAL/$EDO)")" >/dev/null 2>/dev/null
@@ -3641,10 +3652,27 @@ scale_edo() {
 		draw_pitch
 		draw_position
 		return
-	elif [ "$(isnum "$edo_change")" != "0" ] || [ "$edo_change" == "-" ]; then
+	elif [ "$(is_num "$edo_change")" != "0" ] || [ "$edo_change" == "-" ]; then
 		draw_position
 		draw_banner "SCALE"
-		tmp="$(read_line "$edo_change")"
+		if [ "$edo_change" != "-" ]; then
+			tmp="$(read_line "$edo_change")"
+		else
+			gtts_speak "scale closed"
+			RIGHT_BANNER_WIDTH=0
+			draw_pitch
+			draw_position
+			return
+		fi
+
+		if [ "$(is_num "$tmp")" != "1" ]; then
+			gtts_speak "scale closed"
+			RIGHT_BANNER_WIDTH=0
+			draw_pitch
+			draw_position
+			return
+		fi
+
 		if [ "$tmp" -lt "$EDO" ]; then
 			if [ "$tmp" -le "0" ]; then
 				gtts_speak "scale closed"
@@ -4812,7 +4840,7 @@ edit_submenu() {
 			draw_position
 			return 1
 		else
-			if [ "$1" != true ]; then
+			if [ "$1" == true ]; then
 				redraw_buffer
 			fi
 			draw_pitch
@@ -4879,7 +4907,7 @@ edit_submenu() {
 			down
 			continue
 		elif [ "$z" == "q" ] || [ "$z" == "i" ] || [ "$z" == "h" ]; then
-			left "$3"
+			left "$2"
 			if [ "$?" == "1" ]; then
 				return
 			fi
@@ -5010,7 +5038,7 @@ edit_submenu() {
 				continue
 				;;
 			'[D')
-				left "$3"
+				left "$2"
 				if [ "$?" == "1" ]; then
 					return
 				fi
@@ -5020,7 +5048,7 @@ edit_submenu() {
 				continue
 				;;
 			*)
-				left "$3"
+				left "$2"
 				if [ "$?" == "1" ]; then
 					return
 				fi
@@ -5037,10 +5065,12 @@ edit_submenu() {
 			*)
 				if [ "${OPT[$SELECTION]}" == "Queue" ]; then
 					if [ "$initial_screen" == true ]; then
+						gtts_speak "nothing loaded" true
 						draw_banner "N/A"
 						sleep $BANNER_WAIT_TIME
 					else
 						edit_playlist_vim
+						menu_start_over=true
 						if [ "$?" == "$RETURN_JUMP" ]; then
 							return "$RETURN_JUMP"
 						fi
@@ -5048,16 +5078,25 @@ edit_submenu() {
 					draw_banner "EDIT"
 					draw_position
 				elif [ "${OPT[$SELECTION]}" == "Tag" ]; then
-					tag_mp3 "$1"
+					tag_mp3 "$initial_screen"
 					draw_banner "EDIT"
 					draw_position
+					menu_start_over=true
 				elif [ "${OPT[$SELECTION]}" == "Loop" ]; then
 					if [ -z "$FILENAME" ]; then
+						gtts_speak "nothing loaded" true
 						draw_banner "N/A"
 						sleep $BANNER_WAIT_TIME
 					else
-						vim -c "silent edit $FILENAME.repeats | source $ALETHEIA/vimrc"
+						gtts_speak "opening vim"
 						if [ -e "$FILENAME.repeats" ]; then
+							cp "$FILENAME.repeats" "$ALETHEIA/.${FILENAME##*/}.repeats"
+						fi
+						vim -c "silent edit $FILENAME.repeats | source $ALETHEIA_DATA_DIR/vimrc/vimrc.lock"
+						tput civis
+						if [ -e "$FILENAME.repeats" ] && [ -z "$(cat "$FILENAME.repeats")" ]; then
+							rm -f "$FILENAME.repeats"
+						elif [ -e "$FILENAME.repeats" ] && [ -n "$(diff "$FILENAME.repeats" "$ALETHEIA/.${FILENAME##*/}.repeats")" ]; then
 							REPEATS=$(<"$FILENAME.repeats")
 							REPEAT_CURRENT=1
 							REPEAT_TOTAL=$(wc -l <"$FILENAME.repeats")
@@ -5086,43 +5125,68 @@ edit_submenu() {
 							if [ "$space" == "" ]; then
 								space=0
 							fi
+							gtts_speak "loop updated" true
+						fi
+						if [ -e "$ALETHEIA/.${FILENAME##*/}.repeats" ]; then
+							rm -f "$ALETHEIA/.${FILENAME##*/}.repeats"
 						fi
 					fi
+					menu_start_over=true
 					draw_banner "EDIT"
 					draw_position
 				elif [ "${OPT[$SELECTION]}" == "Lock" ]; then
 					if [ -z "$FILENAME" ]; then
+						gtts_speak "nothing loaded" true
 						draw_banner "N/A"
 						sleep $BANNER_WAIT_TIME
 					else
-						vim -c "silent edit $FILENAME.locked | source $ALETHEIA/vimrc"
+						gtts_speak "opening vim"
 						if [ -e "$FILENAME.locked" ]; then
+							cp "$FILENAME.locked" "$ALETHEIA/.${FILENAME##*/}.locked"
+						fi
+						vim -c "silent edit $FILENAME.locked | source $ALETHEIA_DATA_DIR/vimrc/vimrc.lock"
+						tput civis
+						if [ -e "$FILENAME.locked" ] && [ -z "$(cat "$FILENAME.locked")" ]; then
+							rm -f "$FILENAME.locked"
+						elif [ -e "$FILENAME.locked" ] && [ -n "$(diff "$FILENAME.locked" "$ALETHEIA/.${FILENAME##*/}.locked")" ]; then
 							CONTENTS=$(<"$FILENAME.locked")
 							LOCK_TOTAL=$(wc -l <<<"$CONTENTS")
 							((LOCK_TOTAL++))
 							LOCK_SELECTION=0
+							gtts_speak "lock updated" true
+						fi
+						if [ -e "$ALETHEIA/.${FILENAME##*/}.locked" ]; then
+							rm -f "$ALETHEIA/.${FILENAME##*/}.locked"
 						fi
 					fi
+					menu_start_over=true
 					draw_banner "EDIT"
 					draw_position
 				elif [ "${OPT[$SELECTION]}" == "Config" ]; then
-					vim -c "silent edit $ALETHEIA/config | source $ALETHEIA/vimrc"
+					gtts_speak "opening vim"
+					cp "$ALETHEIA/config" "$ALETHEIA/.config.old"
+					vim -c "silent edit $ALETHEIA/config | source $ALETHEIA_DATA_DIR/vimrc/vimrc"
 					tput civis
-					check_config true
-					draw_volume
-					draw_equalizer
-					draw_banner "WAIT"
-					draw_position
-					render_all_help_screens
-					if [ "$initial_screen" != true ]; then
-						reset_buffer
+					if [ -n "$(diff "$ALETHEIA/config" "$ALETHEIA/.config.old")" ]; then
+						gtts_speak "please wait"
+						check_config true
+						draw_volume
+						draw_equalizer
+						draw_banner "WAIT"
+						draw_position
+						render_all_help_screens
+						if [ "$initial_screen" != true ]; then
+							reset_buffer
+						fi
+						draw_banner "MENU"
+						draw_position
+						gtts_speak "config updated" true
 					fi
-					draw_banner "MENU"
-					draw_position
+					menu_start_over=true
+					rm -f "$ALETHEIA/.config.old"
 				else
 					z=","
 				fi
-
 			esac
 		fi
 		if [ "$z" == "," ]; then
@@ -5137,10 +5201,11 @@ edit_submenu() {
 }
 
 edit_playlist_vim() {
-	gtts_speak "edit playlist"
 	echo -e "$(printf '%s\n' "${queue_array[@]}")" >"$ALETHEIA/queue"
 	cp "$ALETHEIA/queue" "$ALETHEIA/queue.old"
-	vim -c "silent edit $ALETHEIA/queue | source $ALETHEIA/vimrc" +"$POSITION"
+	gtts_speak "opening vim"
+	vim -c "silent edit $ALETHEIA/queue | source $ALETHEIA_DATA_DIR/vimrc/vimrc.queue" +"$POSITION"
+	tput civis
 	diff "$ALETHEIA"/queue "$ALETHEIA"/queue.old >/dev/null 2>/dev/null
 	if [ "$?" == "1" ]; then
 		unset queue_array
@@ -5153,12 +5218,13 @@ edit_playlist_vim() {
 		done < "$ALETHEIA/queue"
 		unset IFS
 		TOTAL_QUEUE=$index
-		gtts_speak "saved"
+		gtts_speak "queue updated" true
 		# FIXME
 		new="$(printf '%s\n' "${queue_array[@]}" | grep -n "$FILENAME$" | cut -d':' -f1)"
 		if [ "$new" == "" ]; then
 			res="${queue_array[$POSITION]}"
 			if [ "$res" != "$FILENAME" ]; then
+				rm -f "$ALETHEIA/queue" "$ALETHEIA/queue.old"
 				tput civis
 				JUMP="$POSITION"
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
@@ -5171,7 +5237,7 @@ edit_playlist_vim() {
 	else
 		gtts_speak "closed" true
 	fi
-	tput civis
+	rm -f "$ALETHEIA/queue" "$ALETHEIA/queue.old"
 	draw_volume
 	draw_equalizer
 	draw_pitch
@@ -5179,6 +5245,7 @@ edit_playlist_vim() {
 }
 
 main_menu() {
+	local initial_screen=$1
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 	fi
@@ -5198,7 +5265,6 @@ main_menu() {
 		z=""
 		nospeak=false
 	fi
-	local initial_screen=$1
 	tagged=false
 
 	if [ "$((COLUMNS%2))" == "0" ]; then
@@ -5302,7 +5368,7 @@ main_menu() {
 				draw_position
 				menu_start_over=true
 			elif [ "${OPT[SELECTION]}" == "Edit" ]; then
-				edit_submenu "$initial_screen" "" true
+				edit_submenu "$initial_screen" false
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					return "$RETURN_JUMP"
 				fi
@@ -5853,7 +5919,7 @@ main_menu() {
 					fi
 					menu_start_over=true
 				elif [ "${OPT[$SELECTION]}" == "Edit" ]; then
-					edit_submenu true
+					edit_submenu "$initial_screen" true
 					if [ "$?" == "$RETURN_JUMP" ]; then
 						return "$RETURN_JUMP"
 					fi
@@ -5861,9 +5927,14 @@ main_menu() {
 					draw_position
 					menu_start_over=true
 				elif [ "${OPT[$SELECTION]}" == "Theme" ]; then
-					theme_submenu "$initial_screen"
+					tmp_OPT=( "${OPT[@]}" )
+					tmp_TOTAL_OPTS=$TOTAL_OPTS
+					theme_submenu "$initial_screen" "" true
 					draw_banner "MENU"
 					menu_start_over=true
+					#theme_submenu "$initial_screen"
+					#draw_banner "MENU"
+					#menu_start_over=true
 				elif [ "${OPT[$SELECTION]}" == "Setup" ]; then
 					if [ "$NO_VERTICAL_PADDING" == false ]; then
 						tput cup 1
@@ -6003,7 +6074,7 @@ scale() {
 		draw_pitch
 		draw_position
 		return
-	elif [ "$(isnum "$interval_change")" == "1" ] || [ "$interval_change" == "-" ]; then
+	elif [ "$(is_num "$interval_change")" == "1" ] || [ "$interval_change" == "-" ]; then
 		draw_position
 		draw_banner "SCALE"
 		tmp="$(read_line "$interval_change" true)"
@@ -6280,7 +6351,7 @@ set_custom_int() {
 	draw_banner "INT" false false true
 	tput rc
 	read -rn1 interval_jump
-	if [ "$(isnum "$interval_jump")" == "1" ] || [ "$interval_jump" == "-" ]; then
+	if [ "$(is_num "$interval_jump")" == "1" ] || [ "$interval_jump" == "-" ]; then
 		interval_jump="$(read_line "$interval_jump" true)"
 		if [ "$?" == "1" ]; then
 			gtts_speak_chain "invalid number" "main screen" &
@@ -6438,7 +6509,7 @@ set_custom_edo() {
 	gtts_speak "enter e d o"
 	tput rc
 	read -rn1 new_edo
-	if [ "$(isnum "$new_edo")" == "1" ]; then
+	if [ "$(is_num "$new_edo")" == "1" ]; then
 		new_edo="$(read_line "$new_edo" true)"
 		if [ "$?" == "1" ]; then
 			gtts_speak_chain "invalid number" "main screen" &
@@ -6460,7 +6531,7 @@ set_custom_edo() {
 		return
 	fi
 
-	if [ "$(isnum "$new_edo")" != "0" ]; then
+	if [ "$(is_num "$new_edo")" != "0" ]; then
 		PAUSE=false
 		if [ "$new_edo" -lt "1" ]; then
 			return
@@ -6521,7 +6592,7 @@ half_precise() {
 			temp="$(calc -pd "$new_edo/$EDO")"
 			INTERVAL="$(calc -pd " $INTERVAL*$temp")"
 			INTERVAL="${INTERVAL%%.*}"
-			if [ "$(isnum "$INTERVAL")" == "0" ]; then
+			if [ "$(is_num "$INTERVAL")" == "0" ]; then
 				INTERVAL=0
 			fi
 			EDO="$new_edo"
@@ -6836,7 +6907,7 @@ oscillate() {
 		draw_position
 		return
 	elif [ "$result" != "" ]; then
-		if [ "$result" == "-" ] || [ "$(isnum "$result")" == "1" ]; then
+		if [ "$result" == "-" ] || [ "$(is_num "$result")" == "1" ]; then
 			result="$(read_line "$result")"
 		else
 			gtts_speak "closed" true
@@ -6846,7 +6917,7 @@ oscillate() {
 		fi
 	fi
 
-	if [ "$(isnum "$result")" != "1" ] && [ "$result" != "" ]; then
+	if [ "$(is_num "$result")" != "1" ] && [ "$result" != "" ]; then
 		gtts_speak "closed" true
 		draw_pitch
 		draw_position
@@ -7364,7 +7435,7 @@ set_sleep() {
 	fi
 
 	if [ "$answer" != "" ]; then
-		if [ "$(isnum "$answer")" != "0" ]; then
+		if [ "$(is_num "$answer")" != "0" ]; then
 			SLEEPING=true
 			if [ "$WEB_CLIENT" == "0" ]; then
 				gtts_speak "do you want to suspend? enter y, or n, or q to cancel"
@@ -7444,7 +7515,7 @@ read_line() {
 		return
 	fi
 	if [ "$only_numbers" == true ] && [ "$x" != "" ] && [ "$x" != "-" ]; then
-		if [ "$(isnum "$x")" == "0" ]; then
+		if [ "$(is_num "$x")" == "0" ]; then
 			unset IFS
 			return 1
 		fi
@@ -7469,7 +7540,7 @@ read_line() {
 	read -rn1 x
 	while [ -n "$x" ]; do
 		if [ "$only_numbers" == true ] && [ "$x" != "" ] && [ "$x" != $'\x7F' ]; then
-			if [ "$(isnum "$x")" == "0" ]; then
+			if [ "$(is_num "$x")" == "0" ]; then
 				unset IFS
 				return 1
 			fi
@@ -7506,7 +7577,7 @@ read_line() {
 		fi
 		read -rn1 x
 		if [ "$only_numbers" == true ] && [ "$x" != "" ]; then
-			if [ "$(isnum "$x")" == "0" ]; then
+			if [ "$(is_num "$x")" == "0" ]; then
 				unset IFS
 				return 1
 			fi
@@ -7566,11 +7637,11 @@ read_number() {
 				echo -ne ""
 				return
 			fi
-			if [ "$(isnum "$tmp")" != "0" ]; then
+			if [ "$(is_num "$tmp")" != "0" ]; then
 				echo -ne "-$tmp"
 				return
 			fi
-		elif [ "$(isnum "$x")" != "0" ]; then
+		elif [ "$(is_num "$x")" != "0" ]; then
 			for i in $(seq 1 ${#number}); do
 				echo -ne "\b" >/dev/stderr
 			done
@@ -7580,7 +7651,7 @@ read_number() {
 			if [ "$tmp" == "" ]; then
 				echo -ne "$x"
 				return
-			elif [ "$(isnum "$tmp")" != "0" ]; then
+			elif [ "$(is_num "$tmp")" != "0" ]; then
 				echo -ne "$x$tmp"
 				return
 			fi
@@ -8693,6 +8764,7 @@ tag_mp3() {
 		local FILENAME="$2"
 	fi
 	if [ "$initial_screen" == true ]; then
+		gtts_speak "nothing loaded" true
 		draw_banner "N/A"
 		sleep $BANNER_WAIT_TIME
 	else
@@ -8753,8 +8825,9 @@ TOTAL  = $_totaltracks
 GENRE  = $_genre
 NOTES  = $_comment
 EOF
+			gtts_speak "opening vim"
 			cp "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
-			vim -c "silent edit $ALETHEIA/media.$$.tag | source $ALETHEIA/vimrc | execute 'norm! 4G9l'"
+			vim -c "silent edit $ALETHEIA/media.$$.tag | source $ALETHEIA_DATA_DIR/vimrc/vimrc | execute 'norm! 4G9l'"
 			tput civis
 			if [ -e "$ALETHEIA/media.$$.tag" ] && [ -n "$(diff "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig")" ]; then
 				_append=""
@@ -8767,19 +8840,19 @@ EOF
 						text=" "
 					fi
 					if [ "$item" == "ARTIST" ]; then
-						id3v2 --artist "$text" "$FILENAME"
+						id3v2 --artist "$text" "$FILENAME" >/dev/null 2>/dev/null
 						if [ "$text" = " " ]; then
 							text=""
 						fi
 						_artist="$text"
 					elif [ "$item" == "TITLE" ]; then
-						id3v2 --song "$text" "$FILENAME"
+						id3v2 --song "$text" "$FILENAME" >/dev/null 2>/dev/null
 						if [ "$text" = " " ]; then
 							text=""
 						fi
 						_title="$text"
 					elif [ "$item" == "ALBUM" ]; then
-						id3v2 --album "$text" "$FILENAME"
+						id3v2 --album "$text" "$FILENAME" >/dev/null 2>/dev/null
 						if [ "$text" = " " ]; then
 							text=""
 						fi
@@ -8790,19 +8863,19 @@ EOF
 						fi
 						_tracknumber="$text"
 					elif [ "$item" == "GENRE" ]; then
-						id3v2 --genre "$text" "$FILENAME"
+						id3v2 --genre "$text" "$FILENAME" >/dev/null 2>/dev/null
 						if [ "$text" = " " ]; then
 							text=""
 						fi
 						_genre="$text"
 					elif [ "$item" == "YEAR" ]; then
-						id3v2 --year "$text" "$FILENAME"
+						id3v2 --year "$text" "$FILENAME" >/dev/null 2>/dev/null
 						if [ "$text" = " " ]; then
 							text=""
 						fi
 						_year="$text"
 					elif [ "$item" == "NOTES" ]; then
-						id3v2 --comment "$text" "$FILENAME"
+						id3v2 --comment "$text" "$FILENAME" >/dev/null 2>/dev/null
 						if [ "$text" = " " ]; then
 							text=""
 						fi
@@ -8816,7 +8889,7 @@ EOF
 				done <"$ALETHEIA/media.$$.tag"
 				str=
 				if [ -n "$_tracknumber" ] && [ -n "$_totaltracks" ]; then
-					if [ "$(isnum "$_tracknumber")" == "1" ] && [ "$_tracknumber" -gt "0" ] && [ "$(isnum "$_totaltracks")" == "1" ] && [ "$_totaltracks" -ge "1" ]; then
+					if [ "$(is_num "$_tracknumber")" == "1" ] && [ "$_tracknumber" -gt "0" ] && [ "$(is_num "$_totaltracks")" == "1" ] && [ "$_totaltracks" -ge "1" ]; then
 						str="$_tracknumber/$_totaltracks"
 					fi
 				else
@@ -8826,13 +8899,20 @@ EOF
 						str=
 					fi
 				fi
-				id3v2 --track "$str" "$FILENAME"
+				if [ -n "$str" ]; then
+					id3v2 --track "$str" "$FILENAME" >/dev/null 2>/dev/null
+				fi
 				_file=${FILENAME##*/}
-				sqlite3 "$ALETHEIA/music.db" "UPDATE music SET artist = '${_artist//\'/\'\'}', song = '${_title//\'/\'\'}', album = '${_album//\'/\'\'}', number = '${_tracknumber//\'/\'\'}' WHERE filename = '${_file//\'/\'\'}';"
+				sqlite3 "$ALETHEIA/music.db" "UPDATE music SET artist = '${_artist//\'/\'\'}', song = '${_title//\'/\'\'}', album = '${_album//\'/\'\'}', number = '${_tracknumber//\'/\'\'}' WHERE filename = '${_file//\'/\'\'}';" >/dev/null 2>/dev/null
 				if [ "$3" != true ]; then
 					reset_buffer
 				fi
+				gtts_speak "tag updated" true
 			fi
+		else
+			gtts_speak "not an mp3" true
+			draw_banner "NOT MP3"
+			sleep $BANNER_WAIT_TIME
 		fi
 		rm -f "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
 	fi
@@ -9985,7 +10065,7 @@ start_search() {
 	fi
 	jump_regex="${jump// /.*}"
 	if [ "$jump" != "" ]; then
-		if [ "$(isnum "$jump")" != "0" ]; then
+		if [ "$(is_num "$jump")" != "0" ]; then
 			jump="${jump#"${jump%%[!0]*}"}"
 			if [ "$jump" -lt "1" ]; then
 				if [ "$1" == false ]; then
@@ -10384,7 +10464,7 @@ search_queue() {
 			fi
 			JUMP=${search_array[$((current_pos-1))]%%:*}
 			return "$RETURN_JUMP"
-		elif [ "$(isnum "$inputchar")" != "0" ]; then
+		elif [ "$(is_num "$inputchar")" != "0" ]; then
 			gtts_speak " $inputchar"
 			up_down="$(read_line "$inputchar")"
 			jumpto="$up_down"
@@ -10636,7 +10716,7 @@ queue_controls() {
 			if [ "$pos" -le "0" ]; then
 				pos=1
 			fi
-		elif [ "$(isnum "$inputchar")" == "1" ]; then
+		elif [ "$(is_num "$inputchar")" == "1" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
 			fi
@@ -10678,7 +10758,7 @@ queue_controls() {
 			draw_banner "DELETE"
 			gtts_speak "enter number to delete"
 			read -rn1 c
-			if [ "$(isnum "$c")" == "1" ]; then
+			if [ "$(is_num "$c")" == "1" ]; then
 				c="$(read_line "$c" true)"
 				if [ "$?" == "1" ]; then
 					gtts_speak_chain "invalid number" "select playlist" &
@@ -11280,9 +11360,9 @@ print_queue() {
 			fi
 
 			skip=true
-		elif [ "$(isnum "$inputchar")" != "0" ]; then
+		elif [ "$(is_num "$inputchar")" != "0" ]; then
 			up_down="$(read_line "$inputchar")"
-			if [ "$(isnum "$up_down")" != "0" ]; then
+			if [ "$(is_num "$up_down")" != "0" ]; then
 				up_down="${up_down#"${up_down%%[!0]*}"}"
 				if [ "$up_down" -lt "1" ]; then
 					draw_pitch
@@ -11991,7 +12071,7 @@ main() {
 				fi
 				draw_banner "QUIT" true
 				if [ "$VOICE_ENABLED" == true ]; then
-					gtts_speak "do you want to quit? enter y, or n, or q to cancel"
+					gtts_speak "do you want to quit?"
 				fi
 				input_char=""
 				while true; do
@@ -12003,6 +12083,12 @@ main() {
 						stty echo
 						return $RETURN_QUIT
 					elif [ "$input_char" == "q" ] || [ "$input_char" == $'\e' ]; then
+						if [ -n "$ESPEAK_PID" ]; then
+							kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+						fi
+						if [ "$USE_GTTS" == true ]; then
+							pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+						fi
 						draw_pitch
 						draw_position
 						break
@@ -12025,7 +12111,7 @@ main() {
 					echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
 					sleep $MPLAYER_WAIT_TIME
 					percent_pos="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2)"
-					if [ "$(isnum "$percent_pos")" == "0" ]; then
+					if [ "$(is_num "$percent_pos")" == "0" ]; then
 						percent_pos=1
 					fi
 					if [ "$hours" == "00" ]; then
@@ -12134,10 +12220,10 @@ main() {
 						time_pos="${time_pos#*=}"
 						time_pos="${time_pos%%.*}"
 						tput cup $LINES ${#PADDING}
-						if [ "$(isnum "$percent_pos")" == "0" ]; then
+						if [ "$(is_num "$percent_pos")" == "0" ]; then
 							percent_pos=1
 						fi
-						if [ "$(isnum "$time_pos")" == "1" ]; then
+						if [ "$(is_num "$time_pos")" == "1" ]; then
 							current_time="$(date -u -d @"$time_pos" +%H:%M:%S)"
 							time_unavailable=false
 						else
@@ -12208,7 +12294,7 @@ main() {
 								tput cup $LINES $((10+${#PADDING}))
 							fi
 
-							if [ "$(isnum "$percent_pos")" == "0" ]; then
+							if [ "$(is_num "$percent_pos")" == "0" ]; then
 								percent_pos=$available_space
 							fi
 							percent_pos=$(calc -pd "$percent_pos/100*$available_space+1")
@@ -12813,7 +12899,7 @@ main() {
 				gtts_speak "screen redrawn"
 				;;
 			'O')
-				edit_submenu
+				edit_submenu false true
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					return "$RETURN_JUMP"
 				fi
