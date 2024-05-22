@@ -55,17 +55,17 @@ check_dep bc
 check_dep calc
 check_dep espeak-ng
 check_dep exiftool
+check_dep eyeD3
 check_dep ffmpeg
 check_dep ffprobe
 check_dep iconv
-check_dep id3v2
 check_dep mplayer
 check_dep pactl
 check_dep sox
 check_dep sqlite3
 check_dep vim
 
-echo -e "\nOptional dependencies:\n"
+echo -e "\nOptional Dependencies\n"
 
 check_dep gtts-cli true
 check_dep parallel true

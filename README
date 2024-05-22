@@ -4,7 +4,7 @@ Aletheia is a command-line media player with a wide range of features designed t
 
 Dependencies:
 
-bash, bc, calc, espeak-ng, exiftool, ffmpeg, ffprobe, id3v2, mplayer, pactl, sox, sqlite3, vim
+bash, bc, calc, espeak-ng, exiftool, eyeD3, ffmpeg, ffprobe, mplayer, pactl, sox, sqlite3, vim
 
 Optional dependencies:
 
@@ -13,7 +13,7 @@ play     (Needed for gtts-cli)
 parallel (PARALLEL_CACHE_ENABLED=true enables parallel metadata caching to speed things up)
          (PARALLEL_CACHE_JOBS=[0-9]+ sets the number of tags to scan in parallel)
 
-Slackware users should make sure to install exiftool, id3v2, and sqlite3 from SlackBuilds.org.
+Slackware users should make sure to install exiftool, eyeD3, sqlite3, and their associated dependencies from SlackBuilds.org.
 
 To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' to save your choice.
 

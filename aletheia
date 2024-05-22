@@ -113,6 +113,7 @@ LOCKED_EDO=$DEFAULT_EDO
 VOLUME=""
 LIMIT_MASTER_VOLUME=100
 ONLY_PITCH=false
+DISPLAY_ALBUM=false
 
 LOCKING_POS=0
 EDO_LIMIT="1000000"
@@ -181,7 +182,7 @@ if [ ! -d "$ALETHEIA" ]; then
 	mkdir -p "$ALETHEIA"
 fi
 
-touch -m "$ALETHEIA/start"
+touch -m "$ALETHEIA/start$$"
 
 get_system_volume
 
@@ -377,6 +378,14 @@ check_config() {
 				fi
 			fi
 
+			value="$(read_config "DISPLAY_ALBUM")"
+			if [ "$value" != "" ]; then
+				DISPLAY_ALBUM="$value"
+				if [ "$DISPLAY_ALBUM" != true ] && [ "$DISPLAY_ALBUM" != false ]; then
+					DISPLAY_ALBUM=false
+				fi
+			fi
+
 			if [ -z "$NO_VERTICAL_PADDING" ] || [ "$1" == true ]; then
 				value="$(read_config "NO_VERTICAL_PADDING")"
 				if [ "$value" != "" ]; then
@@ -549,18 +558,18 @@ check_config() {
 }
 
 QUIT=false
-check_dep pactl
-check_dep calc
 check_dep bc
+check_dep calc
 check_dep espeak-ng
-check_dep sox
-check_dep ffprobe
+check_dep exiftool
+check_dep eyeD3
 check_dep ffmpeg
+check_dep ffprobe
 check_dep iconv
 check_dep mplayer
+check_dep pactl
+check_dep sox
 check_dep sqlite3
-check_dep id3v2
-check_dep exiftool
 
 if [ "$QUIT" == true ]; then
 	stty echo
@@ -590,9 +599,9 @@ fi
 extract_metadata() {
 	file=$1
 	time=$(ffprobe -i "$file" -show_entries format=duration -v quiet -of csv="p=0" | cut -d'.' -f1)
-	line=$(exiftool -Artist -Title -Album -TrackNumber "$1")
-	artist="$(echo -n "$line" | grep -E "^Artist")"
-	song="$(echo -n "$line" | grep -E "^Title")"
+	line="$(exiftool -Artist -Title -Album -TrackNumber "$1")"
+	artist="$(echo -ne "$line" | grep -E "^Artist" 2>/dev/null)"
+	song="$(echo -ne "$line" | grep -E "^Title" 2>/dev/null)"
 	i="${file##*/}"
 	i="${i//\'/\'\'}"
 	if [ "$artist" == "" ] && [ "$song" == "" ]; then
@@ -603,10 +612,10 @@ extract_metadata() {
 		fi
 		return
 	fi
-	album="$(echo -n "$line" | grep -E "^Album")"
-	tracknum="$(echo -n "$line" | grep -E "^Track Number")"
-	artist="${artist##*: }"
-	song="${song##*: }"
+	album="$(echo -n "$line" | grep -E "^Album" 2>/dev/null)"
+	tracknum="$(echo -n "$line" | grep -E "^Track Number" 2>/dev/null)"
+	artist="${artist#*: }"
+	song="${song#*: }"
 	if [ "$2" == true ]; then
 		echo ": $artist - $song" >>"$ALETHEIA/useless"
 	else
@@ -692,6 +701,7 @@ cache_metadata() {
 		done &
 	fi
 	clear
+	echo -ne "$BLUE"
 	tail -f "$ALETHEIA/useless" | grep -E "^:" &
 	tail_pid=$!
 
@@ -1275,6 +1285,8 @@ x  Remove Song
 >  Move Song Down
 s  Keyword Search
 c  Toggle Filename
+g  Edit Tag
+^G  Update Tag
 '  Top
 \"  Bottom"
 
@@ -1371,6 +1383,8 @@ $  Save Position
 ^H  Seek to Position
 P  Progress Bar
 O  VIM Menu
+g  Edit Tag
+^G  Update Tag
 Queue Controls
 ;  Queue
 R  Shuffle
@@ -1541,8 +1555,12 @@ cleanup() {
 		rm -f "$ALETHEIA/cancel.tmp" >/dev/null 2>/dev/null
 	fi
 	rm -f "$ALETHEIA"/useless{,_out}
-	rm -f "$ALETHEIA"/start
-	rm -f "$ALETHEIA"/mplayer_output{,_stderr}
+	rm -f "$ALETHEIA/start$$"
+	rm -f "$ALETHEIA/mplayer_output$$"
+	rm -f "$ALETHEIA/mplayer_output_stderr$$"
+	if [ -e "$ALETHEIA/fade" ]; then
+		rm -f "$ALETHEIA/fade"
+	fi
 	pkill -f "^tail -f.*useless" >/dev/null 2>/dev/null
 	tmp_volume_left="$(echo "$SYSTEM_VOLUME_LEFT" | cut -d'%' -f1)"
 	tmp_volume_right="$(echo "$SYSTEM_VOLUME_RIGHT" | cut -d'%' -f1)"
@@ -1590,9 +1608,13 @@ cleanup_sigint() {
 		rm -f "$ALETHEIA/finished.tmp"
 		rm -f "$ALETHEIA/cancel.tmp" >/dev/null 2>/dev/null
 	fi
+	if [ -e "$ALETHEIA/fade" ]; then
+		rm -f "$ALETHEIA/fade"
+	fi
 	rm -f "$ALETHEIA"/useless{,_out}
-	rm -f "$ALETHEIA"/start
-	rm -f "$ALETHEIA"/mplayer_output{,_stderr}
+	rm -f "$ALETHEIA/start$$"
+	rm -f "$ALETHEIA/mplayer_output$$"
+	rm -f "$ALETHEIA/mplayer_output_stderr$$"
 	pkill -f "^tail -f.*useless" >/dev/null 2>/dev/null
 	echo -ne "$NOCOLOR"
 	clear
@@ -2017,7 +2039,7 @@ repeat() {
 	echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
 	echo "get_time_length" >"$ALETHEIA/pipe$$" &
 	sleep $MPLAYER_WAIT_TIME
-	TOTAL_TIME="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
+	TOTAL_TIME="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d '=' -f2)"
 	if [ "$(is_num "$TOTAL_TIME")" == "0" ] || [ "$(echo -e "$TOTAL_TIME < 0.1" | bc)" == "1" ]; then
 		TOTAL_TIME=0.1
 	fi
@@ -2945,7 +2967,7 @@ repeat() {
 			elif [ "$input_char" == "5" ]; then
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
-				START_MARKER="$(printf "%.2f" "$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2)")"
+				START_MARKER="$(printf "%.2f" "$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d'=' -f2)")"
 				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -2955,7 +2977,7 @@ repeat() {
 			elif [ "$input_char" == "7" ]; then
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
-				END_MARKER="$(printf "%.2f" "$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2)")"
+				END_MARKER="$(printf "%.2f" "$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d'=' -f2)")"
 				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
@@ -6433,10 +6455,17 @@ read_locked_file() {
 		# backwards compatible with old style locked file
 		_scaletempo_flag=$oldstyle2
 	fi
+	if [ "$(is_num "$_edo")" != "1" ] || [ "$_edo" -le "0" ]; then
+		return 1
+	else
+		INTERVAL_LOWER_LIMIT=$(bc <<<"$_edo*2.6")
+		INTERVAL_UPPER_LIMIT=$(bc <<<"$_edo*2.1")
+	fi
+	if [ "$(is_num "$_int")" != "1" ] || [ "$(bc <<<"$_int < -$INTERVAL_LOWER_LIMIT")" == "1" ] || [ "$(bc <<<"$_int > $INTERVAL_UPPER_LIMIT")" == "1" ]; then
+		return 1
+	fi
 	INTERVAL=$_int
 	EDO=$_edo
-	INTERVAL_LOWER_LIMIT=$(bc <<<"$EDO*2.6")
-	INTERVAL_UPPER_LIMIT=$(bc <<<"$EDO*2.1")
 }
 
 reset_to_locked() {
@@ -7158,8 +7187,8 @@ pcm_volume_change() {
 			MUTE=false
 			draw_pitch
 		fi
-		if [ "$VOLUME" -ge "5" ]; then
-			VOLUME="$((VOLUME-5))"
+		if [ "$(bc <<<"$VOLUME >= 5")" == "1" ]; then
+			VOLUME="$(bc <<<"$VOLUME-5")"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -7179,8 +7208,8 @@ pcm_volume_change() {
 			MUTE=false
 			draw_pitch
 		fi
-		if [ "$VOLUME" -le "95" ]; then
-			VOLUME="$((VOLUME+5))"
+		if [ "$(bc <<<"$VOLUME <= 95")" == "1" ]; then
+			VOLUME="$(bc <<<"$VOLUME+5")"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -7200,8 +7229,8 @@ pcm_volume_change() {
 			MUTE=false
 			draw_pitch
 		fi
-		if [ "$VOLUME" -ge "1" ]; then
-			VOLUME="$((VOLUME-1))"
+		if [ "$(bc <<<"$VOLUME >= 1")" == "1" ]; then
+			VOLUME="$(bc <<<"$VOLUME-1")"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -7216,8 +7245,8 @@ pcm_volume_change() {
 			MUTE=false
 			draw_pitch
 		fi
-		if [ "$VOLUME" -le "99" ]; then
-			VOLUME="$((VOLUME+1))"
+		if [ "$(bc <<<"$VOLUME <= 99")" == "1" ]; then
+			VOLUME="$(bc <<<"$VOLUME+1")"
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -7235,6 +7264,10 @@ pcm_volume_change() {
 	fi
 	return 200
 }
+
+if [ "$(pgrep -c aletheia)" -gt "1" ]; then
+	VOLUME="0"
+fi
 
 set_system_volume() {
 	if [ "$1" == true ]; then
@@ -7304,9 +7337,26 @@ fade_volume() {
 	PAUSE=false
 	MUTE=false
 	x=0
-	if [ "$inputchar" == "" ]; then
-		read -rn1 inputchar
+	local pause=false
+	if [ ! -e "$ALETHEIA/fade" ]; then
+		touch "$ALETHEIA/fade"
+		while true; do
+			read -rsn1 -t 0.01 inputchar
+			if [ -n "$inputchar" ]; then
+				rm -f "$ALETHEIA/fade"
+				break
+			fi
+			if [ ! -e "$ALETHEIA/fade" ]; then
+				inputchar="j"
+				pause=true
+				break
+			fi
+		done
+	else
+		rm -f "$ALETHEIA/fade"
+		inputchar="k"
 	fi
+
 	down=false
 	up=false
 	if [ "$inputchar" == "j" ]; then
@@ -7331,23 +7381,75 @@ fade_volume() {
 		draw_pitch
 		return
 	fi
-	while [ "$x" -le "100" ] && [ "$VOLUME" -ge "0" ] && [ "$VOLUME" -le "100" ]; do
-		if [ "$up" == true ]; then
-			if [ "$VOLUME" == "100" ]; then
-				draw_pitch
-				return
+	c=
+	while [ "$(bc <<<"$VOLUME >= 0")" == "1" ] && [ "$(bc <<<"$VOLUME <= $DEFAULT_VOLUME")" == "1" ]; do
+		if [ "$c" != "j" ] && [ "$c" != "k" ]; then
+			if [ "$up" == true ]; then
+				if [ "$VOLUME" == "$DEFAULT_VOLUME" ]; then
+					draw_pitch
+					return
+				fi
+				if [ "$(bc <<<"$VOLUME+0.5 <= $DEFAULT_VOLUME")" == "1" ]; then
+					VOLUME="$(calc -pd "$VOLUME+2")"
+				else
+					draw_pitch
+					return
+				fi
+			elif [ "$down" == true ]; then
+				if [ "$VOLUME" == "0" ]; then
+					if [ "$pause" == true ]; then
+						break
+					fi
+					draw_pitch
+					return
+				fi
+				if [ "$(bc <<<"$VOLUME-0.2 >= 0")" == "1" ]; then
+					if [ "$(bc <<<"$VOLUME <= 7")" == "1" ]; then
+						VOLUME="$(calc -pd "$VOLUME-0.25")"
+					else
+						VOLUME="$(calc -pd "$VOLUME-2")"
+					fi
+				fi
 			fi
-			VOLUME="$((VOLUME+1))"
-		elif [ "$down" == true ]; then
-			if [ "$VOLUME" == "0" ]; then
-				draw_pitch
-				return
-			fi
-			VOLUME="$((VOLUME-1))"
+			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		fi
-		echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		draw_volume
-		read -rsn1 -t $BANNER_WAIT_TIME c
+		if [ "$up" == true ]; then
+			if [ "$(bc <<<"$VOLUME > 15")" == "1" ]; then
+				read -rsn1 -t 0.23 c
+			else
+				read -rsn1 -t 0.13 c
+			fi
+		elif [ "$down" == true ]; then
+			if [ "$(bc <<<"$VOLUME < 5")" == "1" ]; then
+				read -rsn1 -t 0.23 c
+			else
+				read -rsn1 -t 0.13 c
+			fi
+		fi
+		if [ "$c" == "8" ]; then
+			system_volume_change false 3 3
+		elif [ "$c" == "9" ]; then
+			system_volume_change true 3 3
+		elif [ "$c" == "j" ]; then
+			pitch_down
+			ret=$?
+			if [ "$OUTPUT" != "" ]; then
+				input=$OUTPUT
+			fi
+			if [ "$ret" != "200" ]; then
+				return $ret
+			fi
+		elif [ "$c" == "k" ]; then
+			pitch_up
+			ret=$?
+			if [ "$OUTPUT" != "" ]; then
+				input=$OUTPUT
+			fi
+			if [ "$ret" != "200" ]; then
+				return $ret
+			fi
+		fi
 		ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null
 		if [ "$?" == "1" ]; then
 			RIGHT_BANNER_WIDTH=$((${#POSITION} + ${#TOTAL_QUEUE} + 1 + (${#CORNER_DIVIDER}*2)))
@@ -7356,6 +7458,9 @@ fade_volume() {
 			return
 		fi
 		if [ "$c" == "q" ] || [ "$c" == $'\e' ] || [ "$c" == "3" ]; then
+			if [ -e "$ALETHEIA/fade" ]; then
+				rm -f "$ALETHEIA/fade"
+			fi
 			gtts_speak "closed" true
 			draw_pitch
 			break
@@ -7379,7 +7484,12 @@ fade_volume() {
 		fi
 		x=$((x+1))
 	done
-	draw_pitch
+	if [ "$down" == true ] && [ "$pause" == true ]; then
+		toggle_pause true
+		draw_banner "PAUSE"
+	else
+		draw_pitch
+	fi
 	redraw_buffer
 }
 
@@ -8376,7 +8486,7 @@ get_metadata() {
 			SONG_LENGTH=""
 		fi
 
-		if [ "$artist" == "" ] || [ "$song" == "" ]; then
+		if [ "$artist" == "" ] && [ "$song" == "" ]; then
 			line="${queue_array[$((pos-1))]##*/}"
 			line="${line%.*}"
 
@@ -8389,10 +8499,16 @@ get_metadata() {
 				line="${line%.*}"
 			fi
 		else
-			if [ "$album" == "" ]; then
-				line="$artist  $song"
+			if [ -z "$artist" ] && [ -n "$song" ]; then
+				line="$song"
+			elif [ -z "$song" ] && [ -n "$artist" ]; then
+				line="$artist"
 			else
-				line="$artist  $album  $song"
+				if [ "$album" == "" ] || [ "$DISPLAY_ALBUM" == false ]; then
+					line="$artist  $song"
+				else
+					line="$artist  $album  $song"
+				fi
 			fi
 		fi
 	else
@@ -8771,18 +8887,18 @@ tag_mp3() {
 		local _ext="${FILENAME##*.}"
 		_ext="${_ext,,}"
 		if [ "$_ext" == "mp3" ]; then
-			line="$(exiftool -Artist -Title -Album -Track -Genre -Year -Comment -AudioBitrate "$FILENAME")"
-			_artist="$(echo -ne "$line" | grep -E "^Artist" | cut -d':' -f2- | sed -e 's/^ //')"
-			_title="$(echo -ne "$line" | grep -E "^Title" | cut -d':' -f2- | sed -e 's/^ //')"
-			_album="$(echo -ne "$line" | grep -E "^Album" | cut -d':' -f2- | sed -e 's/^ //')"
-			_tracknumber="$(echo -ne "$line" | grep -E "^Track" | cut -d':' -f2 | sed -e 's/^ //')"
+			line="$(exiftool -Artist -Title -Album -Track -Genre -Year -Comment -AudioBitrate -OriginalReleaseYear "$FILENAME")"
+			_artist="$(echo -ne "$line" | grep -E "^Artist" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+			_title="$(echo -ne "$line" | grep -E "^Title" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+			_album="$(echo -ne "$line" | grep -E "^Album" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+			_tracknumber="$(echo -ne "$line" | grep -E "^Track" | cut -d':' -f2 | sed -e 's/^ //' 2>/dev/null)"
 			if [ "${_tracknumber//\// }" != "${_tracknumber}" ]; then
 				_totaltracks="${_tracknumber#*/}"
 				_tracknumber="${_tracknumber%/*}"
 			fi
-			_genre="$(echo -ne "$line" | grep -E "^Genre" | cut -d':' -f2- | sed -e 's/^ //')"
-			_year="$(echo -ne "$line" | grep -E "^Year" | cut -d':' -f2- | sed -e 's/^ //')"
-			_comment="$(echo -ne "$line" | grep -E "^Comment" | cut -d':' -f2- | sed -e 's/^ //')"
+			_genre="$(echo -ne "$line" | grep -E "^Genre" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+			_year="$(echo -ne "$line" | grep -E "^Original Release Year" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+			_comment="$(echo -ne "$line" | grep -E "^Comment" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
 			_bitrate="$(echo -ne "$line" | grep -E "^Audio Bitrate" | cut -d':' -f2 | sed -e 's/^ //')"
 			if [ -z "$_artist" ]; then
 				_artist=" "
@@ -8830,7 +8946,7 @@ EOF
 			vim -c "silent edit $ALETHEIA/media.$$.tag | source $ALETHEIA_DATA_DIR/vimrc/vimrc | execute 'norm! 4G9l'"
 			tput civis
 			if [ -e "$ALETHEIA/media.$$.tag" ] && [ -n "$(diff "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig")" ]; then
-				_append=""
+				_append=()
 				while read -r line; do
 					item="${line%%=*}"
 					item="${item%% *}"
@@ -8840,68 +8956,65 @@ EOF
 						text=" "
 					fi
 					if [ "$item" == "ARTIST" ]; then
-						id3v2 --artist "$text" "$FILENAME" >/dev/null 2>/dev/null
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-a "$text")
 						fi
 						_artist="$text"
 					elif [ "$item" == "TITLE" ]; then
-						id3v2 --song "$text" "$FILENAME" >/dev/null 2>/dev/null
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-t "$text")
 						fi
 						_title="$text"
 					elif [ "$item" == "ALBUM" ]; then
-						id3v2 --album "$text" "$FILENAME" >/dev/null 2>/dev/null
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-A "$text")
 						fi
 						_album="$text"
 					elif [ "$item" == "TRACK" ]; then
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-n "$text")
 						fi
 						_tracknumber="$text"
 					elif [ "$item" == "GENRE" ]; then
-						id3v2 --genre "$text" "$FILENAME" >/dev/null 2>/dev/null
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-G "$text")
 						fi
 						_genre="$text"
 					elif [ "$item" == "YEAR" ]; then
-						id3v2 --year "$text" "$FILENAME" >/dev/null 2>/dev/null
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-Y "$text")
 						fi
 						_year="$text"
 					elif [ "$item" == "NOTES" ]; then
-						id3v2 --comment "$text" "$FILENAME" >/dev/null 2>/dev/null
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-c "$text")
 						fi
 						_comment="$text"
 					elif [ "$item" == "TOTAL" ]; then
-						if [ "$text" = " " ]; then
+						if [[ "$text" =~ ^[\ \t]*$ ]]; then
 							text=""
+						else
+							_append+=(-N "$text")
 						fi
 						_totaltracks="$text"
 					fi
 				done <"$ALETHEIA/media.$$.tag"
-				str=
-				if [ -n "$_tracknumber" ] && [ -n "$_totaltracks" ]; then
-					if [ "$(is_num "$_tracknumber")" == "1" ] && [ "$_tracknumber" -gt "0" ] && [ "$(is_num "$_totaltracks")" == "1" ] && [ "$_totaltracks" -ge "1" ]; then
-						str="$_tracknumber/$_totaltracks"
-					fi
-				else
-					if [ -n "$_tracknumber" ]; then
-						str="$_tracknumber"
-					else
-						str=
-					fi
-				fi
-				if [ -n "$str" ]; then
-					id3v2 --track "$str" "$FILENAME" >/dev/null 2>/dev/null
-				fi
+				eyeD3 --remove-frame TPE1 --remove-frame TORY --remove-frame TCON --remove-frame TIT2 --remove-frame TALB --remove-frame TRCK --remove-frame COMM --remove-frame TYER "$FILENAME" >/dev/null 2>/dev/null
+				eyeD3 --encoding utf8 "${_append[@]}" "$FILENAME" >/dev/null 2>/dev/null
 				_file=${FILENAME##*/}
 				sqlite3 "$ALETHEIA/music.db" "UPDATE music SET artist = '${_artist//\'/\'\'}', song = '${_title//\'/\'\'}', album = '${_album//\'/\'\'}', number = '${_tracknumber//\'/\'\'}' WHERE filename = '${_file//\'/\'\'}';" >/dev/null 2>/dev/null
 				if [ "$3" != true ]; then
@@ -8915,6 +9028,30 @@ EOF
 			sleep $BANNER_WAIT_TIME
 		fi
 		rm -f "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
+	fi
+}
+
+update_cache() {
+	if [ -n "$1" ]; then
+		local FILENAME="$1"
+	fi
+	draw_banner "WAIT"
+	line="$(exiftool -Artist -Title -Album -Track "$FILENAME")"
+	_artist="$(echo -ne "$line" | grep -E "^Artist" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+	_title="$(echo -ne "$line" | grep -E "^Title" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+	_album="$(echo -ne "$line" | grep -E "^Album" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
+	_tracknumber="$(echo -ne "$line" | grep -E "^Track" | cut -d':' -f2 | sed -e 's/^ //' 2>/dev/null)"
+	if [ "${_tracknumber//\// }" != "${_tracknumber}" ]; then
+		_totaltracks="${_tracknumber#*/}"
+		_tracknumber="${_tracknumber%/*}"
+	fi
+	_file=${FILENAME##*/}
+	sqlite3 "$ALETHEIA/music.db" "UPDATE music SET artist = '${_artist//\'/\'\'}', song = '${_title//\'/\'\'}', album = '${_album//\'/\'\'}', number = '${_tracknumber//\'/\'\'}' WHERE filename = '${_file//\'/\'\'}';" >/dev/null 2>/dev/null
+	if [ -z "$1" ]; then
+		reset_buffer
+		redraw_buffer
+		draw_pitch
+		draw_position
 	fi
 }
 
@@ -9243,7 +9380,7 @@ scale_help_screen() {
 
 add_downloaded() {
 	regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
-	list=$(find "$MUSICDIR" -cnewer "$ALETHEIA/start" -regex "$regex")
+	list=$(find "$MUSICDIR" -cnewer "$ALETHEIA/start$$" -regex "$regex")
 	if [ "${list:0:1}" != "" ]; then
 		mapfile -O "$TOTAL_QUEUE" -t queue_array < <(echo -ne "$list")
 		DOWNLOAD_POSITION=$((TOTAL_QUEUE+1))
@@ -9268,7 +9405,7 @@ add_downloaded() {
 		draw_position
 		return
 	fi
-	touch -m "$ALETHEIA/start"
+	touch -m "$ALETHEIA/start$$"
 }
 
 read_corner() {
@@ -10092,8 +10229,9 @@ start_search() {
 				draw_position
 			fi
 		else
-			jump="$(echo -ne "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
-			mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -niE "$jump_regex" | grep -v '.repeat.')
+			#jump="$(echo -ne "$jump" | iconv -f utf-8 -t ascii//TRANSLIT)"
+			#mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | iconv -f utf-8 -t ascii//TRANSLIT | grep -niE "$jump_regex" | grep -v '.repeat.')
+			mapfile -t search_array < <(printf '%s\n' "${queue_array[@]}" | grep -niE "$jump_regex" | grep -v '.repeat.')
 			length=${#search_array[@]}
 			if [ "$length" == "1" ]; then
 				LOOP_ARTIST=false
@@ -10140,7 +10278,8 @@ new_playlist() {
 	else
 		KEYWORD="${keyw// /.*}"
 		file_list="$(find "$MUSICDIR" -type f)"
-		matches="$(echo -e "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${KEYWORD}.*mp3$|.*${KEYWORD}.*flac$" | grep -v '.repeat.')"
+		#matches="$(echo -e "$file_list" | grep -n "" | iconv -f utf-8 -t ascii//TRANSLIT | grep -iE ".*${KEYWORD}.*mp3$|.*${KEYWORD}.*flac$" | grep -v '.repeat.')"
+		matches="$(echo -e "$file_list" | grep -n "" | grep -iE ".*${KEYWORD}.*mp3$|.*${KEYWORD}.*flac$" | grep -v '.repeat.')"
 		if [ "$1" == true ] || [ "$2" == true ]; then
 			IFS=$'\n'
 			if [ "$2" == true ]; then
@@ -11415,6 +11554,9 @@ print_queue() {
 		elif [ "$inputchar" == "g" ]; then
 			tag_mp3 false "${queue_array[current-1]}" true
 			continue
+		elif [ "$inputchar" == "" ]; then
+			update_cache "${queue_array[current-1]}"
+			continue
 		elif [ "$inputchar" == "D" ]; then
 			if [ "$current" == "$POSITION" ]; then
 				delete false
@@ -11701,8 +11843,10 @@ save_settings() {
 }
 
 main() {
-	rm -f "$ALETHEIA"/pipe* >/dev/null 2>/dev/null
-	mkfifo "$ALETHEIA/pipe$$"
+	#rm -f "$ALETHEIA"/pipe* >/dev/null 2>/dev/null
+	if [ ! -e "$ALETHEIA/pipe$$" ]; then
+		mkfifo "$ALETHEIA/pipe$$"
+	fi
 	exec 3<> "$ALETHEIA/pipe$$"
 	PAUSE=false
 	MUTE=false
@@ -11733,6 +11877,9 @@ main() {
 
 		if [ "$LOCKED_OFF" == false ]; then
 			read_locked_file "$(<"$FILENAME.locked")"
+			if [ "$?" == "1" ]; then
+				LOCKED=false
+			fi
 		fi
 
 		if [ "$VOLUME" == "" ]; then
@@ -11802,7 +11949,7 @@ main() {
 		FLAGS+=" -volume 0"
 	fi
 
-	rm -f "$ALETHEIA/mplayer_output" >/dev/null 2>/dev/null
+	rm -f "$ALETHEIA/mplayer_output$$" >/dev/null 2>/dev/null
 
 	if [ "$SELECT_REPEAT_FILE" == true ]; then
 		ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f1 | rev)"
@@ -11816,7 +11963,7 @@ main() {
 
 	# shellcheck disable=SC2086
 	# Uses word splitting to expand $FLAGS for use by mplayer
-	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output" 2>"$ALETHEIA/mplayer_output_stderr" &
+	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output$$" 2>"$ALETHEIA/mplayer_output_stderr$$" &
 
 	MPLAYER_PID="$!"
 
@@ -12108,9 +12255,9 @@ main() {
 				tmp_SONG_LENGTH="$(date -u -d @"$CURRENT_SONG_LENGTH" +%H:%M:%S)"
 				IFS=':' read -r hours minutes seconds <<< "$tmp_SONG_LENGTH"
 				if ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null; then
-					echo "get_percent_pos" >"$ALETHEIA/pipe$$" &
+					echo "pausing_keep_force get_percent_pos" >"$ALETHEIA/pipe$$" &
 					sleep $MPLAYER_WAIT_TIME
-					percent_pos="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d'=' -f2)"
+					percent_pos="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d'=' -f2)"
 					if [ "$(is_num "$percent_pos")" == "0" ]; then
 						percent_pos=1
 					fi
@@ -12212,11 +12359,11 @@ main() {
 								return $RETURN_NEXT
 							fi
 						fi
-						echo -e "get_percent_pos\nget_time_pos" >"$ALETHEIA/pipe$$" &
+						echo -e "pausing_keep_force get_percent_pos\npausing_keep_force get_time_pos" >"$ALETHEIA/pipe$$" &
 						sleep $MPLAYER_WAIT_TIME
-						percent_pos="$(tail -2 "$ALETHEIA/mplayer_output" | head -1)"
+						percent_pos="$(tail -2 "$ALETHEIA/mplayer_output$$" | head -1)"
 						percent_pos="${percent_pos#*=}"
-						time_pos="$(tail -1 "$ALETHEIA/mplayer_output")"
+						time_pos="$(tail -1 "$ALETHEIA/mplayer_output$$")"
 						time_pos="${time_pos#*=}"
 						time_pos="${time_pos%%.*}"
 						tput cup $LINES ${#PADDING}
@@ -12380,11 +12527,11 @@ main() {
 				sleep $BANNER_WAIT_TIME
 				if [ "${#SAVED_POSITION[@]}" == "0" ]; then
 					SAVED_TOTAL=1
-					SAVED_POSITION[1]="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
+					SAVED_POSITION[1]="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d '=' -f2)"
 					CURRENT_POSITION=1
 				else
 					SAVED_TOTAL=$((SAVED_TOTAL+1))
-					SAVED_POSITION[SAVED_TOTAL]="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
+					SAVED_POSITION[SAVED_TOTAL]="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d '=' -f2)"
 				fi
 					
 				draw_pitch
@@ -12407,7 +12554,7 @@ main() {
 					sleep $MPLAYER_WAIT_TIME
 					empty_pane
 					tput cup $((LINES-3))
-					echo -ne "$PADDING$CYAN$(tail -1 "$ALETHEIA/mplayer_output")"
+					echo -ne "$PADDING$CYAN$(tail -1 "$ALETHEIA/mplayer_output$$")"
 					tput el
 					read -rn1 input_char
 				fi
@@ -12439,7 +12586,7 @@ main() {
 				gtts_speak "start"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
-				START_MARKER="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
+				START_MARKER="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d '=' -f2)"
 				if [ "$(echo "$BANNER_WAIT_TIME > $MPLAYER_WAIT_TIME" | bc)" == "1" ]; then
 					sleep "$(echo "$BANNER_WAIT_TIME - $MPLAYER_WAIT_TIME" | bc)"
 				fi
@@ -12479,7 +12626,7 @@ main() {
 				gtts_speak "end"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
-				END_TIME="$(tail -1 "$ALETHEIA/mplayer_output" | cut -d '=' -f2)"
+				END_TIME="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d '=' -f2)"
 				END_MARKER=$END_TIME
 				space=0
 				if [ "$(echo "$BANNER_WAIT_TIME > $MPLAYER_WAIT_TIME" | bc)" == "1" ]; then
@@ -12586,6 +12733,9 @@ main() {
 				;;
 			'G')
 				oscillate
+				;;
+			'')
+				update_cache
 				;;
 			'')
 				if [ "$INTERVAL" == "0" ]; then

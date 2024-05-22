@@ -4,18 +4,18 @@ Version: %%VERSION%%
 Release: %%REVISION%%%{?dist}
 License: GPL3
 URL: https://github.com/apeitheo/aletheia
-Requires: mplayer
-Requires: pulseaudio-utils
-Requires: calc
 Requires: bc
-Requires: gtts
+Requires: calc
 Requires: espeak-ng
-Requires: sox
 Requires: ffmpeg
+Requires: gtts
+Requires: mplayer
 Requires: parallel
-Requires: sqlite
 Requires: perl-Image-ExifTool
-Requires: id3v2
+Requires: pulseaudio-utils
+Requires: python3-eyed3
+Requires: sox
+Requires: sqlite
 Requires: vim
 
 %description

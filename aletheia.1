@@ -154,7 +154,7 @@ Steadily adjusts the lower of the two channels until the two channels are equal 
 
 .TP
 .B 3
-Slowly increase or decrease PCM volume. Input should be direction. Specify 'j' to fade down, and 'k' to fade up.
+Slowly increase or decrease PCM volume. Input should be direction. Hit 'j' to fade down, and 'k' to fade up. If a second instance of Aletheia is open, using it on both, starting with the one currently playing music, will lower the PCM volume of the current song and raise the PCM volume in the other instance of Aletheia, allowing for a smooth transition back and forth, if desired.
 
 .RE
 .B Upper Right
@@ -253,6 +253,10 @@ Shuffle the current queue while continuing to play the current file in position 
 .TP
 .B g
 Edit id3v2 metadata for the current file or current selection in the queue view (';').
+
+.TP
+.B ^G 
+Updates Aletheia's cache with the metadata from the current file or current selection in the queue view (';').
 
 .TP
 .B O

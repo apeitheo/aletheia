@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=8
+REVISION=9
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -19,7 +19,7 @@ fi
 
 mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/ "$TMPDIR"/usr/share/applications/ "$TMPDIR"/usr/share/aletheia/themes/ "$TMPDIR"/usr/share/aletheia/vimrc/
 
-echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: pulseaudio-utils, calc, bc, gtts, espeak-ng, sox, ffmpeg, mplayer, parallel, sqlite3, libimage-exiftool-perl, id3v2, vim\nSection: sound\nHomepage: https://github.com/apeitheo/aletheia\nDescription: A CLI media player with speed controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: bc, calc, espeak-ng, eyed3, ffmpeg, gtts, libimage-exiftool-perl, mplayer, parallel, pulseaudio-utils, sox, sqlite3, vim\nSection: sound\nHomepage: https://github.com/apeitheo/aletheia\nDescription: A CLI media player with speed controls and voice feedback." >"$TMPDIR"/DEBIAN/control
 
 install -m 755 "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
 install -m 755 "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/usr/bin/"
