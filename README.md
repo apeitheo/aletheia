@@ -1,6 +1,6 @@
-# Aletheia: Command-Line Media Player with Pitch and Tempo Control
+# Aletheia: CLI Media Player with Pitch and Tempo Control
 
-Aletheia is a command-line media player for GNU/Linux focused on precise pitch and tempo control. It offers:
+Aletheia is a command-line media player for GNU/Linux focused on precise pitch and tempo control, but offers much more as well:
 
 ## Key Features
 
@@ -9,7 +9,7 @@ Aletheia is a command-line media player for GNU/Linux focused on precise pitch a
 - **Versatile Media Support:** Supports all common media formats due to its robust **mplayer** backend.
 - **Voice Feedback:** Optional digital or natural voice feedback.
 - **Playlist Management:** Manage and export playlists with ease.
-- **Advanced Scaling Features:** Smoothly transition between different intervals, allowing for a ***vivid*** aural experience.
+- **Advanced Scaling Features:** Smoothly transition between different intervals.
 
 ## User-Friendly Controls
 
@@ -35,7 +35,7 @@ cd aletheia
 
 ## Testing
 
-Before installation, you can test Aletheia by running the following command:
+Before installation, you can test Aletheia by running the following command. It will automatically check dependencies for you.
 
 ```bash
 ./aletheia
@@ -85,11 +85,13 @@ Slackware users will need exiftool, eyeD3, sqlite3, and eyeDB's dependencies fro
 
 To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "**Help**" option in the menu, or by pressing the '**?**' key at any time. Use the '**j**' and '**k**' keys to page down or up, and '**q**' to go back or quit. If you need voice feedback, hit '**d**' followed by '**#**' to save your choice.
 
-If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (gTTS on PyPI) that downloads voice clips based on the Google Assistant voice. It can be enabled via setting **USE_GTTS** and **VOICE_ENABLED** to **true** in *~/.aletheia/config*.
+If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (gTTS on PyPI) that downloads voice clips based on the Google Assistant voice. It can be enabled via setting **USE_GTTS** and **VOICE_ENABLED** to **true** in *~/.aletheia/config* and ensuring the packages for your distribution containing *gtts-cli* and *play* are installed.
+
+If you have a large media collection, parallel processing of metadata is available via setting **PARALLEL_CACHE_ENABLED** to **true**, and optionally setting the number of tags to process at one time with **PARALLEL_CACHE_JOBS**. Requires *parallel* to be installed. May cause performance issues on slower machines.
 
 ## Package Build Scripts
 
-The following are package build scripts for Debian, Fedora, and Slackware based distributions:
+The following are package build scripts for Debian, Fedora, and Slackware-based distributions:
 
 - **Debian Package:**
 ```bash
@@ -108,13 +110,13 @@ The following are package build scripts for Debian, Fedora, and Slackware based 
 
 ### Custom Location
 
-To install somewhere other than /usr/local:
+To install somewhere other than /usr/local when using ./install:
 
 ```bash
 ./install --destdir /path/to/directory/
 ```
 
-Or using the **DESTDIR** environment variable:
+Or use the **DESTDIR** environment variable:
 
 ```bash
 DESTDIR=/path/to/directory/ ./install
@@ -154,7 +156,4 @@ DESTDIR=/path/to/directory/ ./install
 
 ## Support (Optional)
 
-- **GitHub:** https://www.github.com/apeitheo/aletheia
 - **Patreon:** https://www.patreon.com/aletheia\_project
-
-**Aletheia - Elevate Your Listening Experience.**
