@@ -14,7 +14,7 @@ Aletheia is a command-line media player for GNU/Linux focused on precise pitch a
 ## User-Friendly Controls
 
 - **Simple Navigation:** Uses intuitive key controls.
-- **Customizable Interface:** Customizable and comes with a selection of themes with support for adding your own.
+- **Customizable Interface:** Comes with a selection of themes and support for adding your own.
 - **Metadata Support:** Manage media tags on the go.
 
 ## Get Started
