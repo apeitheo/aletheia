@@ -156,4 +156,4 @@ DESTDIR=/path/to/directory/ ./install
 
 ## Support (Optional)
 
-- **Patreon:** https://www.patreon.com/aletheia\_project
+- **Patreon:** [https://www.patreon.com/aletheia_project](https://www.patreon.com/aletheia_project)
