@@ -1,104 +1,29 @@
-Aletheia: Your Personalized Command-Line Media Player
+Welcome to Aletheia 0.9.6!
 
-Welcome to Aletheia, the innovative command-line media player designed to empower you with unparalleled control over your listening experience. Discover a world where you can customize the pitch and tempo of your media files in real-time, crafting a truly personalized audio journey. Aletheia offers a range of features to enhance your interaction with media, ensuring an immersive and tailored experience.
-
-Key Features:
-
- - Real-Time Pitch and Tempo Adjustment: Change the playback speed and tonality with customizable intervals for a truly tailored experience.
-
- - Seamless Loop Creation: Set custom start and end points for perfect loops, ideal for practice sessions or enjoying your favorite sections repeatedly.
-
- - Versatile Media Support: Whether it's music, soundscapes, or videos, Aletheia supports all your media needs.
-
- - Voice Feedback: Optional voice feedback to guide you through your media, with support for multiple voice options.
-
- - Playlist Management: Easily create, import, and export playlists, and keep your favorite loops and interval adjustments organized.
-
- - Advanced Scaling Features: Smoothly transition between different intervals and playback speeds.
-
-User-Friendly Controls:
- 
- - Simple Navigation: Use intuitive key controls for playback, volume adjustment, and media navigation.
-
- - Customizable Interface: Tailor the display and functionality to suit your preferences, with options to toggle panels, themes, and more.
-
- - Metadata Support: Efficiently manage and display media tags for a streamlined experience.
-
-Ideal For:
-
- - Musicians: Perfect your practice with precise pitch and tempo adjustments.
-
- - Audiophiles: Enjoy your music in a new way with customized playback settings.
-
- - Learners: Improve language or musical skills with looped playback and adjustable speeds.
-
-Experience the power of real-time media control with Aletheia. Download now and take the first step towards a personalized listening journey!
-
-Get Started:
-
-  Clone Aletheia:
-
-    Open your terminal and run the following command to clone the Aletheia repository from GitHub:
-
-      git clone https://github.com/apeitheo/aletheia.git
-
-  Navigate to the Directory:
-
-    Once the cloning process is complete, navigate to the Aletheia directory:
-
-      cd aletheia
-
-Installation:
-
-  Run the installation script to set up Aletheia on your system.
-
-    ./install
-
-Testing:
-
-  After installation, you can test Aletheia by running the following command:
-
-    ./aletheia
-
-  This will launch Aletheia, allowing you to experience its features firsthand.
-
-Uninstallation (Optional):
-
-  If you ever need to uninstall Aletheia, you can run the uninstallation script:
-
-    ./uninstall
-
-  This will remove Aletheia from your system.
+Aletheia is a command-line media player with a wide range of features designed to make it easy to adjust pitch and tempo in real-time using customizable intervals, allowing precise control over the playback speed and tonality of media files. It also supports loop creation with customizable start and end points for seamless looping. Aletheia has optional voice feedback and the ability to play videos, import downloads, and export playlists and loops. In addition, it offers various scaling features to smoothly transition between separate intervals.
 
 Dependencies:
 
-  bash
-  bc
-  calc
-  espeak-ng
-  exiftool
-  eyeD3
-  ffmpeg
-  ffprobe
-  mplayer
-  pactl
-  sox
-  sqlite3
-  vim
+bash, bc, calc, espeak-ng, exiftool, eyeD3, ffmpeg, ffprobe, mplayer, pactl, sox, sqlite3, vim
 
 Optional dependencies:
 
-  gtts-cli
-  play
-  parallel
-       
-Slackware users will need exiftool, eyeD3, sqlite3, and eyeDB's dependencies from SlackBuilds.org.
+gtts-cli (USE_GTTS=true in ~/.aletheia/config enables natural-sounding voice feedback when VOICE_ENABLED is true)
+play     (Needed for gtts-cli)
+parallel (PARALLEL_CACHE_ENABLED=true enables parallel metadata caching to speed things up)
+         (PARALLEL_CACHE_JOBS=[0-9]+ sets the number of tags to scan in parallel)
+
+Slackware users should make sure to install exiftool, eyeD3, sqlite3, and their associated dependencies from SlackBuilds.org.
 
 To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' to save your choice.
 
-If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (https://pypi.org/project/gTTS/) that downloads voice clips based on the Google Assistant voice. It can be enabled via setting USE_GTTS and VOICE_ENABLED to true in ~/.aletheia/config
+If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (https://pypi.org/project/gTTS/) that downloads voice clips based on the Google Assistant voice.
 
-The following are package build scripts for Debian, Fedora, and Slackware based distributions:
+If your distribution isn't listed below, you can use the provided install and uninstall scripts:
+
+Test: ./aletheia
+Install: ./install
+Uninstall: ./uninstall
 
 Debian Package: ./create_deb
 Fedora Package: ./create_rpm
@@ -136,7 +61,5 @@ List of installed files for Slackware package:
 /usr/share/aletheia/themes/*
 /usr/share/aletheia/vimrc/*
 
-Patreon : https://www.patreon.com/aletheia_project
-GitHub  : https://www.github.com/apeitheo/aletheia
-
-Aletheia - Elevate Your Listening Experience.
+Patreon: https://www.patreon.com/aletheia_project
+GitHub: https://www.github.com/apeitheo/aletheia
