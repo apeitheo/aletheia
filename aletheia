@@ -31,6 +31,7 @@ USE_TAGS=true
 PARALLEL_CACHE_ENABLED=false
 PARALLEL_CACHE_JOBS="4"
 THEME_FILE="Slate"
+DEFAULT_THEME_FILE="$THEME_FILE"
 THEME_ENABLED=true
 
 ALETHEIA="$HOME/.aletheia"
@@ -56,6 +57,7 @@ elif [ "$1" == "--help" ]; then
 	echo -e "        $space--sound [keyword]"
 	echo -e "        $space--video [keyword]"
 	echo
+	echo -e "        $space--vanish"
 	echo -e "        $space--server"
 	echo -e "        $space--version"
 	echo
@@ -163,8 +165,11 @@ SONG_LENGTH=""
 PADDING=" "
 
 VOICE_ENABLED=false
-ESPEAK_DIGITAL_VOICE=${ESPEAK_DIGITAL_VOICE:-true}
-USE_GTTS=${USE_GTTS:-false}
+VOICE_ENGINE="espeak-ng"
+ESPEAK_DIGITAL_VOICE="${ESPEAK_DIGITAL_VOICE:-true}"
+GTTS_NATURAL_VOICE="${GTTS_NATURAL_VOICE:-false}"
+ESPEAK_LANGUAGE="en-us+m1"
+GTTS_LANGUAGE="en"
 VOICE_PITCH=0
 VOICE_VOLUME=0.85
 ESPEAK_VOICE_VOLUME=$(bc <<<"$VOICE_VOLUME*100")
@@ -191,9 +196,9 @@ read_config() {
 		local CONFIG="$2"
 	fi
 	if [ "$3" == true ]; then
-		echo -ne "$CONFIG" | sed "/^#/d" | grep -i "$1" | cut -d'=' -f2 | sed -e "s/^ *//g;s/* $//g;s/\"//g;s/'//g"
+		echo -ne "$CONFIG" | sed "/^#/d" | grep -i "^$1[[:space:]]*=" | cut -d'=' -f2 | sed -e "s/^[[:space:]]*//g;s/^ *//g;s/* $//g;s/\"//g;s/'//g"
 	else
-		echo -ne "$CONFIG" | sed "/^#/d" | grep -i "$1" | cut -d'=' -f2 | sed -e "s/^ *//g;s/* $//g;s/\"//g;s/'//g" | tr '[:upper:]' '[:lower:]'
+		echo -ne "$CONFIG" | sed "/^#/d" | grep -i "^$1[[:space:]]*=" | cut -d'=' -f2 | sed -e "s/^[[:space:]]*//g;s/^ *//g;s/* $//g;s/\"//g;s/'//g" | tr '[:upper:]' '[:lower:]'
 	fi
 }
 
@@ -204,6 +209,8 @@ check_colors() {
 			CONFIG="$(cat "$ALETHEIA/themes/$THEME_FILE")"
 		elif [ -e "$ALETHEIA_DATA_DIR/themes/$THEME_FILE" ]; then
 			CONFIG="$(cat "$ALETHEIA_DATA_DIR/themes/$THEME_FILE")"
+		else
+			CONFIG="$(cat "$ALETHEIA_DATA_DIR/themes/$DEFAULT_THEME_FILE")"
 		fi
 	fi
 	if [ -n "$CONFIG" ]; then
@@ -298,6 +305,274 @@ check_dep() {
 		fi
 		QUIT=true
 	fi
+}
+
+REPEAT_HELP="Loop Controls
+6  Switch Loops
+^  Reverse Switch
+&  Lock New Loop
+^X  Update Loop
+%  Remove Loop
+Z  Export Loop
+^L  Exported Loop
+S  Start -0.01
+G  Start +0.01
+s  Start -0.05
+g  Start +0.05
+H  End -0.01
+L  End +0.01
+h  End -0.05
+l  End +0.05
+<  Gap -1
+>  Gap +1
+e  Play Transition
+^H  Seek to Start
+5  Start Position
+7  End Position
+c  Move Banner"
+
+ORIG_REPEAT_HELP="$REPEAT_HELP"
+
+SETUP_HELP="#  Save Settings
+Voice Controls
+d  Speak Page
+T  Feedback Level
+Voice Volume Settings
+8  Volume Down
+9  Volume Up
+Voice Pitch Settings
+J  Down
+K  Up
+Language
+^V  Voice Engine
+Metadata Cache
+c  Cache Tags
+^T  Toggle Tags
+Customization
+^A  Select Theme
+^P  Toggle Panels
+^O  Swap Color"
+
+ORIG_SETUP_HELP="$SETUP_HELP"
+
+QUEUE_HELP="Queue Controls
+j  Page Down
+k  Page Up
+h  Selection Down
+l  Selection Up
+x  Remove Song
+<  Move Song Down
+>  Move Song Up
+s  Keyword Search
+c  Toggle Filename
+g  Edit Tag
+^G  Update Tag
+'  Top
+\"  Bottom"
+
+ORIG_QUEUE_HELP="$QUEUE_HELP"
+
+SCALE_HELP="Scale Controls
+j  Scale Down
+k  Scale Up
+o  Double EDO
+m  Halve EDO
+c  Reverse
+y  $DEFAULT_EDO-EDO"
+
+ORIG_SCALE_HELP="$SCALE_HELP"
+
+HELP="Basic Controls
+i  Menu
+?  Key Controls
+j  Page Down
+k  Page Up
+;  Queue
+p  Pause
+n  Next Song
+b  Previous Song
+m  Man Page
+q  Quit
+Voice Feedback
+d  Toggle Voice
+T  Feedback Level
+#  Save Settings
+^K  Read Interval
+I  Read Corner
+,  Read Title
+^S  Read Lock Status
+Volume Controls
+*  1% Down
+(  1% Up
+8  3% Down
+9  3% Up
+!  PCM 1% Down
+@  PCM 1% Up
+1  PCM 5% Down
+2  PCM 5% Up
+c  Mute
+3  Fade Up/Down
+Interval Controls
+j  Pitch Down
+k  Pitch Up
+x  Lock
+X  Unlock
+f  Next Lock
+F  Previous Lock
+m  Half EDO
+o  Double EDO
+.  Set INT
+/  Set EDO
+w  Reset to Locked
+H  Least Precise
+L  Fully Precise
+J  EDO Down
+K  EDO Up
+y  $DEFAULT_EDO-EDO
+4  Reset INT/EDO
+^U  Toggle Locked
+Pitch Jump Controls
+_  Octave Down
++  Octave Up
+M  Inverse INT
+Y  Zero INT
+Pitch Fade Controls
+C  Scale Speed
+t  Zero INT
+u  INT Up/Down
+U  EDO Up/Down
+-  Octave Down
+=  Octave Up
+^Y  Inverse INT
+G  Oscillate
+Balance Controls
+{  1% Left Up
+}  1% Right Up
+[  1% Left Down
+]  1% Right Down
+0  Reset Fade
+)  Reset
+Track Controls
+h  Seek Backward
+l  Seek Forward
+b  Queue Backward
+n  Queue Forward
+p  Pause
+\\  Restart
+r  Rename
+D  Archive
+^D  Delete
+a  Equalizer
+$  Save Position
+^H  Seek to Position
+P  Progress Bar
+O  VIM Menu
+g  Edit Tag
+^G  Update Tag
+Queue Controls
+;  Queue
+R  Shuffle
+A  Sort
+\"  Last of Artist
+'  First of Artist
+N  Next Artist
+B  Previous Artist
+Z  Export As
+e  Loop Toggle
+^R  Random Mode
+Loop Toggle Controls
+E  Loop Song
+V  Loop Artist
+Search Controls
+S  New Search
+s  Jump To
+^I  Add Songs
+Loop Editor Controls
+5  Start Position
+7  End Position
+6  Enter Loop
+6  Switch Loops
+&  Lock New Loop
+^X  Update Loop
+%  Remove Loop
+Z  Export Loop
+^L  Exported Loop
+^E  Play Only Loops
+\\  Seek to Start
+Video Controls
+<  Enable Video
+>  Fullscreen Video
+Download Controls
+W  Add Downloads
+^W  Jump Downloads
+^N  Add and Jump
+Advanced Controls
+^A  Select Theme
+^O  Swap Color
+^P  Pause All
+z  Redraw Screen
+~  Sleep mode
+|  Vanish Editor"
+
+ORIG_HELP="$HELP"
+
+HELP_LENGTH="$(echo -e "$HELP" | wc -l)"
+SETUP_HELP_LENGTH="$(echo -e "$SETUP_HELP" | wc -l)"
+SCALE_HELP_LENGTH="$(echo -e "$SCALE_HELP" | wc -l)"
+REPEAT_HELP_LENGTH="$(echo -e "$REPEAT_HELP" | wc -l)"
+QUEUE_HELP_LENGTH="$(echo -e "$QUEUE_HELP" | wc -l)"
+
+export HELP_LENGTH
+export SETUP_HELP_LENGTH
+export SCALE_HELP_LENGTH
+export REPEAT_HELP_LENGTH
+export QUEUE_HELP_LENGTH
+
+check_local_lang() {
+	case "$1" in
+		"af") return 0 ;;
+		"bs") return 0 ;;
+		"ca") return 0 ;;
+		"cs") return 0 ;;
+		"cy") return 0 ;;
+		"da") return 0 ;;
+		"de") return 0 ;;
+		"el") return 0 ;;
+		"en") return 0 ;;
+		"eo") return 0 ;;
+		"hi") return 0 ;;
+		"ar") return 0 ;;
+		"es") return 0 ;;
+		"et") return 0 ;;
+		"fi") return 0 ;;
+		"fr") return 0 ;;
+		"hr") return 0 ;;
+		"hu") return 0 ;;
+		"hy") return 0 ;;
+		"id") return 0 ;;
+		"it") return 0 ;;
+		"nl") return 0 ;;
+		"pl") return 0 ;;
+		"pt") return 0 ;;
+		"ru") return 0 ;;
+		"sk") return 0 ;;
+		"sq") return 0 ;;
+		"sr") return 0 ;;
+		"su") return 0 ;;
+		"sv") return 0 ;;
+		"sw") return 0 ;;
+		"tr") return 0 ;;
+		*) return 1 ;;
+	esac
+}
+
+get_espeak_equiv() {
+	case "$1" in
+		"en") echo -ne "en-us" ;;
+		"fr") echo -ne "fr-fr" ;;
+		"su") echo -ne "en-us" ;;
+		*) echo -ne "$1" ;;
+	esac
 }
 
 check_config() {
@@ -464,22 +739,6 @@ check_config() {
 				fi
 			fi
 
-			value="$(read_config "USE_GTTS")"
-			if [ "$value" != "" ]; then
-				USE_GTTS="$value"
-				if [ "$USE_GTTS" != true ] && [ "$USE_GTTS" != false ]; then
-					USE_GTTS=false
-				fi
-				if [ "$USE_GTTS" == true ]; then
-					QUIT=false
-					check_dep gtts-cli true
-					check_dep play true
-					if [ "$QUIT" == true ]; then
-						USE_GTTS=false
-					fi
-				fi
-			fi
-
 			value="$(read_config "ONLY_VOICE_TITLES")"
 			if [ "$value" != "" ]; then
 				ONLY_VOICE_TITLES="$value"
@@ -508,14 +767,50 @@ check_config() {
 				fi
 			fi
 
-			value="$(read_config "ESPEAK_DIGITAL_VOICE")"
+			value="$(read_config "VOICE_ENGINE")"
 			if [ "$value" != "" ]; then
-				ESPEAK_DIGITAL_VOICE="$value"
-				if [ "$ESPEAK_DIGITAL_VOICE" != true ] && [ "$ESPEAK_DIGITAL_VOICE" != false ]; then
+				if [ "$value" == "gtts-cli" ]; then
+					QUIT=false
+					check_dep gtts-cli true
+					check_dep play true
+					if [ "$QUIT" == true ]; then
+						GTTS_NATURAL_VOICE=false
+						ESPEAK_DIGITAL_VOICE=true
+					else
+						GTTS_NATURAL_VOICE=true
+						ESPEAK_DIGITAL_VOICE=false
+					fi
+				else
+					GTTS_NATURAL_VOICE=false
 					ESPEAK_DIGITAL_VOICE=true
 				fi
-				if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
-					USE_GTTS=false
+			fi
+
+			value="$(read_config "LANGUAGE")"
+			if [ "$value" != "" ]; then
+				GTTS_LANGUAGE="$value"
+				ESPEAK_LANGUAGE="$(get_espeak_equiv "$value")+m1"
+				if check_local_lang "$GTTS_LANGUAGE"; then
+					VOICE_APPEND=".$GTTS_LANGUAGE"
+				else
+					VOICE_APPEND=".en"
+					GTTS_LANGUAGE="en"
+				fi
+				LANGUAGE=
+				if [ -e "$ALETHEIA/languages/$GTTS_LANGUAGE" ]; then
+					LANGUAGE="$(<"$ALETHEIA/languages/$GTTS_LANGUAGE")"
+					if [ -e "$ALETHEIA/languages/$GTTS_LANGUAGE.help" ]; then
+						# shellcheck disable=SC1090
+						# Run shellcheck on these individually
+						source "$ALETHEIA/languages/$GTTS_LANGUAGE.help"
+					fi
+				elif [ -e "$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE" ]; then
+					LANGUAGE="$(<"$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE")"
+					if [ -e "$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE.help" ]; then
+						# shellcheck disable=SC1090
+						# Run shellcheck on these individually
+						source "$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE.help"
+					fi
 				fi
 			fi
 
@@ -588,6 +883,13 @@ if [ "$THEME_FILE" != "" ]; then
 	else
 		check_colors
 	fi
+fi
+
+if check_local_lang "$GTTS_LANGUAGE"; then
+	VOICE_APPEND=".$GTTS_LANGUAGE"
+else
+	VOICE_APPEND=".en"
+	GTTS_LANGUAGE="en"
 fi
 
 if [ -z "$NO_VERTICAL_PADDING" ]; then
@@ -701,6 +1003,9 @@ cache_metadata() {
 		done &
 	fi
 	clear
+	#while [ -s "$ALETHEIA/useless" ]; do
+	#	sleep 0.5
+	#done
 	echo -ne "$BLUE"
 	tail -f "$ALETHEIA/useless" | grep -E "^:" &
 	tail_pid=$!
@@ -756,20 +1061,25 @@ cache_metadata() {
 compute() {
 	# if no pitch change requested, eliminate the overhead of calling sox to
 	# change the default pitch of Google's digital voice
-	if [ "$VOICE_PITCH" == "0" ]; then
-		gtts-cli " $1" -o "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+	if check_local_lang "$GTTS_LANGUAGE"; then
+		lang="$GTTS_LANGUAGE"
 	else
-		gtts-cli " $1" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
-		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")" >/dev/null 2>/dev/null
+		lang="en"
+	fi
+	if [ "$VOICE_PITCH" == "0" ]; then
+		gtts-cli " $1" -l "$lang" -o "$ALETHEIA/voices$VOICE_APPEND/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+	else
+		gtts-cli " $1" -l "$lang" -o "/tmp/_$2-tmp.mp3" >/dev/null 2>/dev/null
+		sox "/tmp/_$2-tmp.mp3" "$ALETHEIA/voices$VOICE_APPEND/$2${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")" >/dev/null 2>/dev/null
 		rm -f "/tmp/_$2-tmp.mp3"
 	fi
 	if [ "$3" != true ]; then
-		play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+		play -v "$VOICE_VOLUME" "$ALETHEIA/voices$VOICE_APPEND/$2${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 	fi
 }
 
 gtts_speak_chain() {
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 	fi
 	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -783,9 +1093,9 @@ gtts_speak_chain() {
 		if [ "${list:0:1}" == "-" ]; then
 			list=" $list"
 		fi
-		espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 "$list" &
+		espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v "$ESPEAK_LANGUAGE" "$list" >/dev/null 2>/dev/null &
 		echo -ne "$!" >"$ALETHEIA/espeak.pid"
-	elif [ "$USE_GTTS" == true ]; then
+	elif [ "$GTTS_NATURAL_VOICE" == true ]; then
 		if [ "$NO_WAIT" != true ]; then
 			if (( $# > 2 )); then
 				gtts_speak "please wait"
@@ -806,7 +1116,8 @@ gtts_speak_chain() {
 				if [ "$clip" == "" ]; then
 					continue
 				fi
-				if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
+				clip="$(get_local_phrase "$clip")"
+				if [ -e "$ALETHEIA/voices$VOICE_APPEND/$clip${VOICE_PITCH}.mp3" ]; then
 					if [ "$(echo -ne "$clip" | rev | cut -c 1)" == "?" ]; then
 						clip="$(echo -ne "$clip" | rev | cut -c 2- | rev)\\?"
 					fi
@@ -819,7 +1130,8 @@ gtts_speak_chain() {
 
 			ind=0
 			for i in "${CHAIN[@]}"; do
-				CHAIN[ind]="$ALETHEIA/voices/$i${VOICE_PITCH}.mp3"
+				z="$(get_local_phrase "$i")"
+				CHAIN[ind]="$ALETHEIA/voices$VOICE_APPEND/$z${VOICE_PITCH}.mp3"
 				ind=$((ind+1))
 			done
 
@@ -829,67 +1141,156 @@ gtts_speak_chain() {
 	fi
 }
 
-gtts_speak() {
-	if [ "$USE_GTTS" == true ] && [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
-		if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
+espeak_say() {
+	if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
+		if [ -n "$ESPEAK_PID" ] && [ "$ESPEAK_PID" != "$MPLAYER_PID" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
+		fi
+		if [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
 			return
 		fi
-		if [ "$5" != true ]; then
-			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
-		fi
-		line_count="$(echo -ne "$1" | wc -l)"
-		if [ "$line_count" -gt 1 ]; then
-			clip="$(echo -ne "$1" | head -1) - $line_count"
-		else
-			if [ "$(echo -ne "$1" | cut -c 1)" == " " ]; then
-				clip="$(echo -ne "$1" | cut -c 2-)"
+		if [ "$1" != " " ]; then
+			if [ "$2" == true ] || [ "$3" == true ]; then
+				espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v "$ESPEAK_LANGUAGE" " $1" >/dev/null 2>/dev/null
 			else
-				clip="$1"
-			fi
-			if [ "$(echo -ne "$1" | cut -c 1)" == "\-" ]; then
-				clip="\\$clip"
+				espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v "$ESPEAK_LANGUAGE" " $1" >/dev/null 2>/dev/null &
 			fi
 		fi
-		if [ -e "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" ]; then
-			if [ "$(echo -ne "$clip" | rev | cut -c 1)" == "?" ]; then
-				clip="$(echo -ne "$clip" | rev | cut -c 2- | rev)\\?"
-			fi
-			if [ "$(echo -e "$VOICE_VOLUME > 1.0" | bc)" == "1" ]; then
-				VOICE_VOLUME=.85
-				ESPEAK_VOICE_VOLUME=$(bc <<<"$VOICE_VOLUME*100")
-			fi
-			if [ "$2" != true ]; then
-				play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
-			else
-				play -v "$VOICE_VOLUME" "$ALETHEIA/voices/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
-			fi
+
+		ESPEAK_PID="$!"
+		if [ "$4" == true ]; then
+			echo -ne "$ESPEAK_PID" >"$ALETHEIA/espeak.pid"
+		fi
+	fi
+}
+
+
+gtts_speak() {
+	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+		if [ -e "$ALETHEIA/espeak.pid" ]; then
+			kill "$(<"$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+		fi
+		espeak_say "$1" "$2" "$3" "$4"
+	else
+		local z="$1"
+		if [ "$6" != true ]; then
+			z="$(get_local_phrase "$z")"
 		else
+			z="$(get_local_phrase "$z" false true)"
+		fi
+		if [ "$GTTS_NATURAL_VOICE" == true ] && [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
+			if [ "$ONLY_VOICE_TITLES" == false ] && [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
+				return
+			fi
+			if [ "$5" != true ]; then
+				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+			fi
+			line_count="$(echo -ne "$z" | wc -l)"
 			if [ "$line_count" -gt 1 ]; then
-				if [ "$2" == false ] || [ "$2" == "" ]; then
-					compute "$1" "$clip" >/dev/null 2>/dev/null &
+				clip="$(echo -ne "$z" | head -1) - $line_count"
+			else
+				if [ "$(echo -ne "$z" | cut -c 1)" == " " ]; then
+					clip="$(echo -ne "$z" | cut -c 2-)"
 				else
-					compute "$1" "$clip" >/dev/null 2>/dev/null
+					clip="$z"
+				fi
+				if [ "$(echo -ne "$z" | cut -c 1)" == "\-" ]; then
+					clip="\\$clip"
+				fi
+			fi
+			if [ -e "$ALETHEIA/voices$VOICE_APPEND/$clip${VOICE_PITCH}.mp3" ]; then
+				if [ "$(echo -ne "$clip" | rev | cut -c 1)" == "?" ]; then
+					clip="$(echo -ne "$clip" | rev | cut -c 2- | rev)\\?"
+				fi
+				if [ "$(echo -e "$VOICE_VOLUME > 1.0" | bc)" == "1" ]; then
+					VOICE_VOLUME=.85
+					ESPEAK_VOICE_VOLUME=$(bc <<<"$VOICE_VOLUME*100")
+				fi
+				if [ "$2" != true ]; then
+					play -v "$VOICE_VOLUME" "$ALETHEIA/voices$VOICE_APPEND/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
+				else
+					play -v "$VOICE_VOLUME" "$ALETHEIA/voices$VOICE_APPEND/$clip${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
 				fi
 			else
-				if [ "$2" == false ] || [ "$2" == "" ]; then
-					compute "$clip" "$clip" >/dev/null 2>/dev/null &
+				if [ "$line_count" -gt 1 ]; then
+					if [ "$2" == false ] || [ "$2" == "" ]; then
+						compute "$z" "$clip" >/dev/null 2>/dev/null &
+					else
+						compute "$z" "$clip" >/dev/null 2>/dev/null
+					fi
 				else
-					compute "$clip" "$clip" >/dev/null 2>/dev/null
+					if [ "$2" == false ] || [ "$2" == "" ]; then
+						compute "$clip" "$clip" >/dev/null 2>/dev/null &
+					else
+						compute "$clip" "$clip" >/dev/null 2>/dev/null
+					fi
 				fi
 			fi
 		fi
 	fi
 }
 
-if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
-	gtts_speak() {
-		if [ -e "$ALETHEIA/espeak.pid" ]; then
-			kill "$(<"$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
+draw_banner() {
+	if [ "$3" != true ]; then
+		LEFT=true
+	else
+		RIGHT_BANNER_WIDTH="$((${#i}+2))"
+		LEFT=false
+	fi
+	if [ "$2" != true ]; then
+		COLOR1="$WHITE_BLACK"
+		COLOR2="$BLUE_BLACK"
+		length="$POSITION_WIDTH"
+		warning=false
+	else
+		COLOR1="$WHITE_BLACK"
+		COLOR2="$BLUE_BLACK"
+		length=5
+		warning=true
+	fi
+
+	if [ "$3" == false ] || [ "$3" == "" ]; then
+		tput cup $LINES
+		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}${1^^}$COLOR1 --$COLOR2 "
+		tput sc
+		if [ "$RIGHT_BANNER_WIDTH" != "0" ]; then
+			if [ "$4" == true ]; then
+				length="$RIGHT_BANNER_WIDTH"
+			fi
 		fi
-		espeak_say "$1" "$2" "$3" "$4"
-	}
-	USE_GTTS=false
-fi
+		if [ "$((${#1} + 6 + RIGHT_BANNER_WIDTH + (${#PADDING}*2)))" -lt "$COLUMNS" ]; then
+			printf '%*s' $((COLUMNS - ${#1} - 7 - (${#PADDING}*2) - length)) ""
+		fi
+	else
+		tput cup $LINES $((COLUMNS - ${#1} - 8))
+		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}${1^^}$COLOR1 --$COLOR1 "
+		RIGHT_BANNER_WIDTH=$((${#1}+6))
+	fi
+
+	if [ "$warning" == true ]; then
+		echo -ne "${COLOR1}[${COLOR2}y${COLOR1}/${COLOR2}n${COLOR1}]$PADDING"
+	fi
+
+	if [ "$4" != true ]; then
+		if [ "$3" != true ]; then
+			tput rc
+		fi
+	fi
+}
+
+get_local_phrase() {
+	if [ "$3" == true ]; then
+		found="$(sed -n "/^$1\[$GTTS_LANGUAGE\]/p" <<<"$LANGUAGE" | tail -1)"
+	else
+		found="$(sed -n "/^$1\[$GTTS_LANGUAGE\]/{p;q}" <<<"$LANGUAGE")"
+	fi
+	if [ -n "$found" ]; then
+		echo -ne "${found#*\]}"
+	else
+		echo -ne "$1"
+	fi
+}
 
 draw_vanish_indicator() {
 	tput cup $LINES $((COLUMNS-${#char_count}-2-${#word_count}-${#line_count}-${#PADDING}))
@@ -920,7 +1321,7 @@ vanish() {
 	width=$((COLUMNS-((${#char_count}+2+${#word_count}+${#line_count})*2)-(${#PADDING}*2)-20))
 	tput cup $LINES
 	tput el
-	draw_vanish_banner "INSERT"
+	draw_vanish_banner "$(get_local_phrase "INSERT")"
 	tput cup $LINES $((COLUMNS/2))
 	echo -ne "${BLUE}_"
 	tput sc
@@ -931,7 +1332,7 @@ vanish() {
 	tmpflag=true
 	quit=false
 	while true; do
-		draw_vanish_banner "INSERT"
+		draw_vanish_banner "$(get_local_phrase "INSERT")"
 		draw_vanish_indicator
 		if [ "$tmpflag" == false ]; then
 			IFS=$'\n'
@@ -973,7 +1374,7 @@ vanish() {
 						draw_position
 					else
 						gtts_speak "vanish closed" true
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						draw_position
 						menu_start_over=true
 						SKIP_SPEAK_MENU=false
@@ -1008,7 +1409,7 @@ vanish() {
 						if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
 							printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
 						fi
-						draw_vanish_banner "SAVED"
+						draw_vanish_banner "$(get_local_phrase "SAVED")"
 						sleep $BANNER_WAIT_TIME
 						draw_vanish_banner "VANISH"
 						if [ "$command_line" == "wq" ]; then
@@ -1026,7 +1427,7 @@ vanish() {
 							draw_pitch
 							draw_position
 						else
-							draw_banner "MENU"
+							draw_banner "$(get_local_phrase "MENU")"
 							draw_position
 						fi
 						quit=true
@@ -1077,7 +1478,7 @@ vanish() {
 					if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
 						printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
 					fi
-					draw_vanish_banner "SAVED"
+					draw_vanish_banner "$(get_local_phrase "SAVED")"
 					sleep $BANNER_WAIT_TIME
 				elif [ "$newchar" == "n" ]; then
 					gtts_speak "new entry"
@@ -1108,7 +1509,7 @@ vanish() {
 					if [ "$old_LEFTBANNER_WIDTH" -gt "$LEFTBANNER_WIDTH" ]; then
 						printf '%*s' $((old_LEFTBANNER_WIDTH+1)) ""
 					fi
-					draw_vanish_banner "SAVED"
+					draw_vanish_banner "$(get_local_phrase "SAVED")"
 					tput el
 					draw_vanish_indicator
 					break
@@ -1153,17 +1554,19 @@ vanish() {
 		elif [ "$char" == "" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
-			espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 " $inputnew" &
+			espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v "$ESPEAK_LANGUAGE" " $inputnew" &
 			ESPEAK_PID="$!"
 		elif [ "$char" == "" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 		else
@@ -1173,7 +1576,7 @@ vanish() {
 				inputnew="${inputnew} "
 				display="${display} "
 				if [ "$feedback_enabled" == true ]; then
-					espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 "$word" &
+					espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v "$ESPEAK_LANGUAGE" "$word" &
 					ESPEAK_PID="$!"
 				fi
 				if [ "$inspace" == false ]; then
@@ -1191,7 +1594,7 @@ vanish() {
 				fi
 				if [ "$char" == "." ] || [ "$char" == "?" ] || [ "$char" == "," ] || [ "$char" == "!" ]; then
 					if [ "$feedback_enabled" == true ]; then
-						espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 "$word" &
+						espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v "$ESPEAK_LANGUAGE" "$word" &
 						ESPEAK_PID="$!"
 					fi
 					word_count=$((word_count+1))
@@ -1219,6 +1622,7 @@ vanish() {
 
 if [ "$1" == "--vanish" ]; then
 	vanish true
+	echo -ne "${ESC}0m"
 	clear
 	tput cnorm
 	stty echo
@@ -1231,239 +1635,6 @@ if [ "$LINES" -lt "7" ] || [ "$COLUMNS" -lt "33" ]; then
 		sleep 5
 	fi
 fi
-
-REPEAT_HELP="Loop Controls
-6  Switch Loops
-^  Reverse Switch
-&  Lock New Loop
-^X  Update Loop
-%  Remove Loop
-Z  Export Loop
-^L  Exported Loop
-S  Start -0.01
-G  Start +0.01
-s  Start -0.05
-g  Start +0.05
-H  End -0.01
-L  End +0.01
-h  End -0.05
-l  End +0.05
-<  Gap -1
->  Gap +1
-e  Play Transition
-^H  Seek to Start
-5  Start Position
-7  End Position
-c  Move Banner"
-
-SETUP_HELP="#  Save Settings
-Voice Controls
-d  Speak Page
-T  Feedback Level
-Voice Volume Settings
-8  Volume Down
-9  Volume Up
-Voice Pitch Settings
-J  Down
-K  Up
-Metadata Cache
-c  Cache Tags
-^T  Toggle Tags
-Customization
-^A  Select Theme
-^P  Toggle Panels
-^O  Swap Color"
-
-
-QUEUE_HELP="Queue Controls
-j  Page Down
-k  Page Up
-h  Selection Down
-l  Selection Up
-x  Remove Song
-<  Move Song Up
->  Move Song Down
-s  Keyword Search
-c  Toggle Filename
-g  Edit Tag
-^G  Update Tag
-'  Top
-\"  Bottom"
-
-SCALE_HELP="Scale Controls
-j  Scale Down
-k  Scale Up
-o  Double EDO
-m  Halve EDO
-c  Reverse
-y  $DEFAULT_EDO-EDO"
-
-HELP="Basic Controls
-i  Menu
-?  Key Controls
-j  Page Down
-k  Page Up
-;  Queue
-p  Pause
-n  Next Song
-b  Previous Song
-m  Man Page
-q  Quit
-Voice Feedback
-d  Toggle Voice
-T  Feedback Level
-#  Save Settings
-^K  Read Interval
-I  Read Corner
-,  Read Title
-^S  Read Lock Status
-Volume Controls
-*  1% Down
-(  1% Up
-8  3% Down
-9  3% Up
-!  PCM 1% Down
-@  PCM 1% Up
-1  PCM 5% Down
-2  PCM 5% Up
-c  Mute
-3  Fade Up/Down
-Interval Controls
-j  Pitch Down
-k  Pitch Up
-x  Lock
-X  Unlock
-f  Next Lock
-F  Previous Lock
-m  Half EDO
-o  Double EDO
-.  Set INT
-/  Set EDO
-w  Reset to Locked
-H  Least Precise
-L  Fully Precise
-J  EDO Down
-K  EDO Up
-y  $DEFAULT_EDO-EDO
-4  Reset INT/EDO
-^U  Toggle Locked
-Pitch Jump Controls
-_  Octave Down
-+  Octave Up 
-M  Inverse INT
-Y  Zero INT
-Pitch Fade Controls
-C  Scale Speed
-t  Zero INT
-u  INT Up/Down
-U  EDO Up/Down
--  Octave Down
-=  Octave Up
-^Y  Inverse INT
-G  Oscillate
-Balance Controls
-{  1% Left Up
-}  1% Right Up
-[  1% Left Down
-]  1% Right Down
-0  Reset Fade
-)  Reset
-Track Controls
-h  Seek Backward
-l  Seek Forward
-b  Queue Backward
-n  Queue Forward
-p  Pause
-\\  Restart 
-r  Rename
-D  Archive
-^D  Delete
-a  Equalizer
-$  Save Position
-^H  Seek to Position
-P  Progress Bar
-O  VIM Menu
-g  Edit Tag
-^G  Update Tag
-Queue Controls
-;  Queue
-R  Shuffle
-A  Sort
-\"  Last of Artist
-'  First of Artist
-N  Next Artist
-B  Previous Artist
-Z  Export As
-e  Loop Toggle
-^R  Random Mode
-Loop Toggle Controls
-E  Loop Song
-V  Loop Artist
-Search Controls
-S  New Search
-s  Jump To
-^I  Add Songs
-Loop Editor Controls
-5  Start Position
-7  End Position
-6  Enter Loop 
-6  Switch Loops
-&  Lock New Loop
-^X  Update Loop
-%  Remove Loop
-Z  Export Loop
-^L  Exported Loop
-^E  Play Only Loops
-\\  Seek to Start
-Video Controls
-<  Enable Video
->  Fullscreen Video
-Download Controls
-W  Add Downloads
-^W  Jump Downloads
-^N  Add and Jump
-Advanced Controls
-^A  Select Theme
-^P  Toggle Panels
-^O  Swap Color
-z  Redraw Screen
-~  Sleep mode
-|  Vanish Editor"
-
-HELP_LENGTH="$(echo -e "$HELP" | wc -l)"
-SETUP_HELP_LENGTH="$(echo -e "$SETUP_HELP" | wc -l)"
-SCALE_HELP_LENGTH="$(echo -e "$SCALE_HELP" | wc -l)"
-REPEAT_HELP_LENGTH="$(echo -e "$REPEAT_HELP" | wc -l)"
-QUEUE_HELP_LENGTH="$(echo -e "$QUEUE_HELP" | wc -l)"
-
-export HELP_LENGTH
-export SETUP_HELP_LENGTH
-export SCALE_HELP_LENGTH
-export REPEAT_HELP_LENGTH
-export QUEUE_HELP_LENGTH
-
-espeak_say() {
-	if [ "$VOICE_ENABLED" == true ] || [ "$2" == true ] || [ "$4" == true ]; then
-		if [ -n "$ESPEAK_PID" ] && [ "$ESPEAK_PID" != "$MPLAYER_PID" ]; then
-			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
-		fi
-		if [ "$VOICE_ENABLED" == false ] && [ "$4" != true ]; then
-			return
-		fi
-		if [ "$1" != " " ]; then
-			if [ "$2" == true ] || [ "$3" == true ]; then
-				espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 " $1"
-			else
-				espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" -v en-us+m1 " $1" &
-			fi
-		fi
-
-		ESPEAK_PID="$!"
-		if [ "$4" == true ]; then
-			echo -ne "$ESPEAK_PID" >"$ALETHEIA/espeak.pid"
-		fi
-	fi
-}
 
 draw_wait() {
 	local clear_screen=$1
@@ -1482,59 +1653,12 @@ draw_wait() {
 	gtts_speak "wait" false true
 }
 
-draw_banner() {
-	if [ "$3" != true ]; then
-		LEFT=true
-	else
-		RIGHT_BANNER_WIDTH="$((${#i}+2))"
-		LEFT=false
-	fi
-	if [ "$2" != true ]; then
-		COLOR1="$WHITE_BLACK"
-		COLOR2="$BLUE_BLACK"
-		length="$POSITION_WIDTH"
-		warning=false
-	else
-		COLOR1="$WHITE_BLACK"
-		COLOR2="$BLUE_BLACK"
-		length=12
-		warning=true
-	fi
-	
-	if [ "$3" == false ] || [ "$3" == "" ]; then
-		tput cup $LINES
-		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}$1$COLOR1 --$COLOR2 "
-		tput sc
-		if [ "$RIGHT_BANNER_WIDTH" != "0" ]; then
-			if [ "$4" == true ]; then
-				length="$RIGHT_BANNER_WIDTH"
-			fi
-		fi
-		if [ "$((${#1} + 6 + RIGHT_BANNER_WIDTH + (${#PADDING}*2)))" -lt "$COLUMNS" ]; then
-			printf '%*s' $((COLUMNS - ${#1} - 7 - (${#PADDING}*2) - length)) ""
-		fi
-	else
-		tput cup $LINES $((COLUMNS - ${#1} - 8))
-		echo -ne "$BLUE_BLACK$PADDING$COLOR1-- ${COLOR2}$1$COLOR1 --$COLOR1 "
-		RIGHT_BANNER_WIDTH=$((${#1}+6))
-	fi
-
-	if [ "$warning" == true ]; then
-		echo -ne "$COLOR1${COLOR2}y${COLOR1}: ${WHITE_BLACK}yes $COLOR1${COLOR2}n${COLOR1}: ${WHITE_BLACK}no$PADDING"
-	fi
-
-	if [ "$4" != true ]; then
-		if [ "$3" != true ]; then
-			tput rc
-		fi
-	fi
-}
-
 # shellcheck disable=SC2317
 # trap function
 cleanup() {
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
 	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
 		if [ -e "$ALETHEIA/espeak.pid" ]; then
@@ -1542,7 +1666,7 @@ cleanup() {
 			rm -f "$ALETHEIA/espeak.pid" >/dev/null 2>/dev/null
 		fi
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 	fi
 	if [ -n "$tail_pid" ]; then
@@ -1585,6 +1709,7 @@ cleanup() {
 cleanup_sigint() {
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
 	kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 	if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -1593,7 +1718,7 @@ cleanup_sigint() {
 			rm -f "$ALETHEIA/espeak.pid" >/dev/null 2>/dev/null
 		fi
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 	fi
 	if [ "$WEB_CLIENT" == "1" ]; then
@@ -1631,7 +1756,6 @@ trap cleanup_sigint SIGINT
 
 update_metadata_db() {
 	METADATA_FINISHED=false
-	draw_wait
 	if [ "$USE_TAGS" == true ]; then
 		if [ ! -e "$ALETHEIA/music.db" ]; then
 			echo -n "" >"$ALETHEIA/filelist_unique.tmp"
@@ -1665,12 +1789,12 @@ set_loop() {
 		TRACK_RANDOM=false
 		ONLY_LOCKED=false
 		echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
-		draw_banner "LOOP SONG"
+		draw_banner "$(get_local_phrase "LOOP SONG")"
 	else
 		gtts_speak "loop off"
 		LOOP=false
 		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
-		draw_banner "RESET"
+		draw_banner "$(get_local_phrase "RESET")"
 	fi
 	sleep $BANNER_WAIT_TIME
 	draw_pitch
@@ -1689,7 +1813,7 @@ set_loop_artist() {
 				TRACK_RANDOM=false
 				ONLY_LOCKED=false
 				gtts_speak "loop artist"
-				draw_banner "LOOP ARTIST"
+				draw_banner "$(get_local_phrase "LOOP ARTIST")"
 			fi
 		else
 			if [[ "$TITLE" == *" - "* ]]; then
@@ -1700,7 +1824,7 @@ set_loop_artist() {
 				LOOP_ARTIST_NAME="${TITLE%% - *}"
 				LOOP_ARTIST_NAME="${LOOP_ARTIST_NAME,,}"
 				gtts_speak "loop artist"
-				draw_banner "LOOP ARTIST"
+				draw_banner "$(get_local_phrase "LOOP ARTIST")"
 			fi
 		fi
 	else
@@ -1708,7 +1832,7 @@ set_loop_artist() {
 		LOOP=false
 		LOOP_ARTIST=false
 		echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
-		draw_banner "RESET"
+		draw_banner "$(get_local_phrase "RESET")"
 	fi
 	sleep $BANNER_WAIT_TIME
 	draw_pitch
@@ -1722,13 +1846,13 @@ set_random() {
 		LOOP_ARTIST=false
 		TRACK_RANDOM=true
 		ONLY_LOCKED=false
-		draw_banner "RANDOM MODE"
+		draw_banner "$(get_local_phrase "RANDOM MODE")"
 		reset_buffer
 		redraw_buffer
 	else
 		gtts_speak "random mode off"
 		TRACK_RANDOM=false
-		draw_banner "RANDOM OFF"
+		draw_banner "$(get_local_phrase "RANDOM OFF")"
 	fi
 	sleep $BANNER_WAIT_TIME
 	draw_pitch
@@ -1822,7 +1946,7 @@ set_only_locked() {
 			fi
 			echo -e "pausing_keep loop -1 1" >"$ALETHEIA/pipe$$" &
 			if [ "$5" != true ]; then
-				draw_banner "ONLY LOCKED"
+				draw_banner "$(get_local_phrase "ONLY LOCKED")"
 			fi
 			reset_buffer
 			redraw_buffer
@@ -1835,7 +1959,7 @@ set_only_locked() {
 	elif [ "$2" == true ]; then
 		gtts_speak "all"
 		ONLY_LOCKED=false
-		draw_banner "RESET"
+		draw_banner "$(get_local_phrase "RESET")"
 		queue_array=("${old_queue_array[@]}")
 		TOTAL_QUEUE=${#queue_array[@]}
 		tmp="$(printf '%s\n' "${queue_array[@]}" | grep -n "$FILENAME$" | cut -d':' -f1)"
@@ -1853,7 +1977,7 @@ set_only_locked() {
 	else
 		gtts_speak "all"
 		ONLY_LOCKED=false
-		draw_banner "RESET"
+		draw_banner "$(get_local_phrase "RESET")"
 		queue_array=("${old_queue_array[@]}")
 		TOTAL_QUEUE=${#queue_array[@]}
 		tmp="$(printf '%s\n' "${queue_array[@]}" | grep -n "$FILENAME$" | cut -d':' -f1)"
@@ -1876,7 +2000,7 @@ track_toggle() {
 		gtts_speak "reset"
 		LOOP=false
 		LOOP_ARTIST=false
-		draw_banner "RESET"
+		draw_banner "$(get_local_phrase "RESET")"
 		sleep $BANNER_WAIT_TIME
 		draw_pitch
 		draw_position
@@ -1885,7 +2009,7 @@ track_toggle() {
 
 about() {
 	echo -ne "$NOCOLOR"
-	draw_banner "ABOUT"
+	draw_banner "$(get_local_phrase "ABOUT")"
 	tput cup $LINES $((COLUMNS-${#PADDING}))
 	echo -ne "$NOCOLOR${PADDING}"
 	empty_pane
@@ -1927,7 +2051,7 @@ set_scale_speed() {
 	tmp=""
 	if [ "$SCALE_SPEED" != "$DEFAULT_SCALE_SPEED" ]; then
 		reset=true
-		draw_banner "RESET"
+		draw_banner "$(get_local_phrase "RESET")"
 		stty -echo
 		sleep $BANNER_WAIT_TIME
 		stty echo
@@ -1936,7 +2060,7 @@ set_scale_speed() {
 		tmp="$DEFAULT_SCALE_SPEED"
 	else
 		gtts_speak "set scale speed"
-		draw_banner "SPEED"
+		draw_banner "$(get_local_phrase "SPEED")"
 	fi
 
 	if [ "$tmp" == "" ]; then
@@ -2036,8 +2160,7 @@ draw_loop() {
 }
 
 repeat() {
-	echo -e "pausing_keep loop 0 1" >"$ALETHEIA/pipe$$" &
-	echo "get_time_length" >"$ALETHEIA/pipe$$" &
+	echo -e "pausing_keep loop 0 1\nget_time_length" >"$ALETHEIA/pipe$$" &
 	sleep $MPLAYER_WAIT_TIME
 	TOTAL_TIME="$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d '=' -f2)"
 	if [ "$(is_num "$TOTAL_TIME")" == "0" ] || [ "$(echo -e "$TOTAL_TIME < 0.1" | bc)" == "1" ]; then
@@ -2059,7 +2182,7 @@ repeat() {
 			fi
 			if [ "$(is_num "$START_MARKER")" == "0" ] || [ "$(echo -e "$START_MARKER < 0" | bc)" == "1" ]; then
 				gtts_speak "loop file error"
-				draw_banner "ERROR"
+				draw_banner "$(get_local_phrase "ERROR")"
 				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
@@ -2076,7 +2199,7 @@ repeat() {
 			fi
 			if [ "$(is_num "$END_TIME")" == "0" ] || [ "$(echo -e "$END_TIME < 0" | bc)" == "1" ]; then
 				gtts_speak "loop file error"
-				draw_banner "ERROR"
+				draw_banner "$(get_local_phrase "ERROR")"
 				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
@@ -2096,7 +2219,7 @@ repeat() {
 			fi
 			if [ "$(is_num "$space")" != "1" ]; then
 				gtts_speak "loop file error"
-				draw_banner "ERROR"
+				draw_banner "$(get_local_phrase "ERROR")"
 				sleep $BANNER_WAIT_TIME
 				draw_pitch
 				draw_position
@@ -2108,7 +2231,7 @@ repeat() {
 			fi
 		else
 			REPEAT_ONLY=false
-			draw_banner "NO LOOPS"
+			draw_banner "$(get_local_phrase "NO LOOPS")"
 			gtts_speak "no loops"
 			sleep $BANNER_WAIT_TIME
 			draw_pitch
@@ -2134,9 +2257,9 @@ repeat() {
 		END_MARKER="$(printf '%.2f' "$END_MARKER")"
 		RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 		if [ "$REPEAT_TOTAL" == "0" ]; then
-			draw_banner "LOOP 0/$REPEAT_TOTAL"
+			draw_banner "$(get_local_phrase "LOOP") 0/$REPEAT_TOTAL"
 		else
-			draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+			draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 		fi
 		draw_loop
 		scale=false
@@ -2146,9 +2269,9 @@ repeat() {
 				x=0
 				if [ "$input_char" == "" ]; then
 					if [ "$space" -gt "0" ]; then
-						echo -e "pause" >"$ALETHEIA/pipe$$" &
+						echo "pause" >"$ALETHEIA/pipe$$" &
 						read -rsn1 -t "$(calc -pd "$space/20")" input_char
-						echo -e "pause" >"$ALETHEIA/pipe$$" &
+						echo "pause" >"$ALETHEIA/pipe$$" &
 					fi
 				fi
 				if [ "$input_char" != "" ]; then
@@ -2211,7 +2334,7 @@ repeat() {
 							if [ "$input_char" == "q" ] || [ "$input_char" == "u" ] || [ "$input_char" == "" ]; then
 								scale=false
 								gtts_speak "scale closed"
-								draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+								draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 								break
 							elif [ "$input_char" == "c" ]; then
 								if [ "$scale_down" == true ]; then
@@ -2292,7 +2415,7 @@ repeat() {
 				START_MARKER="$(printf '%.2f' "$START_MARKER")"
 				END_MARKER="$(printf '%.2f' "$END_MARKER")"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 
 				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
@@ -2342,7 +2465,7 @@ repeat() {
 				START_MARKER="$(printf '%.2f' "$START_MARKER")"
 				END_MARKER="$(printf '%.2f' "$END_MARKER")"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				input_char=""
 				flagged=false
@@ -2351,10 +2474,10 @@ repeat() {
 				time_before=$(date +%s.%N)
 				if [ "$LEFT" == true ]; then
 					draw_pitch
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				else
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_loop
 				fi
 				flagged=true
@@ -2363,7 +2486,7 @@ repeat() {
 				time_before=$(date +%s.%N)
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				toggle_voice
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "" ] || [ "$input_char" == "\\" ]; then
@@ -2373,14 +2496,14 @@ repeat() {
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				gtts_speak "scale"
-				draw_banner "SCALE"
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "SCALE")"
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				if [ "$scale" == true ]; then
 					scale=false
 					if [ "$inputchar" == "u" ] || [ "$inputchar" == "q" ]; then
 						gtts_speak "scale closed"
 						draw_pitch
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=true
 					fi
 				else
@@ -2394,19 +2517,19 @@ repeat() {
 						scale=true
 						input_char=""
 						gtts_speak "scaling"
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=false
 					elif [ "$inputchar" == "k" ]; then
 						scale_down=false
 						scale=true
 						input_char=""
 						gtts_speak "scaling"
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=false
 					elif [ "$inputchar" == "u" ] || [ "$inputchar" == "q" ]; then
 						gtts_speak "scale closed"
 						draw_pitch
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 						flagged=true
 					elif [ "$inputchar" == $'\e' ]; then
 						read -rn2 -t 0.03 key
@@ -2416,7 +2539,7 @@ repeat() {
 							scale=true
 							input_char=""
 							gtts_speak "scaling"
-							draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+							draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 							flagged=false
 							;;
 						'[A')
@@ -2424,13 +2547,13 @@ repeat() {
 							scale=true
 							input_char=""
 							gtts_speak "scaling"
-							draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+							draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 							flagged=false
 							;;
 						*)
 							gtts_speak "scale closed"
 							draw_pitch
-							draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+							draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 							flagged=true
 							;;
 						esac
@@ -2448,7 +2571,7 @@ repeat() {
 				set_equalizer
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "T" ]; then
 				old_time_before=$time_before
@@ -2470,7 +2593,7 @@ repeat() {
 			elif [ "$input_char" == "Z" ]; then
 				toggle_pause true
 				gtts_speak "export loop"
-				draw_banner "EXPORT" false false true
+				draw_banner "$(get_local_phrase "EXPORT")" false false true
 				tput rc
 				read -rn1 number_repeats
 				if [ -n "$number_repeats" ]; then
@@ -2484,7 +2607,7 @@ repeat() {
 					time_before=$(date +%s.%N)
 					gtts_speak_chain "export closed" "loop mode" &
 				else
-					draw_banner "WAIT" false false true
+					draw_banner "$(get_local_phrase "WAIT")" false false true
 					gtts_speak "wait"
 					ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f1 | rev)"
 					filename_without_ext="$(echo -ne "$FILENAME" | rev | cut -d'.' -f2- | rev)"
@@ -2531,7 +2654,7 @@ repeat() {
 					fi
 				fi
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "A" ]; then
@@ -2550,10 +2673,10 @@ repeat() {
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				read_corner
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "Y" ]; then
@@ -2563,7 +2686,7 @@ repeat() {
 				zero_interval_jump
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				draw_pitch
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				input_char=""
 				flagged=true
 				switch=true
@@ -2575,7 +2698,7 @@ repeat() {
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
 				draw_pitch
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 				switch=true
 			elif [ "$input_char" == "q" ] || [ "$input_char" == "" ]; then
@@ -2608,19 +2731,20 @@ repeat() {
 			elif [ "$input_char" == "?" ]; then
 				toggle_pause true
 				RIGHT_BANNER_WIDTH="$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))"
-				draw_banner "HELP" false false true
+				draw_banner "$(get_local_phrase "HELP")" false false true
 				tput cup $LINES $((COLUMNS-12))
 				echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
 				loop_help_screen
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				toggle_pause true
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				redraw_buffer
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "i" ]; then
@@ -2635,7 +2759,7 @@ repeat() {
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "M" ]; then
@@ -2652,7 +2776,7 @@ repeat() {
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				draw_pitch
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				switch=true
 				flagged=true
 			elif [ "$input_char" == "v" ]; then
@@ -2660,7 +2784,7 @@ repeat() {
 				time_before=$(date +%s.%N)
 				toggle_scale_tempo
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "z" ]; then
 				old_time_before=$time_before
@@ -2672,7 +2796,7 @@ repeat() {
 				draw_equalizer
 				reset_buffer
 				redraw_buffer
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "<" ]; then
@@ -2681,7 +2805,7 @@ repeat() {
 				fi
 				gtts_speak "$space"
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
 					echo "seek $START_MARKER 2" >"$ALETHEIA/pipe$$" &
@@ -2702,27 +2826,27 @@ repeat() {
 			elif [ "$input_char" == "." ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				set_custom_int true
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				switch=true
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "/" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				set_custom_edo true
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				switch=true
 				flagged=true
 			elif [ "$input_char" == "," ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				gtts_speak "$TITLE" >/dev/null 2>/dev/null
@@ -2731,7 +2855,7 @@ repeat() {
 				space=$((space+1))
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 				gtts_speak "$space"
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				if [ "$(echo -e "$(calc -pd "$END_MARKER-$START_MARKER") < 1.5" | bc)" == "1" ]; then
 					echo "seek $START_MARKER 2" >"$ALETHEIA/pipe$$" &
@@ -2760,7 +2884,7 @@ repeat() {
 				fi
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				switch=true
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "2" ] || [ "$input_char" == "1" ] || [ "$input_char" == "!" ] || [ "$input_char" == "@" ] || [ "$input_char" == "9" ] || [ "$input_char" == "8" ] || [ "$input_char" == "*" ] || [ "$input_char" == "(" ]; then
 				old_time_before=$time_before
@@ -2875,9 +2999,9 @@ repeat() {
 						RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 					fi
 					if [ "$REPEAT_TOTAL" == "0" ]; then
-						draw_banner "LOOP 0/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") 0/$REPEAT_TOTAL"
 					else
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 					fi
 					draw_loop
 					input_char=""
@@ -2931,9 +3055,9 @@ repeat() {
 						RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
 					fi
 					if [ "$REPEAT_TOTAL" == "0" ]; then
-						draw_banner "LOOP 0/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") 0/$REPEAT_TOTAL"
 					else
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 					fi
 					draw_loop
 					input_char=""
@@ -2970,7 +3094,7 @@ repeat() {
 				START_MARKER="$(printf "%.2f" "$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d'=' -f2)")"
 				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				input_char=""
 				flagged=false
@@ -2980,7 +3104,7 @@ repeat() {
 				END_MARKER="$(printf "%.2f" "$(tail -1 "$ALETHEIA/mplayer_output$$" | cut -d'=' -f2)")"
 				time=$(calc -pd "($END_MARKER-$START_MARKER)*($s)")
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				input_char=""
 				flagged=false
@@ -3040,9 +3164,9 @@ repeat() {
 						draw_loop
 					fi
 					if [ "$REPEAT_TOTAL" == "0" ]; then
-						draw_banner "LOOP 0/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") 0/$REPEAT_TOTAL"
 					else
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 					fi
 					draw_loop
 					input_char=""
@@ -3060,23 +3184,23 @@ repeat() {
 					text="LOOP MODE"
 					REPEAT_ONLY=true
 					RIGHT_BANNER_WIDTH="${#text}"
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_banner "$text" false true
 					gtts_speak "loop mode"
 					sleep $BANNER_WAIT_TIME
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_loop
 				else
-					text="OFF"
+					text="$(get_local_phrase "OFF")"
 					REPEAT_ONLY=false
 					RIGHT_BANNER_WIDTH="${#text}"
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_banner "$text" false true
 					gtts_speak "loop mode off"
 					sleep $BANNER_WAIT_TIME
 					RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 					draw_loop
 				fi
 				flagged=true
@@ -3154,9 +3278,9 @@ repeat() {
 						draw_loop
 					fi
 					if [ "$REPEAT_TOTAL" == "0" ]; then
-						draw_banner "LOOP 0/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") 0/$REPEAT_TOTAL"
 					else
-						draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+						draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 					fi
 					draw_loop
 					input_char=""
@@ -3172,7 +3296,7 @@ repeat() {
 			elif [ "$input_char" == "p" ]; then
 				RIGHT_BANNER_WIDTH=$((6+${#REPEAT_CURRENT}+${#REPEAT_TOTAL}))
 				toggle_pause
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -rn1 input_char
 				else
@@ -3182,14 +3306,14 @@ repeat() {
 				time_before=$(date +%s.%N)
 				toggle_pause
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				time_x=$(date +%s.%N)
 				flagged=true
 			elif [ "$input_char" == "o" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
 					echo "mute" >"$ALETHEIA/pipe$$" &
@@ -3201,7 +3325,7 @@ repeat() {
 			elif [ "$input_char" == "m" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				PAUSE=false
 				if [ "$MUTE" == true ]; then
 					echo "mute" >"$ALETHEIA/pipe$$" &
@@ -3213,51 +3337,51 @@ repeat() {
 			elif [ "$input_char" == "x" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				RIGHT_BANNER_WIDTH=$((${#REPEAT_CURRENT}+${#REPEAT_TOTAL}+12))
 				lock
 				draw_pitch
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "X" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				RIGHT_BANNER_WIDTH=$((${#REPEAT_CURRENT}+${#REPEAT_TOTAL}+12))
 				unlock
 				draw_pitch
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "f" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				RIGHT_BANNER_WIDTH=$((${#REPEAT_CURRENT}+${#REPEAT_TOTAL}+12))
 				swap_lock true
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				switch=true
 				draw_pitch
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "F" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				orig_orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				RIGHT_BANNER_WIDTH=$((${#REPEAT_CURRENT}+${#REPEAT_TOTAL}+12))
 				swap_lock
 				orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 				switch=true
 				draw_pitch
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 				flagged=true
 			elif [ "$input_char" == "%" ]; then
 				old_time_before=$time_before
 				time_before=$(date +%s.%N)
 				if [ "$REPEAT_TOTAL" -ge "1" ]; then
 					gtts_speak "unlocked $REPEAT_CURRENT"
-					draw_banner "UNLOCKED $REPEAT_CURRENT"
+					draw_banner "$(get_local_phrase "UNLOCKED") $REPEAT_CURRENT"
 					draw_loop
 					if [ "$WEB_CLIENT" == "0" ]; then
 						read -rn1 -t $BANNER_WAIT_TIME t
@@ -3303,7 +3427,7 @@ repeat() {
 					gtts_speak "no repeats"
 				fi
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				input_char=""
 				flagged=false
@@ -3318,13 +3442,13 @@ repeat() {
 					gtts_speak "no loops"
 				fi
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "SAVED" false false true
+				draw_banner "$(get_local_phrase "SAVED")" false false true
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -rn1 -t $BANNER_WAIT_TIME input_char
 				else
 					read -rn1 -t $BANNER_WAIT_TIME input_char <"$ALETHEIA/web_client_pipe$$"
 				fi
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false false true
 				draw_loop
 				flagged=true
 			elif [ "$input_char" == "&" ]; then
@@ -3364,14 +3488,14 @@ repeat() {
 					REPEAT_TOTAL=$((REPEAT_TOTAL+1))
 				fi
 				RIGHT_BANNER_WIDTH=$((${#START_MARKER}+${#END_MARKER}+${#space}+(${#CORNER_DIVIDER}*2)))
-				draw_banner "LOCKED $REPEAT_TOTAL"
+				draw_banner "$(get_local_phrase "LOCKED") $REPEAT_TOTAL"
 				draw_loop
 				if [ "$WEB_CLIENT" == "0" ]; then
 					read -rn1 -t $BANNER_WAIT_TIME t
 				else
 					read -rn1 -t $BANNER_WAIT_TIME t <"$ALETHEIA/web_client_pipe$$"
 				fi
-				draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL"
+				draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL"
 				draw_loop
 				input_char="$t"
 				flagged=true
@@ -3385,7 +3509,7 @@ repeat() {
 					pitch_down true
 					orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 					switch=true
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 					flagged=true
 					;;
 				'[A')
@@ -3395,7 +3519,7 @@ repeat() {
 					pitch_up true
 					orig_old_s="$(calc -pd "(2^($INTERVAL/$EDO))")"
 					switch=true
-					draw_banner "LOOP $REPEAT_CURRENT/$REPEAT_TOTAL" false true
+					draw_banner "$(get_local_phrase "LOOP") $REPEAT_CURRENT/$REPEAT_TOTAL" false true
 					flagged=true
 					;;
 				*)
@@ -3469,7 +3593,7 @@ zero_interval() {
 	reverse=false
 	zero=false
 	if [ "$INTERVAL" != "0" ]; then
-		draw_banner "ZERO" false true
+		draw_banner "$(get_local_phrase "ZERO")" false true
 		zero=true
 		SAVED_INTERVAL=$INTERVAL
 		SAVED_EDO=$EDO
@@ -3480,7 +3604,7 @@ zero_interval() {
 		new_EDO="$EDO"
 	else
 		if [ "$SAVED_INTERVAL" != "" ]; then
-			draw_banner "RESET" false true
+			draw_banner "$(get_local_phrase "RESET")" false true
 			gtts_speak "scaling back"
 			old_int="0"
 			old_edo="$EDO"
@@ -3516,26 +3640,26 @@ zero_interval() {
 				draw_position
 				return
 			fi
-			secondary_scale_func "$c" "ZERO" true
+			secondary_scale_func "$c" "$(get_local_phrase "ZERO")" true
 			if [ "$c" == "z" ]; then
 				draw_wait false
 				reset_dimensions
 				if [ "$zero" == true ]; then
-					draw_banner "ZERO" false true
+					draw_banner "$(get_local_phrase "ZERO")" false true
 				else
-					draw_banner "RESET" false true
+					draw_banner "$(get_local_phrase "RESET")" false true
 				fi
 				redraw_screen false 1 1 1 0
 			elif [ "$c" == "d" ]; then
 				toggle_voice
 				draw_pitch
 				if [ "$zero" == true ]; then
-					draw_banner "ZERO" false true
+					draw_banner "$(get_local_phrase "ZERO")" false true
 				else
-					draw_banner "RESET" false true
+					draw_banner "$(get_local_phrase "RESET")" false true
 				fi
 			elif [ "$c" == "q" ]; then
-				draw_banner "QUIT" true
+				draw_banner "$(get_local_phrase "QUIT")" true
 				if [ "$VOICE_ENABLED" == true ]; then
 					gtts_speak "quit"
 				fi
@@ -3582,14 +3706,14 @@ zero_interval() {
 				draw_position
 				return
 			fi
-			secondary_scale_func "$c" "ZERO" true
+			secondary_scale_func "$c" "$(get_local_phrase "ZERO")" true
 			if [ "$c" == "z" ]; then
 				draw_wait false
 				reset_dimensions
 				if [ "$zero" == true ]; then
-					draw_banner "ZERO" false true
+					draw_banner "$(get_local_phrase "ZERO")" false true
 				else
-					draw_banner "RESET" false true
+					draw_banner "$(get_local_phrase "RESET")" false true
 				fi
 				redraw_screen false 1 1 1 0
 			elif [ "$c" == "d" ]; then
@@ -3621,7 +3745,7 @@ zero_interval() {
 
 scale_edo() {
 	gtts_speak "scale e d o"
-	draw_banner "SCALE"
+	draw_banner "$(get_local_phrase "SCALE")"
 	stopat=""
 	read -rsn1 edo_change
 	if [ "$edo_change" == "J" ]; then
@@ -3676,7 +3800,7 @@ scale_edo() {
 		return
 	elif [ "$(is_num "$edo_change")" != "0" ] || [ "$edo_change" == "-" ]; then
 		draw_position
-		draw_banner "SCALE"
+		draw_banner "$(get_local_phrase "SCALE")"
 		if [ "$edo_change" != "-" ]; then
 			tmp="$(read_line "$edo_change")"
 		else
@@ -3736,7 +3860,7 @@ scale_edo() {
 		return
 	fi
 	if [ "$edo_change" != "" ]; then
-		draw_banner "SCALE" false true
+		draw_banner "$(get_local_phrase "SCALE")" false true
 		draw_pitch
 		PAUSE=false
 		if [ "$MUTE" == true ]; then
@@ -3759,7 +3883,7 @@ scale_edo() {
 					draw_position
 					return
 				fi
-				secondary_scale_func "$c" "SCALE"
+				secondary_scale_func "$c" "$(get_local_phrase "SCALE")"
 				if [ "$c" == $'\e' ] || [ "$c" == "u" ] || [ "$c" == "q" ]; then
 					break
 				elif [ "$c" == "c" ]; then
@@ -3777,11 +3901,11 @@ scale_edo() {
 				elif [ "$c" == "d" ]; then
 					toggle_voice
 					draw_pitch
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 				elif [ "$c" == "z" ]; then
 					draw_wait false
 					reset_dimensions
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then
 					original_edo="$EDO"
@@ -3819,7 +3943,7 @@ scale_edo() {
 					draw_position
 					return
 				fi
-				secondary_scale_func "$c" "SCALE"
+				secondary_scale_func "$c" "$(get_local_phrase "SCALE")"
 				if [ "$c" == $'\e' ] || [ "$c" == "q" ] || [ "$c" == "u" ]; then
 					break
 				elif [ "$c" == "c" ]; then
@@ -3838,11 +3962,11 @@ scale_edo() {
 				elif [ "$c" == "d" ]; then
 					toggle_voice
 					draw_pitch
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 				elif [ "$c" == "z" ]; then
 					draw_wait false
 					reset_dimensions
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then	
 					original_edo=$EDO
@@ -3885,11 +4009,19 @@ draw_menu() {
 		local OPT=( "" "${tmp_OPT[@]}" )
 		local TOTAL_OPTS=$tmp_TOTAL_OPTS
 	fi
-	for l in "${OPT[@]}"; do
-		if [ "${#l}" -gt "$longest" ]; then
-			longest=${#l}
-		fi
-	done
+	if [ "$6" == true ]; then
+		for l in "${OPT_FULL[@]}"; do
+			if [ "${#l}" -gt "$longest" ]; then
+				longest=${#l}
+			fi
+		done
+	else
+		for l in "${OPT[@]}"; do
+			if [ "${#l}" -gt "$longest" ]; then
+				longest=${#l}
+			fi
+		done
+	fi
 
 	add="$(tput el)"
 	if [ -n "$2" ] && [ "$3" != true ]; then
@@ -3924,24 +4056,45 @@ draw_menu() {
 
 	for i in $(seq 1 "$TOTAL_OPTS"); do
 		pad="  "
-		temp="${#OPT[$i]}"
+		if [ "$6" == true ]; then
+			temp="${#OPT_FULL[$i]}"
+		else
+			temp="${#OPT[$i]}"
+		fi
 		while [ "$temp" -le "$pad_" ]; do
 			pad="$pad "
 			temp="$((temp+1))"
 		done
-		if [ "${OPT[$i]}" == "Music" ] || [ "${OPT[$i]}" == "Edit" ] || [ "${OPT[$i]}" == "Theme" ]; then
-			arrow=" ›"
+		if [ -z "$6" ]; then
+			if [ "${OPT[$i]}" == "$_Music" ] || [ "${OPT[$i]}" == "$_Edit" ] || [ "${OPT[$i]}" == "$_Theme" ] || [ "${OPT[$i]}" == "$_Language" ]; then
+				arrow=" ›"
+			else
+				arrow="  "
+			fi
 		else
 			arrow="  "
 		fi
-		if [ "${#OPT[$i]}" -lt "$longest" ]; then
-			pad2=$(printf '%*s' "$((longest-${#OPT[$i]}))" "")
+		if [ "$6" == true ]; then
+			if [ "${#OPT_FULL[$i]}" -lt "$longest" ]; then
+				pad2=$(printf '%*s' "$((longest-${#OPT_FULL[$i]}))" "")
+			else
+				pad2=""
+			fi
 		else
-			pad2=""
+			if [ "${#OPT[$i]}" -lt "$longest" ]; then
+				pad2=$(printf '%*s' "$((longest-${#OPT[$i]}))" "")
+			else
+				pad2=""
+			fi
 		fi
 		if [ "$i" == "$SELECTION" ]; then
 			pad=""
-			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$add$BAR$BLUE_BLACK ${OPT[$i]}$pad2$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
+			if [ "$6" == true ]; then
+				_opt="${OPT_FULL[$i]}"
+			else
+				_opt="${OPT[$i]}"
+			fi
+			menu_buf="$menu_buf\n$PADDING$COLOR_ACCENT$add$BAR$BLUE_BLACK $_opt$pad2$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
 			if [ "$tagged" == false ] || [ "$tagged" == "" ]; then
 				if [ "$nospeak" == false ]; then
 					if [ "$menu_start_over" == true ]; then
@@ -3949,9 +4102,13 @@ draw_menu() {
 							if [ "${OPT[i]}" == "Setup" ]; then
 								opt="settings"
 							else
-								opt="${OPT[i]}"
+								if [ "$6" == true ]; then
+									opt="${OPT_FULL[i]}"
+								else
+									opt="${OPT[i]}"
+								fi
 							fi
-							gtts_speak_chain "menu" "$opt" &
+							gtts_speak "$opt" "" "" "" "" true
 						fi
 						menu_start_over=false
 					else
@@ -3960,9 +4117,13 @@ draw_menu() {
 								if [ "${OPT[i]}" == "Setup" ]; then
 									opt="settings"
 								else
-									opt="${OPT[i]}"
+									if [ "$6" == true ]; then
+										opt="${OPT_FULL[i]}"
+									else
+										opt="${OPT[i]}"
+									fi
 								fi
-								gtts_speak "$opt"
+								gtts_speak "$opt" "" "" "" "" true
 							fi
 						else
 							NO_QUEUE_FLAG=false
@@ -3972,7 +4133,12 @@ draw_menu() {
 			fi
 		else
 			pad=""
-			menu_buf="$menu_buf\n$PADDING$add$COLOR_ACCENT$BAR$WHITE ${OPT[$i]}$pad2$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
+			if [ "$6" == true ]; then
+				_opt="${OPT_FULL[$i]}"
+			else
+				_opt="${OPT[$i]}"
+			fi
+			menu_buf="$menu_buf\n$PADDING$add$COLOR_ACCENT$BAR$WHITE $_opt$pad2$arrow$pad$NOCOLOR$COLOR_ACCENT$BAR$(tput el)"
 		fi
 	done
 
@@ -4009,11 +4175,480 @@ draw_menu() {
 		echo -ne "$menu_buf" | sed -n "$((1+_offset)),$((LINES-2+_offset))p"
 	else
 		if [ -n "$2" ]; then
-			echo -ne "$menu_buf" | sed -n "$((1+_offset)),$((LINES-$2+_offset))p"
+			printf '%b' "$menu_buf" | sed -n "$((1+_offset)),$((LINES-$2+_offset))p"
 		else
-			echo -ne "$menu_buf"
+			printf '%b' "$menu_buf"
 		fi
 	fi
+}
+
+lang_submenu() {
+	local initial_screen=$1
+	local z=""
+	local old_LINES=$LINES
+	local old_COLUMNS=$COLUMNS
+	local tagged=false
+	local SELECTION=1
+	local espeak_voices=""
+	espeak_voices="$(espeak-ng --voices)"
+	if [ -n "$ESPEAK_PID" ]; then
+		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
+	fi
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
+		pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
+	fi
+	if [ "$WEB_CLIENT" == "1" ]; then
+		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
+	else
+		_input=
+	fi
+
+	local nospeak=false
+	if [ "$_input" != "" ]; then
+		z="$_input"
+		nospeak=true
+	else
+		z=""
+		nospeak=false
+	fi
+
+	local even=false
+	if [ "$((COLUMNS%2))" == "0" ]; then
+		even=true
+	fi
+
+	local OPT=( )
+	OPT[0]=
+	local voices=( )
+	if [ -d "$ALETHEIA/languages" ] && [ -n "$(find "$ALETHEIA/languages" -maxdepth 1 -type f)" ]; then
+		voices=("$ALETHEIA/languages/"*[^\.help])
+		voices+=("$ALETHEIA_DATA_DIR/languages/"*[^\.help])
+	else
+		voices=("$ALETHEIA_DATA_DIR/languages/"*[^\.help])
+	fi
+	voices=("${voices[@]##*/}")
+	OPT+=("${voices[@]}")
+	unset "OPT[0]"
+	for (( i=1; i<=${#OPT[@]}; i++ )); do
+		OPT_FULL[i]="$(get_local_lang "${OPT[i]}")"
+	done
+
+	combined=( )
+
+	for i in "${!OPT_FULL[@]}"; do
+		combined+=("${OPT_FULL[i]} ${OPT[i]}")
+	done
+
+	sorted_combined=$(printf "%s\n" "${combined[@]}" | sort)
+
+	OPT_FULL=("")
+	OPT=("")
+
+	x=0
+	while IFS=' ' read -r item1 item2; do
+		if [ -n "$item1" ] && [ -n "$item2" ]; then
+			OPT_FULL+=("$item1")
+			OPT+=("$item2")
+		fi
+	done <<< "$sorted_combined"
+
+	unset "OPT[0]" "OPT_FULL[0]"
+
+	local TOTAL_OPTS=${#OPT[@]}
+	z="$GTTS_LANGUAGE"
+	zt="$((TOTAL_OPTS+1))"
+	lt="$((LINES-4))"
+	local _offset_=0
+	if [ -n "$z" ]; then
+		j=1
+		until [ "${OPT[$j]}" == "${z%\+*}" ]; do
+			((SELECTION++))
+			if [ "$SELECTION" -gt "$lt" ]; then
+				((_offset_++))
+			fi
+			((j++))
+			if [ "$j" == "$zt" ]; then
+				SELECTION=1
+				_offset_=0
+				break
+			fi
+		done
+	fi
+
+	orig_SELECTION=$SELECTION
+
+	local pad_=1
+	local menu_start_over=true
+	local first=$(((LINES/2) - (TOTAL_OPTS/2)-1))
+	local last=$((first + TOTAL_OPTS - 1))
+
+	draw_banner "$(get_local_phrase "LANGUAGE")"
+	echo -ne "$NOCOLOR"
+
+	up() {
+		if [ -n "$ESPEAK_PID" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
+		fi
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
+			pkill -f "^play.*voices" >/dev/null 2>/dev/null
+		fi
+		if [ "$SELECTION" -gt "1" ]; then
+			SELECTION="$((SELECTION-1))"
+			if [ "$((SELECTION-_offset_))" == "0" ]; then
+				((_offset_--))
+			fi
+		else
+			SELECTION="$TOTAL_OPTS"
+			_offset_=$((TOTAL_OPTS-LINES+4))
+		fi
+		if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+			ESPEAK_LANGUAGE="$(get_espeak_equiv "${OPT[SELECTION]}")+m1"
+			GTTS_LANGUAGE="${OPT[$SELECTION]}"
+		else
+			lang="$(get_espeak_equiv "${OPT[SELECTION]}")"
+			if grep -q -E "[[:space:]]${lang}[[:space:]]" <<<"$espeak_voices"; then
+				ESPEAK_LANGUAGE="$(get_espeak_equiv "${OPT[$SELECTION]}")+m1"
+			fi
+			GTTS_LANGUAGE="${OPT[$SELECTION]}"
+			if check_local_lang "$GTTS_LANGUAGE"; then
+				VOICE_APPEND=".$GTTS_LANGUAGE"
+			else
+				VOICE_APPEND=".en"
+			fi
+			if [ ! -d "$ALETHEIA/voices$VOICE_APPEND" ]; then
+				mkdir "$ALETHEIA/voices$VOICE_APPEND"
+			fi
+		fi
+		echo -ne "$NOCOLOR"
+		tagged=false
+		z=""
+	}
+
+	down() {
+		if [ -n "$ESPEAK_PID" ]; then
+			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
+		fi
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
+			pkill -f "^play.*voices" >/dev/null 2>/dev/null
+		fi
+		if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
+			SELECTION="$((SELECTION+1))"
+			if [ "$((SELECTION-_offset_))" == "$((LINES-3))" ]; then
+				((_offset_++))
+			fi
+		else
+			SELECTION="1"
+			_offset_=0
+		fi
+		if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
+			ESPEAK_LANGUAGE="$(get_espeak_equiv "${OPT[$SELECTION]}")+m1"
+			GTTS_LANGUAGE="${OPT[$SELECTION]}"
+		else
+			lang="$(get_espeak_equiv "${OPT[SELECTION]}")"
+			if grep -q -E "[[:space:]]${lang}[[:space:]]" <<<"$espeak_voices"; then
+				ESPEAK_LANGUAGE="$(get_espeak_equiv "${OPT[$SELECTION]}")+m1"
+			fi
+			GTTS_LANGUAGE="${OPT[$SELECTION]}"
+			if check_local_lang "$GTTS_LANGUAGE"; then
+				VOICE_APPEND=".$GTTS_LANGUAGE"
+			else
+				VOICE_APPEND=".en"
+			fi
+			if [ ! -d "$ALETHEIA/voices$VOICE_APPEND" ]; then
+				mkdir "$ALETHEIA/voices$VOICE_APPEND"
+			fi
+		fi
+		echo -ne "$NOCOLOR"
+		tagged=false
+		z=""
+	}
+
+	left() {
+		if [ "$orig_SELECTION" != "$SELECTION" ]; then
+			draw_banner "$(get_local_phrase "WAIT")"
+			echo -ne "$NOCOLOR"
+			reset_dimensions
+			if [ "$2" != true ]; then
+				reset_buffer
+			fi
+			if [ "$ESPEAK_DIGITAL_VOICE" == false ]; then
+				draw_banner "$(get_local_phrase "WAIT")"
+				ESPEAK_LANGUAGE="$(get_espeak_equiv "$GTTS_LANGUAGE")+m1"
+			fi
+			_save_setting "LANGUAGE" "$GTTS_LANGUAGE"
+			if [ -e "$ALETHEIA/languages/$GTTS_LANGUAGE" ]; then
+				LANGUAGE="$(<"$ALETHEIA/languages/$GTTS_LANGUAGE")"
+			else
+				LANGUAGE="$(<"$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE")"
+			fi
+			if [ "$GTTS_LANGUAGE" == "en" ]; then
+				HELP="$ORIG_HELP"
+				REPEAT_HELP="$ORIG_REPEAT_HELP"
+				SETUP_HELP="$ORIG_SETUP_HELP"
+				QUEUE_HELP="$ORIG_QUEUE_HELP"
+				SCALE_HELP="$ORIG_SCALE_HELP"
+				render_all_help_screens
+			else
+				if [ -e "$ALETHEIA/languages/$GTTS_LANGUAGE.help" ]; then
+					# shellcheck disable=SC1090
+					# Run shellcheck on these individually
+					source "$ALETHEIA/languages/$GTTS_LANGUAGE.help"
+					render_all_help_screens
+				elif [ -e "$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE.help" ]; then
+					# shellcheck disable=SC1090
+					# Run shellcheck on these individually
+					source "$ALETHEIA_DATA_DIR/languages/$GTTS_LANGUAGE.help"
+					render_all_help_screens
+				fi
+			fi
+			echo -e "$CONFIG" >"$ALETHEIA/config"
+		fi
+		if [ "$2" != true ]; then
+			redraw_buffer
+			draw_pitch
+			draw_position
+		fi
+		echo -ne "$NOCOLOR"
+		_Music="$(get_local_phrase "Music")"
+		_Theme="$(get_local_phrase "Theme")"
+		_Edit="$(get_local_phrase "Edit")"
+		_Language="$(get_local_phrase "Language")"
+		z=","
+	}
+
+	skip_=false
+	until [ "$z" == "," ]; do
+		TOTAL_OPTS=${#OPT[@]}
+		if [ "$z" == "" ]; then
+			x=1
+
+			if [ "$skip_" != true ]; then
+				if [ "$3" == true ] && [ -n "$4" ]; then
+					SELECTION="$4" draw_menu false "$(($2-5))" true "l" "m" true
+				fi
+				_offset=$_offset_ draw_menu false "" false "" "" true
+			else
+				skip_=false
+			fi
+
+			until [ "$z" != "" ]; do
+				if [ "$WEB_CLIENT" == "1" ]; then
+					read -rsn1 -t 0.01 tmp_z <"$ALETHEIA/web_client_pipe$$"
+				fi
+				if [ "$tmp_z" != "" ]; then
+					z=$tmp_z
+				else
+					sleep 0.0005
+					if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
+						clear
+						draw_wait false
+						if [ "$((COLUMNS%2))" == "0" ]; then
+							even=true
+						else
+							even=false
+						fi
+						reset_buffer
+						render_all_help_screens
+						echo -ne "$NOCOLOR"
+						clear
+						screen_redrawn=true
+						_offset_=0
+						SELECTION=1
+						old_LINES=$LINES
+						old_COLUMNS=$COLUMNS
+						draw_volume
+						draw_equalizer
+						draw_banner "$(get_local_phrase "LANGUAGE")"
+						draw_position
+						echo -ne "$NOCOLOR"
+						break
+					else
+						screen_redrawn=false
+					fi
+					if read -rsn1 -t $BANNER_WAIT_TIME z; then
+						break
+					fi
+				fi
+			done
+		fi
+		if [ "$screen_redrawn" == true ]; then
+			continue
+		fi
+		if [ "$z" == "k" ]; then
+			up
+			continue
+		elif [ "$z" == "j" ]; then
+			down
+			continue
+		elif [ "$z" == "q" ] || [ "$z" == "i" ] || [ "$z" == "" ] || [ "$z" == "h" ]; then
+			left "$3" "$initial_screen"
+			return
+		elif [ "$z" == "8" ]; then
+			system_volume_change false 3 3
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "9" ]; then
+			system_volume_change true 3 3
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "*" ]; then
+			system_volume_change false 1 1
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "(" ]; then
+			system_volume_change true 1 1
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "1" ]; then
+			ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null
+			if [ "$?" != "1" ]; then
+				pcm_volume_change "$z"
+				ret="$?"
+				if [ "$ret" != 200 ]; then
+					return $ret
+				fi
+			else
+				if [ "$VOLUME" -ge "5" ]; then
+					VOLUME=$((VOLUME-5))
+					gtts_speak "$VOLUME"
+				fi
+				draw_volume
+			fi
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "2" ]; then
+			ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null
+			if [ "$?" != "1" ]; then
+				pcm_volume_change "$z"
+				ret="$?"
+				if [ "$ret" != 200 ]; then
+					return $ret
+				fi
+			else
+				if [ "$VOLUME" -le "95" ]; then
+					VOLUME=$((VOLUME+5))
+					gtts_speak "$VOLUME"
+				fi
+				draw_volume
+			fi
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "!" ]; then
+			ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null
+			if [ "$?" != "1" ]; then
+				pcm_volume_change "$z"
+				ret="$?"
+				if [ "$ret" != 200 ]; then
+					return $ret
+				fi
+			else
+				if [ "$VOLUME" -ge "1" ]; then
+					VOLUME=$((VOLUME-1))
+					gtts_speak "$VOLUME"
+				fi
+				draw_volume
+			fi
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "@" ]; then
+			ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null
+			if [ "$?" != "1" ]; then
+				pcm_volume_change "$z"
+				ret="$?"
+				if [ "$ret" != 200 ]; then
+					return $ret
+				fi
+			else
+				if [ "$VOLUME" -le "99" ]; then
+					VOLUME=$((VOLUME+1))
+					gtts_speak "$VOLUME"
+				fi
+				draw_volume
+			fi
+			tagged=true
+			z=""
+			skip_=true
+			continue
+		elif [ "$z" == "c" ]; then
+			toggle_mute
+			tagged=true
+			z=""
+			continue
+		elif [ "$z" == "d" ]; then
+			toggle_voice false false "$(get_local_phrase "MENU")"
+			menu_start_over=true
+			z=""
+			continue
+		elif [ "$z" == "z" ]; then
+			draw_wait false
+			REDRAWN=true
+			reset_dimensions
+			draw_volume
+			draw_equalizer
+			draw_banner "$(get_local_phrase "LANGUAGE")"
+			draw_position
+			if [ "$initial_screen" == false ]; then
+				reset_buffer
+			fi
+			z=""
+			continue
+		elif [ "$z" == $'\e' ]; then
+			read -rn2 -t 0.03 key
+			case $key in
+			'[A')
+				up
+				continue
+				;;
+			'[B')
+				down
+				continue
+				;;
+			'[C')
+				z=""
+				continue
+				;;
+			*)
+				left "$3" "$initial_screen"
+				;;
+			esac
+		elif [ "$z" == "" ]; then
+			z=""
+		else
+			z=""
+			continue
+		fi
+		if [ "$z" == "" ] || [ "$z" == " " ]; then
+			case $SELECTION in
+			*)
+				left "$3" "$initial_screen"
+				;;
+			esac
+		fi
+		if [ "$z" == "," ]; then
+			if [ "$REPEAT_ONLY" == true ]; then
+				gtts_speak_chain "menu closed" "loop mode" &
+			else
+				gtts_speak_chain "menu closed" "main screen" &
+			fi
+		fi
+	done
 }
 
 theme_submenu() {
@@ -4025,12 +4660,15 @@ theme_submenu() {
 
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 	fi
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
+	else
+		_input=
 	fi
 
 	local nospeak=false
@@ -4045,14 +4683,20 @@ theme_submenu() {
 	fi
 
 	local OPT=( )
-	if [ -d "$ALETHEIA/themes" ] && [ -n "$(ls -1 "$ALETHEIA/themes")" ]; then
-		readarray -O 1 -t OPT <<<"$(ls -1 "$ALETHEIA/themes/")"
+	local list_themes=
+
+	if [ -d "$ALETHEIA/themes" ]; then
+		list_themes="$(ls -1 "$ALETHEIA/themes")"
+		if [ -d "$ALETHEIA/themes" ] && [ -n "$list_themes" ]; then
+			readarray -O 1 -t OPT <<<"$list_themes"
+		fi
 	fi
 	local TOTAL_OPTS=${#OPT[@]}
 	if [ -d "$ALETHEIA_DATA_DIR/themes" ]; then
 		readarray -O $((TOTAL_OPTS+1)) -t OPT <<<"$(ls -1 "$ALETHEIA_DATA_DIR/themes/")"
 	fi
 	TOTAL_OPTS=${#OPT[@]}
+	export OPT TOTAL_OPTS
 
 	local longest=
 	longest="$(wc -L <<<"${OPT[@]}")"
@@ -4082,16 +4726,15 @@ theme_submenu() {
 	local first=$(((LINES/2) - (TOTAL_OPTS/2)-1))
 	local last=$((first + TOTAL_OPTS - 1))
 
-	draw_banner "THEME"
+	draw_banner "$(get_local_phrase "THEME")"
 	echo -ne "$NOCOLOR"
 
-	THEME_FILE="${OPT[$SELECTION]}"
+	THEME_FILE="${OPT[SELECTION]}"
 	check_colors true
 	draw_volume
 	draw_equalizer
-	draw_banner "THEME"
+	draw_banner "$(get_local_phrase "THEME")"
 	draw_position
-	THEME_FILE="${OPT[$SELECTION]}"
 	THEME_ENABLED=true
 	_save_setting "THEME_ENABLED" "$THEME_ENABLED"
 	echo -e "$CONFIG" >"$ALETHEIA/config"
@@ -4099,8 +4742,9 @@ theme_submenu() {
 	up() {
 		if [ -n "$ESPEAK_PID" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
 		fi
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$SELECTION" -gt "1" ]; then
@@ -4112,17 +4756,17 @@ theme_submenu() {
 			SELECTION="$TOTAL_OPTS"
 			_offset_=$((TOTAL_OPTS-LINES+4))
 		fi
-		THEME_FILE="${OPT[$SELECTION]}"
+		THEME_FILE="${OPT[SELECTION]}"
 		THEME_ENABLED=true
 		check_colors true
 		draw_volume
 		draw_equalizer
-		draw_banner "THEME"
+		draw_banner "$(get_local_phrase "THEME")"
 		draw_position
 		if [ "$MUTE" == true ]; then
-			draw_banner "MUTE"
+			draw_banner "$(get_local_phrase "MUTE")"
 		elif [ "$PAUSE" == true ]; then
-			draw_banner "PAUSE"
+			draw_banner "$(get_local_phrase "PAUSE")"
 		fi
 		echo -ne "$NOCOLOR"
 		tagged=false
@@ -4132,8 +4776,9 @@ theme_submenu() {
 	down() {
 		if [ -n "$ESPEAK_PID" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
 		fi
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
@@ -4145,17 +4790,17 @@ theme_submenu() {
 			SELECTION="1"
 			_offset_=0
 		fi
-		THEME_FILE="${OPT[$SELECTION]}"
+		THEME_FILE="${OPT[SELECTION]}"
 		THEME_ENABLED=true
 		check_colors true
 		draw_volume
 		draw_equalizer
-		draw_banner "THEME"
+		draw_banner "$(get_local_phrase "THEME")"
 		draw_position
 		if [ "$MUTE" == true ]; then
-			draw_banner "MUTE"
+			draw_banner "$(get_local_phrase "MUTE")"
 		elif [ "$PAUSE" == true ]; then
-			draw_banner "PAUSE"
+			draw_banner "$(get_local_phrase "PAUSE")"
 		fi
 		echo -ne "$NOCOLOR"
 		tagged=false
@@ -4163,8 +4808,8 @@ theme_submenu() {
 	}
 
 	left() {
-		if [ "$orig_SELECTION" != "$SELECTION" ]; then
-			draw_banner "WAIT"
+		#if [ "$orig_SELECTION" != "$SELECTION" ]; then
+			draw_banner "$(get_local_phrase "WAIT")"
 			echo -ne "$NOCOLOR"
 			reset_dimensions
 			if [ "$2" != true ]; then
@@ -4172,7 +4817,7 @@ theme_submenu() {
 			fi
 			_save_setting "THEME_FILE" "$THEME_FILE"
 			echo -e "$CONFIG" >"$ALETHEIA/config"
-		fi
+		#fi
 		if [ "$1" != true ]; then
 			redraw_buffer
 			draw_pitch
@@ -4219,7 +4864,7 @@ theme_submenu() {
 						old_COLUMNS=$COLUMNS
 						draw_volume
 						draw_equalizer
-						draw_banner "THEME"
+						draw_banner "$(get_local_phrase "THEME")"
 						draw_position
 						echo -ne "$NOCOLOR"
 						break
@@ -4342,7 +4987,7 @@ theme_submenu() {
 			z=""
 			continue
 		elif [ "$z" == "d" ]; then
-			toggle_voice false false "MENU"
+			toggle_voice false false "$(get_local_phrase "MENU")"
 			menu_start_over=true
 			z=""
 			continue
@@ -4352,7 +4997,7 @@ theme_submenu() {
 			reset_dimensions
 			draw_volume
 			draw_equalizer
-			draw_banner "THEME"
+			draw_banner "$(get_local_phrase "THEME")"
 			draw_position
 			if [ "$initial_screen" == false ]; then
 				reset_buffer
@@ -4387,10 +5032,6 @@ theme_submenu() {
 		if [ "$z" == "" ] || [ "$z" == " " ]; then
 			case $SELECTION in
 			*)
-				THEME_FILE="${OPT[$SELECTION]}"
-				THEME_ENABLED=true
-				_save_setting "THEME_FILE" "$THEME_FILE"
-				_save_setting "THEME_ENABLED" "$THEME_ENABLED"
 				THEME_ENABLED=true
 				_save_setting "THEME_ENABLED" "$THEME_ENABLED"
 				echo -e "$CONFIG" >"$ALETHEIA/config"
@@ -4398,12 +5039,12 @@ theme_submenu() {
 
 				draw_volume
 				draw_equalizer
-				draw_banner "THEME"
+				draw_banner "$(get_local_phrase "THEME")"
 				draw_position
 				if [ "$MUTE" == true ]; then
-					draw_banner "MUTE"
+					draw_banner "$(get_local_phrase "MUTE")"
 				elif [ "$PAUSE" == true ]; then
-					draw_banner "PAUSE"
+					draw_banner "$(get_local_phrase "PAUSE")"
 				fi
 			esac
 		fi
@@ -4421,8 +5062,9 @@ music_submenu() {
 	local initial_screen=$1
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 	fi
 	local z=""
@@ -4447,7 +5089,7 @@ music_submenu() {
 	fi
 
 	local OPT=( )
-	OPT=( "" "Locks" "Loops" )
+	OPT=( "" "$(get_local_phrase "Locks")" "$(get_local_phrase "Loops")" )
 	unset "OPT[0]"
 	local SELECTION="1"
 	pad_=1
@@ -4456,15 +5098,16 @@ music_submenu() {
 	last=$((first + TOTAL_OPTS - 1))
 	local _offset=0
 
-	draw_banner "MUSIC"
+	draw_banner "$(get_local_phrase "Music")"
 	echo -ne "$NOCOLOR"
 	local TOTAL_OPTS=
 
 	up() {
 		if [ -n "$ESPEAK_PID" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
 		fi
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$SELECTION" -gt "1" ]; then
@@ -4486,8 +5129,9 @@ music_submenu() {
 	down() {
 		if [ -n "$ESPEAK_PID" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
 		fi
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
@@ -4537,7 +5181,7 @@ music_submenu() {
 						old_COLUMNS=$COLUMNS
 						draw_volume
 						draw_equalizer
-						draw_banner "EDIT"
+						draw_banner "$(get_local_phrase "Music")"
 						draw_position
 						echo -ne "$NOCOLOR"
 						break
@@ -4561,7 +5205,7 @@ music_submenu() {
 			continue
 		elif [ "$z" == "q" ] || [ "$z" == "i" ] || [ "$z" == "h" ]; then
 			if [ "$initial_screen" == true ]; then
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				draw_position
 				return
 			fi
@@ -4664,7 +5308,7 @@ music_submenu() {
 			z=""
 			continue
 		elif [ "$z" == "d" ]; then
-			toggle_voice false false "MENU"
+			toggle_voice false false "$(get_local_phrase "MENU")"
 			menu_start_over=true
 			z=""
 			continue
@@ -4674,7 +5318,7 @@ music_submenu() {
 			reset_dimensions
 			draw_volume
 			draw_equalizer
-			draw_banner "MUSIC"
+			draw_banner "$(get_local_phrase "Music")"
 			draw_position
 			if [ "$initial_screen" == false ]; then
 				reset_buffer
@@ -4694,7 +5338,7 @@ music_submenu() {
 				;;
 			'[D')
 				if [ "$initial_screen" == true ]; then
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					draw_position
 					return
 				fi
@@ -4706,7 +5350,7 @@ music_submenu() {
 				;;
 			*)
 				if [ "$initial_screen" == true ]; then
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					draw_position
 					return
 				fi
@@ -4720,14 +5364,14 @@ music_submenu() {
 			continue
 		fi
 		if [ "$z" == "" ] || [ "$z" == " " ]; then
-			if [ "${OPT[$SELECTION]}" == "Loops" ]; then
+			if [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Loops")" ]; then
 				VIDEO=false
 				load_only_loops true
 				if [ "$?" == "200" ]; then
-					draw_banner "NO LOOPS"
-					gtts_speak "no loops" true
+					draw_banner "$(get_local_phrase "NO LOOPS")"
+					gtts_speak "$(get_local_phrase "no loops")" true
 					sleep $BANNER_WAIT_TIME
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					echo -ne "$NOCOLOR"
 					menu_start_over=true
 					continue
@@ -4737,15 +5381,15 @@ music_submenu() {
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				REPEAT_ONLY=true
 				return $RETURN_JUMP
-			elif [ "${OPT[$SELECTION]}" == "Locks" ]; then
+			elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Locks")" ]; then
 				VIDEO=false
-				draw_banner "WAIT"
+				draw_banner "$(get_local_phrase "WAIT")"
 				set_only_locked false false false false true
 				if [ "$?" == "50" ]; then
-					draw_banner "NO LOCKS"
-					gtts_speak "no locks" true
+					draw_banner "$(get_local_phrase "NO LOCKS")"
+					gtts_speak "$(get_local_phrase "no locks")" true
 					sleep $BANNER_WAIT_TIME
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					echo -ne "$NOCOLOR"
 					menu_start_over=true
 					continue
@@ -4774,8 +5418,9 @@ edit_submenu() {
 	local initial_screen=$1
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 	fi
 	local z=""
@@ -4783,6 +5428,8 @@ edit_submenu() {
 	old_COLUMNS=$COLUMNS
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
+	else
+		_input=
 	fi
 	if [ "$_input" != "" ]; then
 		z="$_input"
@@ -4800,7 +5447,12 @@ edit_submenu() {
 	fi
 
 	local OPT=( )
-	OPT=( "" "Tag" "Lock" "Loop" "Queue" "Config" )
+	_Tag="$(get_local_phrase "Tag")"
+	_Lock="$(get_local_phrase "Lock")"
+	_Loop="$(get_local_phrase "Loop")"
+	_Queue="$(get_local_phrase "Queue")"
+	_Config="$(get_local_phrase "Config")"
+	OPT=( "" "$_Tag" "$_Lock" "$_Loop" "$_Queue" "$_Config" )
 	unset "OPT[0]"
 	local SELECTION="1"
 	pad_=1
@@ -4809,15 +5461,16 @@ edit_submenu() {
 	last=$((first + TOTAL_OPTS - 1))
 	local _offset=0
 
-	draw_banner "EDIT"
+	draw_banner "$(get_local_phrase "$_Edit")"
 	echo -ne "$NOCOLOR"
 	local TOTAL_OPTS=
 
 	up() {
 		if [ -n "$ESPEAK_PID" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
 		fi
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$SELECTION" -gt "1" ]; then
@@ -4839,8 +5492,9 @@ edit_submenu() {
 	down() {
 		if [ -n "$ESPEAK_PID" ]; then
 			kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+			unset ESPEAK_PID
 		fi
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
@@ -4858,7 +5512,7 @@ edit_submenu() {
 
 	left() {
 		if [ "$initial_screen" == true ]; then
-			draw_banner "MENU"
+			draw_banner "$(get_local_phrase "MENU")"
 			draw_position
 			return 1
 		else
@@ -4906,7 +5560,7 @@ edit_submenu() {
 						old_COLUMNS=$COLUMNS
 						draw_volume
 						draw_equalizer
-						draw_banner "EDIT"
+						draw_banner "$(get_local_phrase "EDIT")"
 						draw_position
 						echo -ne "$NOCOLOR"
 						break
@@ -5031,7 +5685,7 @@ edit_submenu() {
 			z=""
 			continue
 		elif [ "$z" == "d" ]; then
-			toggle_voice false false "MENU"
+			toggle_voice false false "$(get_local_phrase "MENU")"
 			menu_start_over=true
 			z=""
 			continue
@@ -5041,7 +5695,7 @@ edit_submenu() {
 			reset_dimensions
 			draw_volume
 			draw_equalizer
-			draw_banner "EDIT"
+			draw_banner "$(get_local_phrase "EDIT")"
 			draw_position
 			if [ "$initial_screen" == false ]; then
 				reset_buffer
@@ -5085,7 +5739,7 @@ edit_submenu() {
 		if [ "$z" == "" ] || [ "$z" == " " ]; then
 			case $SELECTION in
 			*)
-				if [ "${OPT[$SELECTION]}" == "Queue" ]; then
+				if [ "${OPT[$SELECTION]}" == "$_Queue" ]; then
 					if [ "$initial_screen" == true ]; then
 						gtts_speak "nothing loaded" true
 						draw_banner "N/A"
@@ -5097,14 +5751,14 @@ edit_submenu() {
 							return "$RETURN_JUMP"
 						fi
 					fi
-					draw_banner "EDIT"
+					draw_banner "$(get_local_phrase "EDIT")"
 					draw_position
-				elif [ "${OPT[$SELECTION]}" == "Tag" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$_Tag" ]; then
 					tag_mp3 "$initial_screen"
-					draw_banner "EDIT"
+					draw_banner "$(get_local_phrase "EDIT")"
 					draw_position
 					menu_start_over=true
-				elif [ "${OPT[$SELECTION]}" == "Loop" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$_Loop" ]; then
 					if [ -z "$FILENAME" ]; then
 						gtts_speak "nothing loaded" true
 						draw_banner "N/A"
@@ -5116,6 +5770,7 @@ edit_submenu() {
 						fi
 						vim -c "silent edit $FILENAME.repeats | source $ALETHEIA_DATA_DIR/vimrc/vimrc.lock"
 						tput civis
+						stty -ixon
 						if [ -e "$FILENAME.repeats" ] && [ -z "$(cat "$FILENAME.repeats")" ]; then
 							rm -f "$FILENAME.repeats"
 						elif [ -e "$FILENAME.repeats" ] && [ -n "$(diff "$FILENAME.repeats" "$ALETHEIA/.${FILENAME##*/}.repeats")" ]; then
@@ -5154,9 +5809,9 @@ edit_submenu() {
 						fi
 					fi
 					menu_start_over=true
-					draw_banner "EDIT"
+					draw_banner "$(get_local_phrase "EDIT")"
 					draw_position
-				elif [ "${OPT[$SELECTION]}" == "Lock" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$_Lock" ]; then
 					if [ -z "$FILENAME" ]; then
 						gtts_speak "nothing loaded" true
 						draw_banner "N/A"
@@ -5168,6 +5823,7 @@ edit_submenu() {
 						fi
 						vim -c "silent edit $FILENAME.locked | source $ALETHEIA_DATA_DIR/vimrc/vimrc.lock"
 						tput civis
+						stty -ixon
 						if [ -e "$FILENAME.locked" ] && [ -z "$(cat "$FILENAME.locked")" ]; then
 							rm -f "$FILENAME.locked"
 						elif [ -e "$FILENAME.locked" ] && [ -n "$(diff "$FILENAME.locked" "$ALETHEIA/.${FILENAME##*/}.locked")" ]; then
@@ -5182,25 +5838,26 @@ edit_submenu() {
 						fi
 					fi
 					menu_start_over=true
-					draw_banner "EDIT"
+					draw_banner "$(get_local_phrase "EDIT")"
 					draw_position
-				elif [ "${OPT[$SELECTION]}" == "Config" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$_Config" ]; then
 					gtts_speak "opening vim"
 					cp "$ALETHEIA/config" "$ALETHEIA/.config.old"
 					vim -c "silent edit $ALETHEIA/config | source $ALETHEIA_DATA_DIR/vimrc/vimrc"
 					tput civis
+					stty -ixon
 					if [ -n "$(diff "$ALETHEIA/config" "$ALETHEIA/.config.old")" ]; then
 						gtts_speak "please wait"
 						check_config true
 						draw_volume
 						draw_equalizer
-						draw_banner "WAIT"
+						draw_banner "$(get_local_phrase "WAIT")"
 						draw_position
 						render_all_help_screens
 						if [ "$initial_screen" != true ]; then
 							reset_buffer
 						fi
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						draw_position
 						gtts_speak "config updated" true
 					fi
@@ -5228,6 +5885,7 @@ edit_playlist_vim() {
 	gtts_speak "opening vim"
 	vim -c "silent edit $ALETHEIA/queue | source $ALETHEIA_DATA_DIR/vimrc/vimrc.queue" +"$POSITION"
 	tput civis
+	stty -ixon
 	diff "$ALETHEIA"/queue "$ALETHEIA"/queue.old >/dev/null 2>/dev/null
 	if [ "$?" == "1" ]; then
 		unset queue_array
@@ -5248,6 +5906,7 @@ edit_playlist_vim() {
 			if [ "$res" != "$FILENAME" ]; then
 				rm -f "$ALETHEIA/queue" "$ALETHEIA/queue.old"
 				tput civis
+				stty -ixon
 				JUMP="$POSITION"
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				return $RETURN_JUMP
@@ -5270,8 +5929,9 @@ main_menu() {
 	local initial_screen=$1
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 	fi
 	z=""
@@ -5279,13 +5939,13 @@ main_menu() {
 	old_COLUMNS=$COLUMNS
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
+	else
+		_input=
 	fi
+	nospeak=false
 	if [ "$_input" != "" ]; then
 		z="$_input"
 		nospeak=true
-	else
-		z=""
-		nospeak=false
 	fi
 	tagged=false
 
@@ -5294,9 +5954,16 @@ main_menu() {
 	else
 		even=false
 	fi
-	
+
 	unset OPT
-	OPT=( "" "Music" "Sound" "Video" "Empty" "Queue" "Setup" "Theme" "Edit" "Help" "Quit" )
+
+	_Music="$(get_local_phrase "Music")"
+	_Theme="$(get_local_phrase "Theme")"
+	_Edit="$(get_local_phrase "Edit")"
+	_Language="$(get_local_phrase "Language")"
+
+	OPT=( "" "$_Music" "$(get_local_phrase "Sound")" "$(get_local_phrase "Video")" "$(get_local_phrase "Empty")" "$(get_local_phrase "Queue")" "$(get_local_phrase "Setup")" "$_Theme" "$_Edit" "$(get_local_phrase "Language")" "$(get_local_phrase "Help")" "$(get_local_phrase "Quit")" )
+
 	unset "OPT[0]"
 	TOTAL_OPTS=${#OPT[@]}
 
@@ -5312,10 +5979,10 @@ main_menu() {
 		echo -ne "$NOCOLOR"
 		draw_volume
 		draw_equalizer
-		draw_banner "MENU"
+		draw_banner "$(get_local_phrase "MENU")"
 		draw_position
 	else
-		draw_banner "MENU"
+		draw_banner "$(get_local_phrase "MENU")"
 		echo -ne "$NOCOLOR"
 	fi
 
@@ -5323,8 +5990,9 @@ main_menu() {
 		up() {
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$SELECTION" -gt "1" ]; then
@@ -5343,8 +6011,9 @@ main_menu() {
 		down() {
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$SELECTION" -lt "$TOTAL_OPTS" ]; then
@@ -5363,8 +6032,9 @@ main_menu() {
 		left() {
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			echo -ne "$WHITE"
@@ -5374,11 +6044,12 @@ main_menu() {
 		right() {
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
-			if [ "${OPT[SELECTION]}" == "Music" ]; then
+			if [ "${OPT[SELECTION]}" == "$_Music" ]; then
 				music_submenu "$initial_screen"
 				local _ret="$?"
 				if [ "$_ret" == "$RETURN_JUMP" ]; then
@@ -5386,39 +6057,57 @@ main_menu() {
 				elif [ "$_ret" == "200" ]; then
 					z=","
 				fi
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				draw_position
 				menu_start_over=true
-			elif [ "${OPT[SELECTION]}" == "Edit" ]; then
+			elif [ "${OPT[SELECTION]}" == "$_Edit" ]; then
 				edit_submenu "$initial_screen" false
 				if [ "$?" == "$RETURN_JUMP" ]; then
 					return "$RETURN_JUMP"
 				fi
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				draw_position
 				menu_start_over=true
-			elif [ "${OPT[SELECTION]}" == "Theme" ]; then
+			elif [ "${OPT[SELECTION]}" == "$_Theme" ]; then
 				tmp_OPT=( "${OPT[@]}" )
 				tmp_TOTAL_OPTS=$TOTAL_OPTS
 				theme_submenu "$initial_screen" "" true
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				menu_start_over=true
+			elif [ "${OPT[SELECTION]}" == "$_Language" ]; then
+				lang_submenu true
+				_Music="$(get_local_phrase "Music")"
+				_Theme="$(get_local_phrase "Theme")"
+				_Edit="$(get_local_phrase "Edit")"
+				_Language="$(get_local_phrase "Language")"
+				menu_start_over=true
+				OPT=( "" "$_Music" "$(get_local_phrase "Sound")" "$(get_local_phrase "Video")" "$(get_local_phrase "Empty")" "$(get_local_phrase "Queue")" "$(get_local_phrase "Setup")" "$_Theme" "$_Edit" "$(get_local_phrase "Language")" "$(get_local_phrase "Help")" "$(get_local_phrase "Quit")" )
+				unset "OPT[0]"
+				draw_banner "$(get_local_phrase "MENU")"
+				if [ "${OPT[SELECTION]}" == "$_Music" ] || [ "${OPT[SELECTION]}" == "$_Edit" ] || [ "${OPT[SELECTION]}" == "$_Theme" ] || [ "${OPT[SELECTION]}" == "$_Language" ]; then
+					arrow=" ›"
+				else
+					arrow="  "
+				fi
 			fi
 			z=""
 		}
+
 		if [ "$z" == "" ]; then
 			x=1
 
 			draw_menu
 
-			until [ "$z" != "" ]; do
+			until [ -n "$z" ]; do
 				if [ "$WEB_CLIENT" == "1" ]; then
 					read -rsn1 -t 0.01 tmp_z <"$ALETHEIA/web_client_pipe$$"
+				else
+					tmp_z=
 				fi
 				if [ "$tmp_z" != "" ]; then
 					z=$tmp_z
 				else
-					sleep 0.0005
+					sleep 0.005
 					if [ "$old_LINES" != "$LINES" ] || [ "$old_COLUMNS" != "$COLUMNS" ]; then
 						clear
 						draw_wait false
@@ -5440,20 +6129,20 @@ main_menu() {
 						old_COLUMNS=$COLUMNS
 						draw_volume
 						draw_equalizer
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						draw_position
 						echo -ne "$NOCOLOR"
 						break
 					else
 						screen_redrawn=false
 					fi
-					if read -rsn1 -t $BANNER_WAIT_TIME z; then
+					if IFS= read -rsn1 -t "$MAIN_REFRESH_TIME" z; then
 						break
 					fi
 				fi
 			done
 		fi
-		if [ "$screen_redrawn" == true ]; then
+		if [ "$screen_redrawn" == true ] && [ -z "$z" ]; then
 			continue
 		fi
 
@@ -5475,7 +6164,7 @@ main_menu() {
 			if [ "$initial_screen" == true ]; then
 				menu_start_over=true
 			fi
-			draw_banner "MENU"
+			draw_banner "$(get_local_phrase "MENU")"
 			draw_position
 			z=""
 			continue
@@ -5489,8 +6178,9 @@ main_menu() {
 		elif [ "$z" == "T" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			toggle_feedback_level
@@ -5504,7 +6194,15 @@ main_menu() {
 			continue
 		elif [ "$z" == "" ]; then
 			theme_submenu true
-			draw_banner "MENU"
+			draw_banner "$(get_local_phrase "MENU")"
+			menu_start_over=true
+			z=""
+			continue
+		elif [ "$z" == "" ]; then
+			lang_submenu "$initial_screen"
+			OPT=( "" "$(get_local_phrase "Music")" "$(get_local_phrase "Sound")" "$(get_local_phrase "Video")" "$(get_local_phrase "Empty")" "$(get_local_phrase "Queue")" "$(get_local_phrase "Setup")" "$(get_local_phrase "Theme")" "$(get_local_phrase "Edit")" "$(get_local_phrase "Language")" "$(get_local_phrase "Help")" "$(get_local_phrase "Quit")" )
+			unset "OPT[0]"
+			draw_banner "$(get_local_phrase "MENU")"
 			menu_start_over=true
 			z=""
 			continue
@@ -5532,15 +6230,56 @@ main_menu() {
 			continue
 		elif [ "$z" == "C" ]; then
 			set_scale_speed
-			draw_banner "MENU"
+			draw_banner "$(get_local_phrase "MENU")"
 			z=""
 			continue
 		elif [ "$z" == "q" ]; then
 			if [ "$initial_screen" == true ]; then
-				clear
-				tput cnorm
-				stty echo
-				exit 0
+				if [ "$WEB_CLIENT" == "1" ]; then
+					read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
+				else
+					_input=
+				fi
+				if [ "$_input" != "" ]; then
+					if [ "$_input" == "y" ]; then
+						echo -ne "$NOCOLOR"
+						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+						clear
+						stty echo
+						return $RETURN_QUIT
+					fi
+				fi
+				draw_banner "$(get_local_phrase "QUIT")" true
+				if [ "$VOICE_ENABLED" == true ]; then
+					gtts_speak "do you want to quit?"
+				fi
+				input_char=""
+				while true; do
+					read -rn1 input_char
+					if [ "$input_char" == "y" ]; then
+						echo -ne "$NOCOLOR"
+						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
+						clear
+						stty echo
+						exit 0
+					elif [ "$input_char" == "q" ] || [ "$input_char" == $'\e' ]; then
+						if [ -n "$ESPEAK_PID" ]; then
+							kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+							unset ESPEAK_PID
+						fi
+						if [ "$GTTS_NATURAL_VOICE" == true ]; then
+							pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+						fi
+						break
+					elif [ "$input_char" == "n" ]; then
+						break
+					fi
+				done
+				draw_banner "$(get_local_phrase "MENU")"
+				draw_position
+				gtts_speak "quit canceled" true
+				z=""
+				continue
 			fi
 			z=","
 		elif [ "$z" == "8" ]; then
@@ -5651,7 +6390,7 @@ main_menu() {
 			reset_dimensions
 			draw_volume
 			draw_equalizer
-			draw_banner "MENU"
+			draw_banner "$(get_local_phrase "MENU")"
 			draw_position
 			reset_buffer
 			z=""
@@ -5662,9 +6401,12 @@ main_menu() {
 			tput cup $((LINES-2))
 			tput el
 			setup_screen "$initial_screen" true
+			OPT=( "" "$(get_local_phrase "Music")" "$(get_local_phrase "Sound")" "$(get_local_phrase "Video")" "$(get_local_phrase "Empty")" "$(get_local_phrase "Queue")" "$(get_local_phrase "Setup")" "$(get_local_phrase "Theme")" "$(get_local_phrase "Edit")" "$(get_local_phrase "Language")" "$(get_local_phrase "Help")" "$(get_local_phrase "Quit")" )
+			unset "OPT[0]"
 			if [ "$initial_screen" == false ]; then
 				redraw_buffer
 			fi
+			draw_banner "$(get_local_phrase "MENU")"
 			z=""
 			continue
 		elif [ "$z" == "?" ]; then
@@ -5697,7 +6439,13 @@ main_menu() {
 		#	z=""
 		#	continue
 		elif [ "$z" == "" ]; then
-			toggle_panels
+			toggle_pause false true
+			z=""
+			continue
+		elif [ "$z" == "p" ] || [ "$z" == " " ]; then
+			if [ "$initial_screen" != true ]; then
+				toggle_pause true
+			fi
 			z=""
 			continue
 		elif [ "$z" == "s" ]; then
@@ -5719,13 +6467,13 @@ main_menu() {
 			new_TOTAL_QUEUE=${#tmp_array[@]}
 			if [ "$new_TOTAL_QUEUE" == "0" ]; then
 				if [ "$SELECTION" == "2" ]; then
-					draw_banner "NO SOUND"
+					draw_banner "$(get_local_phrase "NO SOUND")"
 					gtts_speak "no sound"
 				elif [ "$SELECTION" == "3" ]; then
-					draw_banner "NO VIDEO"
+					draw_banner "$(get_local_phrase "NO VIDEO")"
 					gtts_speak "no video"
 				else
-					draw_banner "NO MUSIC"
+					draw_banner "$(get_local_phrase "NO MUSIC")"
 					gtts_speak "no music"
 				fi
 				sleep $BANNER_WAIT_TIME
@@ -5748,6 +6496,7 @@ main_menu() {
 				TOTAL_QUEUE=$old_tq
 				queue_array=("${old_qa[@]}")
 			fi
+			draw_banner "$(get_local_phrase "MENU")"
 			menu_start_over=true
 			z=""
 			continue
@@ -5846,22 +6595,22 @@ main_menu() {
 		if [ "$z" == "" ] || [ "$z" == " " ]; then
 			case $SELECTION in
 			*)
-				if [ "${OPT[$SELECTION]}" == "Empty" ]; then
+				if [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Empty")" ]; then
 					JUMP="1"
 					new_playlist true
 					if [ "$?" == "$RETURN_JUMP" ]; then
 						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 						return $RETURN_JUMP
 					fi
-				elif [ "${OPT[$SELECTION]}" == "Music" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$_Music" ]; then
 					regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 					mapfile -t tmp_array < <(find "$MUSICDIR" -type f -regex "$regex" -and -not -iname "*.repeat.*" | shuf)
 					new_TOTAL_QUEUE=${#tmp_array[@]}
 					if [ "$new_TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NO MUSIC"
+						draw_banner "$(get_local_phrase "NO MUSIC")"
 						gtts_speak "no music" true
 						sleep $BANNER_WAIT_TIME
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						echo -ne "$NOCOLOR"
 						menu_start_over=true
 						NO_QUEUE_FLAG=true
@@ -5878,15 +6627,15 @@ main_menu() {
 						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 						return $RETURN_JUMP
 					fi
-				elif [ "${OPT[$SELECTION]}" == "Sound" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Sound")" ]; then
 					regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 					mapfile -t tmp_array < <(find "$SOUNDDIR" -type f -regex "$regex" | shuf)
 					new_TOTAL_QUEUE=${#tmp_array[@]}
 					if [ "$new_TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NO SOUNDS"
+						draw_banner "$(get_local_phrase "NO SOUNDS")"
 						gtts_speak "no sounds" true
 						sleep $BANNER_WAIT_TIME
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						echo -ne "$NOCOLOR"
 						menu_start_over=true
 						NO_QUEUE_FLAG=true
@@ -5903,15 +6652,15 @@ main_menu() {
 						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 						return $RETURN_JUMP
 					fi
-				elif [ "${OPT[$SELECTION]}" == "Video" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Video")" ]; then
 					regex=".*\.\(${VIDEO_FORMATS//,/\\|}\)$"
 					mapfile -t tmp_array < <(find "$VIDEODIR" -type f -regex "$regex" | shuf)
 					new_TOTAL_QUEUE=${#tmp_array[@]}
 					if [ "$new_TOTAL_QUEUE" == "0" ]; then
-						draw_banner "NO VIDEOS"
+						draw_banner "$(get_local_phrase "NO VIDEOS")"
 						gtts_speak "no videos" true
 						sleep $BANNER_WAIT_TIME
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						echo -ne "$NOCOLOR"
 						NO_QUEUE_FLAG=true
 						menu_start_over=true
@@ -5926,11 +6675,11 @@ main_menu() {
 						kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 						return $RETURN_JUMP
 					fi
-				elif [ "${OPT[$SELECTION]}" == "Queue" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Queue")" ]; then
 					if [ ! -d "$ALETHEIA/playlists" ]; then
-						draw_banner "NO QUEUES"
+						draw_banner "$(get_local_phrase "NO QUEUES")"
 						sleep "$BANNER_WAIT_TIME"
-						draw_banner "MENU"
+						draw_banner "$(get_local_phrase "MENU")"
 						echo -ne "$NOCOLOR"
 						menu_start_over=true
 					fi
@@ -5940,24 +6689,21 @@ main_menu() {
 						return $RETURN_JUMP
 					fi
 					menu_start_over=true
-				elif [ "${OPT[$SELECTION]}" == "Edit" ]; then
-					edit_submenu "$initial_screen" true
+				elif [ "${OPT[$SELECTION]}" == "$_Edit" ]; then
+					edit_submenu "$initial_screen" false
 					if [ "$?" == "$RETURN_JUMP" ]; then
 						return "$RETURN_JUMP"
 					fi
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					draw_position
 					menu_start_over=true
-				elif [ "${OPT[$SELECTION]}" == "Theme" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$_Theme" ]; then
 					tmp_OPT=( "${OPT[@]}" )
 					tmp_TOTAL_OPTS=$TOTAL_OPTS
 					theme_submenu "$initial_screen" "" true
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					menu_start_over=true
-					#theme_submenu "$initial_screen"
-					#draw_banner "MENU"
-					#menu_start_over=true
-				elif [ "${OPT[$SELECTION]}" == "Setup" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Setup")" ]; then
 					if [ "$NO_VERTICAL_PADDING" == false ]; then
 						tput cup 1
 						tput el
@@ -5965,7 +6711,13 @@ main_menu() {
 						tput el
 					fi
 					setup_screen "$initial_screen" true
-				elif [ "${OPT[$SELECTION]}" == "Help" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Language")" ]; then
+					lang_submenu true
+					menu_start_over=true
+					draw_banner "$(get_local_phrase "MENU")"
+					OPT=( "" "$_Music" "$(get_local_phrase "Sound")" "$(get_local_phrase "Video")" "$(get_local_phrase "Empty")" "$(get_local_phrase "Queue")" "$(get_local_phrase "Setup")" "$_Theme" "$_Edit" "$(get_local_phrase "Language")" "$(get_local_phrase "Help")" "$(get_local_phrase "Quit")" )
+					unset "OPT[0]"
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Help")" ]; then
 					tput cup 1
 					tput el
 					tput cup $((LINES-2))
@@ -5985,7 +6737,7 @@ main_menu() {
 					fi
 					draw_position
 					menu_start_over=true
-				elif [ "${OPT[$SELECTION]}" == "Quit" ]; then
+				elif [ "${OPT[$SELECTION]}" == "$(get_local_phrase "Quit")" ]; then
 					clear
 					exit 0
 				else
@@ -6018,10 +6770,10 @@ scale() {
 	if [ "$WEB_CLIENT" != 1 ]; then
 		gtts_speak "scale interval"
 	fi
-	draw_banner "SCALE"
+	draw_banner "$(get_local_phrase "SCALE")"
 	stopat=""
 	if [ "$WEB_CLIENT" == "0" ]; then
-		read -rsn1 interval_change <&1
+		read -rsn1 interval_change
 	else
 		read -rsn1 interval_change <"$ALETHEIA/web_client_pipe$$"
 	fi
@@ -6098,7 +6850,7 @@ scale() {
 		return
 	elif [ "$(is_num "$interval_change")" == "1" ] || [ "$interval_change" == "-" ]; then
 		draw_position
-		draw_banner "SCALE"
+		draw_banner "$(get_local_phrase "SCALE")"
 		tmp="$(read_line "$interval_change" true)"
 		if [ "$?" == "1" ]; then
 			gtts_speak_chain "invalid number" "main screen" &
@@ -6135,7 +6887,7 @@ scale() {
 			interval_change="$((INTERVAL+EDO))"
 		elif [ "$c" == "d" ]; then
 			toggle_voice
-			draw_banner "SCALE" false true
+			draw_banner "$(get_local_phrase "SCALE")" false true
 		else
 			gtts_speak "scale closed"
 			RIGHT_BANNER_WIDTH=0
@@ -6151,7 +6903,7 @@ scale() {
 		return
 	fi
 	if [ "$interval_change" != "" ]; then
-		draw_banner "SCALE" false true
+		draw_banner "$(get_local_phrase "SCALE")" false true
 		draw_pitch
 		PAUSE=false
 		if [ "$MUTE" == true ]; then
@@ -6175,7 +6927,7 @@ scale() {
 					draw_position
 					return
 				fi
-				secondary_scale_func "$c" "SCALE"
+				secondary_scale_func "$c" "$(get_local_phrase "SCALE")"
 				if [ "$c" == $'\e' ] || [ "$c" == "u" ] || [ "$c" == "q" ] || [ "$c" == "" ]; then
 					gtts_speak "scale closed"
 					break
@@ -6197,11 +6949,11 @@ scale() {
 				elif [ "$c" == "d" ]; then
 					toggle_voice
 					draw_pitch
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 				elif [ "$c" == "z" ]; then
 					draw_wait false
 					reset_dimensions
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then
 					echo -e "af_del scaletempo" >"$ALETHEIA/pipe$$" &
@@ -6235,7 +6987,7 @@ scale() {
 					draw_position
 					return
 				fi
-				secondary_scale_func "$c" "SCALE"
+				secondary_scale_func "$c" "$(get_local_phrase "SCALE")"
 				if [ "$c" == $'\e' ] || [ "$c" == "q" ] || [ "$c" == "u" ] || [ "$c" == "" ]; then
 					gtts_speak "scale closed"
 					break
@@ -6259,11 +7011,11 @@ scale() {
 				elif [ "$c" == "d" ]; then
 					toggle_voice
 					draw_pitch
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 				elif [ "$c" == "z" ]; then
 					draw_wait false
 					reset_dimensions
-					draw_banner "SCALE" false true
+					draw_banner "$(get_local_phrase "SCALE")" false true
 					redraw_screen false 1 1 1 0
 				elif [ "$c" == "" ]; then	
 					INTERVAL="$((INTERVAL+1))"
@@ -6290,7 +7042,7 @@ scale() {
 }
 
 scale_octave() {
-	draw_banner "OCTAVE" false true
+	draw_banner "$(get_local_phrase "OCTAVE")" false true
 	PAUSE=false
 	if [ "$MUTE" == true ]; then
 		echo "mute" >"$ALETHEIA/pipe$$" &
@@ -6308,12 +7060,12 @@ scale_octave() {
 				x=0
 				while [ "$x" -lt "$EDO" ]; do
 					read -rsn1 -t "$SCALE_SPEED" c 
-					secondary_scale_func "$c" "OCTAVE"
+					secondary_scale_func "$c" "$(get_local_phrase "OCTAVE")"
 					if [ "$c" == "z" ]; then
 						draw_wait false
 						reset_dimensions
 						redraw_screen false 1 1 1 0
-						draw_banner "OCTAVE" false true
+						draw_banner "$(get_local_phrase "OCTAVE")" false true
 					elif [ "$c" == "d" ]; then
 						toggle_voice
 						draw_pitch
@@ -6341,12 +7093,12 @@ scale_octave() {
 				x=0
 				while [ "$x" -lt "$EDO" ]; do
 					read -rsn1 -t "$SCALE_SPEED" c 
-					secondary_scale_func "$c" "OCTAVE"
+					secondary_scale_func "$c" "$(get_local_phrase "OCTAVE")"
 					if [ "$c" == "z" ]; then
 						draw_wait false
 						reset_dimensions
 						redraw_screen false 1 1 1 0
-						draw_banner "OCTAVE" false true
+						draw_banner "$(get_local_phrase "OCTAVE")" false true
 					elif [ "$c" == "d" ]; then
 						toggle_voice
 						draw_pitch
@@ -6370,7 +7122,7 @@ scale_octave() {
 
 set_custom_int() {
 	gtts_speak "enter interval adjustment"
-	draw_banner "INT" false false true
+	draw_banner "$(get_local_phrase "INT")" false false true
 	tput rc
 	read -rn1 interval_jump
 	if [ "$(is_num "$interval_jump")" == "1" ] || [ "$interval_jump" == "-" ]; then
@@ -6404,7 +7156,7 @@ toggle_mute() {
 	if [ "$MUTE" == false ]; then
 		echo -e "mute 1" >"$ALETHEIA/pipe$$" &
 		MUTE=true
-		draw_banner "MUTE"
+		draw_banner "$(get_local_phrase "MUTE")"
 		gtts_speak "muted" true
 		pactl set-sink-mute @DEFAULT_SINK@ 1 >/dev/null 2>/dev/null
 	else
@@ -6417,16 +7169,22 @@ toggle_mute() {
 }
 
 toggle_pause() {
-	echo -e "pause" >"$ALETHEIA/pipe$$" &
+	if [ "$2" == true ]; then
+		for pipe in "$ALETHEIA/pipe"*; do
+			echo "pause" >"$pipe" &
+		done
+	else
+		echo "pause" >"$ALETHEIA/pipe$$" &
+	fi
 	if [ "$PAUSE" == false ]; then
 		PAUSE=true
-		if [ "$1" == false ] || [ "$1" == "" ]; then
+		if [ "$1" != true ]; then
 			gtts_speak "paused"
-			draw_banner "PAUSE" false false true
+			draw_banner "$(get_local_phrase "PAUSE")" false false true
 		fi
 	else
 		PAUSE=false
-		if [ "$1" == false ] || [ "$1" == "" ]; then
+		if [ "$1" != true ]; then
 			gtts_speak "unpaused"
 			draw_pitch
 		fi
@@ -6864,14 +7622,14 @@ secondary_scale_func() {
 		more_precise
 	elif [ "$1" == "o" ]; then
 		if [ "$mute" == true ]; then
-			echo "mute" >"$ALETHEIA/pipe$$"
+			echo "mute" >"$ALETHEIA/pipe$$" &
 			mute=false
 			draw_pitch
 		fi
 		double_precise
 	elif [ "$1" == "m" ]; then
 		if [ "$mute" == true ]; then
-			echo "mute" >"$ALETHEIA/pipe$$"
+			echo "mute" >"$ALETHEIA/pipe$$" &
 			mute=false
 			draw_pitch
 		fi
@@ -6927,7 +7685,7 @@ secondary_scale_func() {
 oscillate() {
 	old_int="$INTERVAL"
 	gtts_speak "oscillate"
-	draw_banner "OSCILLATE"
+	draw_banner "$(get_local_phrase "OSCILLATE")"
 	tput rc
 	read -rsn1 result
 	if [ "$result" == "q" ] || [ "$result" == "G" ] || [ "$result" == $'\e' ]; then
@@ -7028,7 +7786,7 @@ oscillate() {
 		draw_position
 		return
 	fi
-	draw_banner "OSCILLATE" false true
+	draw_banner "$(get_local_phrase "OSCILLATE")" false true
 	gtts_speak "oscillating"
 	if [ "$result" == "" ]; then
 		old_int="$INTERVAL"
@@ -7074,7 +7832,7 @@ oscillate() {
 				result=$((result/2))
 			fi
 		fi
-		secondary_scale_func "$c" "OSCILLATE"
+		secondary_scale_func "$c" "$(get_local_phrase "OSCILLATE")"
 		if [ "$c" == "c" ]; then
 			x=$((result-x-2))
 			if [ "$NEGATIVE" == true ]; then
@@ -7085,12 +7843,12 @@ oscillate() {
 		elif [ "$c" == "z" ]; then
 			draw_wait false
 			reset_dimensions
-			draw_banner "OSCILLATE" false true
+			draw_banner "$(get_local_phrase "OSCILLATE")" false true
 			redraw_screen false 1 1 1 0
 		elif [ "$c" == "d" ]; then
 			toggle_voice
 			draw_pitch
-			draw_banner "OSCILLATE" false true
+			draw_banner "$(get_local_phrase "OSCILLATE")" false true
 		elif [ "$c" == "q" ] || [ "$c" == $'\e' ]; then
 			break
 		elif [ "$c" == "" ]; then
@@ -7134,7 +7892,7 @@ oscillate() {
 					result=$((result/2))
 				fi
 			fi
-			secondary_scale_func "$c" "OSCILLATE"
+			secondary_scale_func "$c" "$(get_local_phrase "OSCILLATE")"
 			if [ "$c" == "c" ]; then
 				x=$((result-x-2))
 				if [ "$NEGATIVE" == true ]; then
@@ -7152,7 +7910,7 @@ oscillate() {
 			elif [ "$c" == "z" ]; then
 				draw_wait false
 				reset_dimensions
-				draw_banner "OSCILLATE" false true
+				draw_banner "$(get_local_phrase "OSCILLATE")" false true
 				redraw_screen false 1 1 1 0
 			elif [ "$c" == "q" ] || [ "$c" == $'\e' ]; then
 				break
@@ -7229,8 +7987,12 @@ pcm_volume_change() {
 			MUTE=false
 			draw_pitch
 		fi
-		if [ "$(bc <<<"$VOLUME >= 1")" == "1" ]; then
-			VOLUME="$(bc <<<"$VOLUME-1")"
+		if [ "$(bc <<<"$VOLUME >= 0.25")" == "1" ]; then
+			if [[ "$VOLUME" =~ .*\..* ]]; then
+				VOLUME="${VOLUME%.*}"
+			else
+				VOLUME="$(bc <<<"$VOLUME-1")"
+			fi
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -7245,8 +8007,13 @@ pcm_volume_change() {
 			MUTE=false
 			draw_pitch
 		fi
-		if [ "$(bc <<<"$VOLUME <= 99")" == "1" ]; then
-			VOLUME="$(bc <<<"$VOLUME+1")"
+		if [ "$(bc <<<"$VOLUME <= 99.75")" == "1" ]; then
+			if [[ "$VOLUME" =~ .*\..* ]]; then
+				VOLUME="$(bc <<<"$VOLUME+1")"
+				VOLUME="${VOLUME%.*}"
+			else
+				VOLUME="$(bc <<<"$VOLUME+1")"
+			fi
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 			draw_equalizer
 			draw_volume 1
@@ -7275,7 +8042,7 @@ set_system_volume() {
 	else
 		dir="-"
 	fi
-	pactl set-sink-volume @DEFAULT_SINK@ "${dir}$2%" "${dir}$3%"
+	pactl set-sink-volume @DEFAULT_SINK@ "${dir}$2%" "${dir}$3%" >/dev/null 2>/dev/null
 }
 
 system_volume_change() {
@@ -7326,13 +8093,14 @@ system_volume_change() {
 
 fade_volume() {
 	inputchar=""
+	_input=
 	if [ "$WEB_CLIENT" == "1" ]; then
 		read -rsn1 -t 0.1 _input <"$ALETHEIA/web_client_pipe$$"
 	fi
 	if [ "$_input" != "" ]; then
 		inputchar="$_input"
 	fi
-	draw_banner "FADE"
+	draw_banner "$(get_local_phrase "FADE")"
 	gtts_speak "select direction to fade"
 	PAUSE=false
 	MUTE=false
@@ -7382,15 +8150,22 @@ fade_volume() {
 		return
 	fi
 	c=
-	while [ "$(bc <<<"$VOLUME >= 0")" == "1" ] && [ "$(bc <<<"$VOLUME <= $DEFAULT_VOLUME")" == "1" ]; do
+	while [ "$(bc <<<"$VOLUME >= 0")" == "1" ] && [ "$(bc <<<"$VOLUME <= 100")" == "1" ]; do
 		if [ "$c" != "j" ] && [ "$c" != "k" ]; then
 			if [ "$up" == true ]; then
-				if [ "$VOLUME" == "$DEFAULT_VOLUME" ]; then
+				if [ "$VOLUME" == "100" ]; then
 					draw_pitch
 					return
 				fi
-				if [ "$(bc <<<"$VOLUME+0.5 <= $DEFAULT_VOLUME")" == "1" ]; then
-					VOLUME="$(calc -pd "$VOLUME+2")"
+				if [ "$(bc <<<"$VOLUME+0.5 <= 100")" == "1" ]; then
+					if [ "$(bc <<<"$VOLUME <= 7")" == "1" ]; then
+						VOLUME="$(calc -pd "$VOLUME+0.25")"
+					elif [ "$(bc <<<"$VOLUME <= 14")" == "1" ]; then
+						VOLUME="$(calc -pd "$VOLUME+0.50")"
+					else
+						VOLUME="$(calc -pd "$VOLUME+2")"
+						VOLUME="${VOLUME%.*}"
+					fi
 				else
 					draw_pitch
 					return
@@ -7403,13 +8178,21 @@ fade_volume() {
 					draw_pitch
 					return
 				fi
-				if [ "$(bc <<<"$VOLUME-0.2 >= 0")" == "1" ]; then
+				if [ "$(bc <<<"$VOLUME-0.25 >= 0")" == "1" ]; then
 					if [ "$(bc <<<"$VOLUME <= 7")" == "1" ]; then
 						VOLUME="$(calc -pd "$VOLUME-0.25")"
+					elif [ "$(bc <<<"$VOLUME <= 14")" == "1" ]; then
+						VOLUME="$(calc -pd "$VOLUME-0.50")"
 					else
 						VOLUME="$(calc -pd "$VOLUME-2")"
+						VOLUME="${VOLUME%.*}"
 					fi
 				fi
+			fi
+			if [ "$(bc <<<"$VOLUME > 100")" == "1" ]; then
+				VOLUME=100
+			elif [ "$(bc <<<"$VOLUME < 0")" == "1" ]; then
+				VOLUME=0
 			fi
 			echo "volume $VOLUME 1" >"$ALETHEIA/pipe$$" &
 		fi
@@ -7466,7 +8249,7 @@ fade_volume() {
 			break
 		elif [ "$c" == "d" ]; then
 			toggle_voice
-			draw_banner "FADE"
+			draw_banner "$(get_local_phrase "FADE")"
 		elif [ "$c" == "c" ]; then
 			if [ "$down" == true ]; then
 				down=false
@@ -7479,14 +8262,14 @@ fade_volume() {
 		elif [ "$c" == "z" ]; then
 			draw_wait false
 			reset_dimensions
-			draw_banner "FADING"
+			draw_banner "$(get_local_phrase "FADING")"
 			redraw_screen false 1 1 0 1
 		fi
 		x=$((x+1))
 	done
 	if [ "$down" == true ] && [ "$pause" == true ]; then
 		toggle_pause true
-		draw_banner "PAUSE"
+		draw_banner "$(get_local_phrase "PAUSE")"
 	else
 		draw_pitch
 	fi
@@ -7502,14 +8285,14 @@ sleep_countdown() {
 	if [ "$tmp" != "" ]; then
 		gtts_speak_chain "sleep canceled" "main screen" &
 		echo -e "loop -1 1" >"$ALETHEIA/pipe$$" &
-		draw_banner "CANCELED"
+		draw_banner "$(get_local_phrase "CANCELED")"
 		sleep $BANNER_WAIT_TIME
 		draw_pitch
 		return
 	fi
 	if [ "$SLEEPING" == true ]; then
 		SLEEPING=false
-		draw_banner "SLEEPING"
+		draw_banner "$(get_local_phrase "SLEEPING")"
 		x="$VOLUME"
 		while [ "$x" -ge "0" ] && [ "$VOLUME" -gt "0" ]; do
 			VOLUME="$((VOLUME-1))"
@@ -7537,7 +8320,7 @@ sleep_countdown() {
 
 set_sleep() {
 	if [ "$WEB_CLIENT" == "0" ]; then
-		draw_banner "MINUTES"
+		draw_banner "$(get_local_phrase "MINUTES")"
 		gtts_speak "enter time to sleep, in minutes"
 		answer="$(read_line)"
 	else
@@ -7548,8 +8331,8 @@ set_sleep() {
 		if [ "$(is_num "$answer")" != "0" ]; then
 			SLEEPING=true
 			if [ "$WEB_CLIENT" == "0" ]; then
-				gtts_speak "do you want to suspend? enter y, or n, or q to cancel"
-				draw_banner "SUSPEND" true
+				gtts_speak "do you want to suspend?"
+				draw_banner "$(get_local_phrase "SUSPEND")" true
 				read -rsn1 suspend
 			else
 				suspend="y"
@@ -7567,11 +8350,11 @@ set_sleep() {
 			fi
 
 			if [ "$SUSPEND" == true ]; then
-				draw_banner "SUSPEND ${answer}"
+				draw_banner "$(get_local_phrase "SUSPEND") ${answer}"
 				draw_position
 				gtts_speak "suspending in" true false
 			else
-				draw_banner "SLEEP ${answer}"
+				draw_banner "$(get_local_phrase "SLEEP") ${answer}"
 				draw_position
 				gtts_speak "sleeping in" true false
 			fi
@@ -7742,6 +8525,7 @@ read_number() {
 			tmp="$(read_line)"
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$tmp" == "" ]; then
 				echo -ne ""
@@ -7941,12 +8725,17 @@ reset_buffer() {
 		#fi
 
 		if [ "$SONG_LENGTH" == "" ]; then
-			buf_space="$(printf '%*s' $((COLUMNS-${#pos}-${#pad}-(${#PADDING}*2)-${#line}-3-5)) "")"
-			APPEND=""
-			APPEND_BLACK=""
-			hours="00"
-			minutes="00"
-			seconds="00"
+			if [ "$pos" == "$POSITION" ]; then
+				time=$(ffprobe -i "$orig_line" -show_entries format=duration -v quiet -of csv="p=0" | cut -d'.' -f1)
+				SONG_LENGTH="$(date -u -d @"$time" +%H:%M:%S)"
+				IFS=':' read -r hours minutes seconds <<< "$SONG_LENGTH"
+			else
+				APPEND=""
+				APPEND_BLACK=""
+				hours="00"
+				minutes="--"
+				seconds="--"
+			fi
 		else
 			SONG_LENGTH="$(date -u -d @"$SONG_LENGTH" +%H:%M:%S)"
 			IFS=':' read -r hours minutes seconds <<< "$SONG_LENGTH"
@@ -7965,13 +8754,11 @@ reset_buffer() {
 				line=$(echo -ne "$line" | sed "s|^|\\$BLUE_BLACK|g;s||~|g")
 			else
 				if [ "$pos" == "$POSITION" ] && [ "$PANELS_ENABLED" == false ]; then
-					line=$(echo -ne "$line" | sed "s|^|\\$BLUE|g;s||\\${BLUE}~|g;s/$/\\$NOCOLOR/g")
+					line=$(echo -ne "$line" | sed "s|^|\\$BLUE_BLACK|g;s||~|g")
 				else
-					line=$(echo -ne "$line" | sed "s|^|\\$WHITE|g;s||\\${WHITE}~|g;s/$/\\$NOCOLOR/g")
+					line=$(echo -ne "$line" | sed "s|^|\\$WHITE|g;s||~|g;s|$|\\${BLUE}|g")
 				fi
 			fi
-		else
-			line=$(echo -ne "$line" | sed "s||~|g")
 		fi
 
 		if [ "$PANELS_ENABLED" == true ] && [ "$pos" == "$POSITION" ]; then
@@ -8024,6 +8811,7 @@ redraw_buffer() {
 
 empty_pane() {
 	tput civis
+	stty -ixon
 	lineno=$1
 	stop=$2
 	pane=$((LINES-2))
@@ -8263,7 +9051,7 @@ jump_to_last_of_artist() {
 
 load_only_loops() {
 	if [ "$LOOPS_ONLY" == false ] || [ "$1" == true ]; then
-		draw_banner "WAIT"
+		draw_banner "$(get_local_phrase "WAIT")"
 		artist="$(echo -ne "$TITLE" | sed -e "s/ - //g" | cut -d'' -f1)"
 		if [ "$LOOP_ARTIST" == true ]; then
 			if [ "$(find "$MUSICDIR" | grep -e "^$artist - " | grep -e "\.repeats$")" == "" ]; then
@@ -8310,7 +9098,7 @@ load_only_loops() {
 			POSITION=1
 		fi
 	else
-		draw_banner "WAIT"
+		draw_banner "$(get_local_phrase "WAIT")"
 		regex=".*\.\(${AUDIO_FORMATS//,/\\|}\)$"
 		unset queue_array
 		IFS=$'\n'
@@ -8400,7 +9188,7 @@ load_loop_file() {
 		LOOP_ON=false
 		if [ -e "$FILENAME" ]; then
 			echo "volume 0 1" >"$ALETHEIA/pipe$$" &
-			draw_banner "LOOP OFF" 
+			draw_banner "$(get_local_phrase "LOOP OFF")"
 			gtts_speak "loop disabled"
 			if [ -e "$FILENAME.repeats" ]; then
 				REPEATS="$(<"$FILENAME.repeats")"
@@ -8528,17 +9316,17 @@ get_metadata() {
 
 toggle_feedback_level() {
 	if [ "$VOICE_ENABLED" == true ]; then
-		draw_banner "OFF"
+		draw_banner "$(get_local_phrase "OFF")"
 		gtts_speak "voice feedback disabled" true
 		VOICE_ENABLED=false
 	elif [ "$ONLY_VOICE_TITLES" == true ]; then
 		ONLY_VOICE_TITLES=false
 		VOICE_ENABLED=true
-		draw_banner "VOICE ON"
+		draw_banner "$(get_local_phrase "VOICE ON")"
 		gtts_speak "full voice feedback" true
 	else
 		ONLY_VOICE_TITLES=true
-		draw_banner "ONLY TITLE"
+		draw_banner "$(get_local_phrase "ONLY TITLE")"
 		gtts_speak "only artist and title" true
 		VOICE_ENABLED=false
 	fi
@@ -8550,7 +9338,7 @@ toggle_feedback_level() {
 swap_lock() {
 	if [ "$LOCK_TOTAL" == 0 ]; then
 		gtts_speak "no locks"
-		draw_banner "NONE" false false true
+		draw_banner "$(get_local_phrase "NONE")" false false true
 		sleep "$BANNER_WAIT_TIME"
 		return
 	fi
@@ -8605,7 +9393,7 @@ swap_lock() {
 	fi
 
 	echo -e "speed_set $(calc -pd "2^($INTERVAL/$EDO)")" >"$ALETHEIA/pipe$$" &
-	draw_banner "LOCK $((LOCK_SELECTION+1))/$LOCK_TOTAL" false false true
+	draw_banner "$(get_local_phrase "LOCK") $((LOCK_SELECTION+1))/$LOCK_TOTAL" false false true
 	gtts_speak_chain "lock" "$((LOCK_SELECTION+1))" "of" "$LOCK_TOTAL" &
 	sleep "$BANNER_WAIT_TIME"
 }
@@ -8626,10 +9414,10 @@ unlock() {
 	fi
 	if [ -e "$tmp.locked" ]; then
 		if [ "$LOCK_TOTAL" == "0" ]; then
-			draw_banner "UNLOCK $((LOCK_SELECTION+1))/1" false false true
+			draw_banner "$(get_local_phrase "UNLOCK") $((LOCK_SELECTION+1))/1" false false true
 			gtts_speak_chain "unlocked" "$((LOCK_SELECTION+1))" "of" "1" &
 		else
-			draw_banner "UNLOCK $((LOCK_SELECTION+1))/$LOCK_TOTAL" false false true
+			draw_banner "$(get_local_phrase "UNLOCK") $((LOCK_SELECTION+1))/$LOCK_TOTAL" false false true
 			gtts_speak_chain "unlocked" "$((LOCK_SELECTION+1))" "of" "$LOCK_TOTAL" &
 		fi
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
@@ -8664,7 +9452,7 @@ unlock() {
 		sleep "$BANNER_WAIT_TIME"
 	else
 		gtts_speak "no locks"
-		draw_banner "NONE" false false true
+		draw_banner "$(get_local_phrase "NONE")" false false true
 		sleep "$BANNER_WAIT_TIME"
 	fi
 }
@@ -8714,7 +9502,7 @@ lock() {
 	else
 		echo -ne "${WHITE_BLACK}${REP}$"
 	fi
-	draw_banner "LOCK $((LOCK_SELECTION+1))/$LOCK_TOTAL" false false true
+	draw_banner "$(get_local_phrase "LOCK") $((LOCK_SELECTION+1))/$LOCK_TOTAL" false false true
 	sleep "$BANNER_WAIT_TIME"
 }
 
@@ -8751,7 +9539,7 @@ seek_right() {
 			return $RETURN_NEXT
 		fi
 	fi
-	echo -e "seek +5%" >"$ALETHEIA/pipe$$"
+	echo -e "seek +5%" >"$ALETHEIA/pipe$$" &
 	return 200
 }
 
@@ -8771,10 +9559,10 @@ delete() {
 		yesno="$_input"
 	else
 		if [ "$permanent" == true ]; then
-			draw_banner "DELETE" true
+			draw_banner "$(get_local_phrase "DELETE")" true
 			gtts_speak "delete file?"
 		else
-			draw_banner "ARCHIVE" true
+			draw_banner "$(get_local_phrase "ARCHIVE")" true
 			gtts_speak "archive file?"
 		fi
 	fi
@@ -8787,9 +9575,9 @@ delete() {
 	fi
 	deleted=false
 	if [ "$yesno" == "y" ] || [ "$yesno" == "Y" ]; then
-		if [ ! -d "$ALETHEIA/deleted" ] || [ ! -d "$ALETHEIA/deleted/voices" ]; then
-			mkdir "$ALETHEIA/deleted"
-			mkdir "$ALETHEIA/deleted/voices"
+		if [ ! -d "$ALETHEIA/deleted" ] || [ ! -d "$ALETHEIA/deleted/voices$VOICE_APPEND" ]; then
+			mkdir "$ALETHEIA/deleted" >/dev/null 2>/dev/null
+			mkdir "$ALETHEIA/deleted/voices$VOICE_APPEND" >/dev/null 2>/dev/null
 		fi
 		if [ "$permanent" == true ]; then
 			rm -f "$FILENAME" >/dev/null 2>/dev/null
@@ -8813,11 +9601,11 @@ delete() {
 		if [ "$(ls -1 "$path")" == "" ]; then
 			rmdir "$path"
 		fi
-		if [ -e "$ALETHEIA/voices/$TITLE.mp3" ]; then
+		if [ -e "$ALETHEIA/voices$VOICE_APPEND/$TITLE.mp3" ]; then
 			if [ "$permanent" == true ]; then
-				rm -f "$ALETHEIA/voices/$TITLE.mp3"
+				rm -f "$ALETHEIA/voices$VOICE_APPEND/$TITLE.mp3"
 			else
-				mv "$ALETHEIA/voices/$TITLE.mp3" "$ALETHEIA/deleted/voices/"
+				mv "$ALETHEIA/voices$VOICE_APPEND/$TITLE.mp3" "$ALETHEIA/deleted/voices$VOICE_APPEND/"
 			fi
 		fi
 		draw_pitch
@@ -8945,6 +9733,7 @@ EOF
 			cp "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
 			vim -c "silent edit $ALETHEIA/media.$$.tag | source $ALETHEIA_DATA_DIR/vimrc/vimrc | execute 'norm! 4G9l'"
 			tput civis
+			stty -ixon
 			if [ -e "$ALETHEIA/media.$$.tag" ] && [ -n "$(diff "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig")" ]; then
 				_append=()
 				while read -r line; do
@@ -9024,7 +9813,7 @@ EOF
 			fi
 		else
 			gtts_speak "not an mp3" true
-			draw_banner "NOT MP3"
+			draw_banner "$(get_local_phrase "NOT MP3")"
 			sleep $BANNER_WAIT_TIME
 		fi
 		rm -f "$ALETHEIA/media.$$.tag" "$ALETHEIA/media.$$.tag.orig"
@@ -9035,7 +9824,7 @@ update_cache() {
 	if [ -n "$1" ]; then
 		local FILENAME="$1"
 	fi
-	draw_banner "WAIT"
+	draw_banner "$(get_local_phrase "WAIT")"
 	line="$(exiftool -Artist -Title -Album -Track "$FILENAME")"
 	_artist="$(echo -ne "$line" | grep -E "^Artist" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
 	_title="$(echo -ne "$line" | grep -E "^Title" | cut -d':' -f2- | sed -e 's/^ //' 2>/dev/null)"
@@ -9055,12 +9844,50 @@ update_cache() {
 	fi
 }
 
+get_local_lang() {
+	case "$1" in
+		"af") echo -ne "Afrikaans" ;;
+		"bs") echo -ne "Bosnian" ;;
+		"ca") echo -ne "Catalan" ;;
+		"cs") echo -ne "Czech" ;;
+		"cy") echo -ne "Welsh" ;;
+		"da") echo -ne "Danish" ;;
+		"de") echo -ne "German" ;;
+		"el") echo -ne "Greek" ;;
+		"en") echo -ne "English" ;;
+		"eo") echo -ne "Esperanto" ;;
+		"hi") echo -ne "Hindi" ;;
+		"ar") echo -ne "Arabic" ;;
+		"es") echo -ne "Spanish" ;;
+		"et") echo -ne "Estonian" ;;
+		"fi") echo -ne "Finnish" ;;
+		"fr") echo -ne "French" ;;
+		"hr") echo -ne "Croatian" ;;
+		"hu") echo -ne "Hungarian" ;;
+		"hy") echo -ne "Armenian" ;;
+		"id") echo -ne "Indonesian" ;;
+		"it") echo -ne "Italian" ;;
+		"nl") echo -ne "Dutch" ;;
+		"pl") echo -ne "Polish" ;;
+		"pt") echo -ne "Portuguese" ;;
+		"ru") echo -ne "Russian" ;;
+		"sk") echo -ne "Slovak" ;;
+		"sq") echo -ne "Albanian" ;;
+		"sr") echo -ne "Serbian" ;;
+		"su") echo -ne "Sundanese" ;;
+		"sv") echo -ne "Swedish" ;;
+		"sw") echo -ne "Swahili" ;;
+		"tr") echo -ne "Turkish" ;;
+		*) echo -ne "$1" ;;
+	esac
+}
+
 draw_pitch() {
 	if [ "$PAUSE" == true ]; then
-		draw_banner "PAUSE"
+		draw_banner "$(get_local_phrase "PAUSE")"
 		return
 	elif [ "$MUTE" == true ]; then
-		draw_banner "MUTE"
+		draw_banner "$(get_local_phrase "MUTE")"
 		return
 	fi
 
@@ -9118,7 +9945,7 @@ queue_help_screen() {
 	if [ "$NO_HELP" == true ]; then
 		return
 	fi
-	gtts_speak_chain "queue controls" "press d to read page" &
+	gtts_speak_chain "queue controls" &
 	flagged=false
 
 	width="$(echo -ne "$QUEUE_HELP" | wc -L)"
@@ -9136,8 +9963,8 @@ queue_help_screen() {
 			number_per_page=$((LINES-4))
 		fi
 		original_number_per_page=$number_per_page
-		draw_banner "QUEUE"
-		draw_banner "HELP" false true
+		draw_banner "$(get_local_phrase "QUEUE")"
+		draw_banner "$(get_local_phrase "HELP")" false true
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
 			tput cup 1
 		else
@@ -9176,6 +10003,7 @@ queue_help_screen() {
 		if [ "$inputchar" == "j" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$((page+1))" -lt "${#QUEUE_HELP_BUFFER[@]}" ]; then
 				page=$((page+1))
@@ -9183,12 +10011,13 @@ queue_help_screen() {
 		elif [ "$inputchar" == "k" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$page" -gt "0" ]; then
 				page=$((page-1))
 			fi
 		elif [ "$inputchar" == "d" ]; then
-			echo -e "$QUEUE_HELP" | sed -n "$first,${last}p;$pos,$((pos+number_per_page-1))p" | sed "s/$/\n/g;s/'/single quote/g;s/\"/double quote/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
+			echo -e "$QUEUE_HELP" | sed -n "$first,${last}p;$pos,$((pos+number_per_page-1))p" | sed "s/$/\n/g;s/'/single quote/g;s/\"/double quote/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v "$ESPEAK_LANGUAGE" -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
 		elif [ "$inputchar" == $'\e' ]; then
 			read -rn2 -t 0.03 key
@@ -9196,6 +10025,7 @@ queue_help_screen() {
 			'[B')
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				if [ "$((page+1))" -lt "${#QUEUE_HELP_BUFFER[@]}" ]; then
 					page=$((page+1))
@@ -9204,6 +10034,7 @@ queue_help_screen() {
 			'[A')
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				if [ "$page" -gt "0" ]; then
 					page=$((page-1))
@@ -9212,12 +10043,13 @@ queue_help_screen() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				gtts_speak "closed" true
 				number_per_page="$original_number_per_page"
 				draw_volume
 				draw_equalizer
-				draw_banner "QUEUE"
+				draw_banner "$(get_local_phrase "QUEUE")"
 				draw_position
 				return
 				;;
@@ -9225,12 +10057,13 @@ queue_help_screen() {
 		else
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			gtts_speak "closed" true
 			number_per_page="$original_number_per_page"
 			draw_volume
 			draw_equalizer
-			draw_banner "QUEUE"
+			draw_banner "$(get_local_phrase "QUEUE")"
 			draw_position
 			return
 		fi
@@ -9241,8 +10074,8 @@ scale_help_screen() {
 	if [ "$NO_HELP" == true ]; then
 		return
 	fi
-	gtts_speak_chain "scale controls" "press d to read page" &
-	draw_banner "HELP" false true
+	gtts_speak_chain "scale controls" &
+	draw_banner "$(get_local_phrase "HELP")" false true
 
 	width="$(echo -ne "$SCALE_HELP" | wc -L)"
 	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
@@ -9292,10 +10125,11 @@ scale_help_screen() {
 		fi
 
 		local inputchar=
-		read -rsn1 inputchar <&1
+		read -rsn1 inputchar
 		if [ "$inputchar" == "j" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			gtts_speak "page down"
 			if [ "$((page+1))" -lt "${#SCALE_HELP_BUFFER[@]}" ]; then
@@ -9305,6 +10139,7 @@ scale_help_screen() {
 		elif [ "$inputchar" == "k" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
@@ -9314,11 +10149,12 @@ scale_help_screen() {
 		elif [ "$inputchar" == "d" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
-			echo "$SCALE_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g;s/EDO/e d o/g;s/INT/interval/g;s/PCM/p c m/g;s/|/vertical slash/g;s/?/question mark/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g;s/-/ /g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
+			echo "$SCALE_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g;s/EDO/e d o/g;s/INT/interval/g;s/PCM/p c m/g;s/|/vertical slash/g;s/?/question mark/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g;s/-/ /g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v "$ESPEAK_LANGUAGE" -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -9327,13 +10163,14 @@ scale_help_screen() {
 			draw_volume
 			draw_equalizer
 			empty_pane
-			draw_banner "SCALE"
-			draw_banner "HELP" false true
+			draw_banner "$(get_local_phrase "SCALE")"
+			draw_banner "$(get_local_phrase "HELP")" false true
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			gtts_speak "closed" true
@@ -9355,8 +10192,9 @@ scale_help_screen() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				gtts_speak "closed" true
@@ -9367,8 +10205,9 @@ scale_help_screen() {
 		else
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			gtts_speak "closed" true
@@ -9398,7 +10237,7 @@ add_downloaded() {
 		unset IFS
 		if [ "$1" != true ]; then
 			gtts_speak "nothing downloaded"
-			draw_banner "NONE"
+			draw_banner "$(get_local_phrase "NONE")"
 		fi
 		sleep $BANNER_WAIT_TIME
 		draw_pitch
@@ -9409,11 +10248,11 @@ add_downloaded() {
 }
 
 read_corner() {
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 	fi
 	z=""
-	draw_banner "READ" false false true
+	draw_banner "$(get_local_phrase "READ")" false false true
 	gtts_speak "read corner"
 	read -rsn1 x
 	if [ "$x" == "u" ]; then
@@ -9490,7 +10329,7 @@ render_scale_help_screen() {
 
 setup_screen() {
 	initial_screen=$1
-	gtts_speak_chain "settings" "press d to read page" &
+	gtts_speak_chain "settings" &
 	flagged=false
 
 	width="$(echo -ne "$SETUP_HELP" | wc -L)"
@@ -9508,7 +10347,7 @@ setup_screen() {
 			number_per_page=$((LINES-4))
 		fi
 		original_number_per_page=$number_per_page
-		draw_banner "SETUP"
+		draw_banner "$(get_local_phrase "SETUP")"
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
 			tput cup 1
 		else
@@ -9544,10 +10383,11 @@ setup_screen() {
 		fi
 
 		local inputchar=
-		read -rsn1 inputchar <&1
+		read -rsn1 inputchar
 		if [ "$inputchar" == "j" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$((page+1))" -lt "${#SETUP_HELP_BUFFER[@]}" ]; then
 				page=$((page+1))
@@ -9555,62 +10395,90 @@ setup_screen() {
 		elif [ "$inputchar" == "k" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$page" -gt "0" ]; then
 				page=$((page-1))
 			fi
 		elif [ "$inputchar" == "J" ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ "$VOICE_PITCH" -gt "-30" ]; then
 				VOICE_PITCH="$((VOICE_PITCH-1))"
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == false ]; then
-				if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
-					draw_banner "WAIT"
-					gtts-cli " $VOICE_PITCH" -o "/tmp/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
-					sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")" >/dev/null 2>/dev/null
+				if [ ! -e "$ALETHEIA/voices$VOICE_APPEND/voice-pitch${VOICE_PITCH}.mp3" ]; then
+					draw_banner "$(get_local_phrase "WAIT")"
+					if check_local_lang "$GTTS_LANGUAGE"; then
+						lang="$GTTS_LANGUAGE"
+					else
+						lang="en"
+					fi
+					gtts-cli " $VOICE_PITCH" -l "$lang" -o "/tmp/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null
+					sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices$VOICE_APPEND/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")" >/dev/null 2>/dev/null
 					rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
-					draw_banner "VOICE"
+					draw_banner "$(get_local_phrase "VOICE")"
 					draw_position
 				fi
-				play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
+				play -v "$VOICE_VOLUME" "$ALETHEIA/voices$VOICE_APPEND/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 			else
 				espeak_say "$VOICE_PITCH" false false true
 			fi
 		elif [ "$inputchar" == "K" ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ "$VOICE_PITCH" -lt "30" ]; then
 				VOICE_PITCH="$((VOICE_PITCH+1))"
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == false ]; then
-				if [ ! -e "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" ]; then
-					draw_banner "WAIT"
-					gtts-cli " $VOICE_PITCH" -o "/tmp/voice-pitch${VOICE_PITCH}.mp3"
-					sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")"
+				if [ ! -e "$ALETHEIA/voices$VOICE_APPEND/voice-pitch${VOICE_PITCH}.mp3" ]; then
+					draw_banner "$(get_local_phrase "WAIT")"
+					if check_local_lang "$GTTS_LANGUAGE"; then
+						lang="$GTTS_LANGUAGE"
+					else
+						lang="en"
+					fi
+					gtts-cli " $VOICE_PITCH" -l "$lang" -o "/tmp/voice-pitch${VOICE_PITCH}.mp3"
+					sox "/tmp/voice-pitch${VOICE_PITCH}.mp3" "$ALETHEIA/voices$VOICE_APPEND/voice-pitch${VOICE_PITCH}.mp3" speed "$(calc -pd "2^($VOICE_PITCH/60)")"
 					rm -f "/tmp/voice-pitch${VOICE_PITCH}.mp3"
-					draw_banner "VOICE"
+					draw_banner "$(get_local_phrase "VOICE")"
 					draw_position
 				fi
-				play -v "$VOICE_VOLUME" "$ALETHEIA/voices/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
+				play -v "$VOICE_VOLUME" "$ALETHEIA/voices$VOICE_APPEND/voice-pitch${VOICE_PITCH}.mp3" >/dev/null 2>/dev/null &
 			else
 				espeak_say "$VOICE_PITCH" false false true
 			fi
 		elif [ "$inputchar" == "" ]; then
 			theme_submenu "$initial_screen"
+		elif [ "$inputchar" == "" ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
+				GTTS_NATURAL_VOICE=false
+				ESPEAK_DIGITAL_VOICE=true
+				VOICE_ENGINE="espeak-ng"
+				draw_banner "ESPEAK"
+				gtts_speak "e speak"
+			else
+				GTTS_NATURAL_VOICE=true
+				ESPEAK_DIGITAL_VOICE=false
+				VOICE_ENGINE="gtts-cli"
+				draw_banner "GTTS"
+				gtts_speak "g t t s"
+			fi
+			sleep "$BANNER_WAIT_TIME"
 		elif [ "$inputchar" == "" ]; then
 			toggle_panels "$initial_screen"
 		elif [ "$inputchar" == "" ]; then
 			invert_colors  "$initial_screen"
 		elif [ "$inputchar" == "" ]; then
 			if [ "$USE_TAGS" == true ]; then
-				draw_banner "FILENAME"
+				draw_banner "$(get_local_phrase "FILENAME")"
+				gtts_speak "display filename"
 				USE_TAGS=false
 			else
-				draw_banner "TAGS"
+				draw_banner "$(get_local_phrase "TAGS")"
+				gtts_speak "display tags"
 				USE_TAGS=true
 			fi
 			sleep $BANNER_WAIT_TIME
@@ -9620,6 +10488,7 @@ setup_screen() {
 		elif [ "$inputchar" == "T" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			toggle_feedback_level
 		elif [ "$inputchar" == "#" ]; then
@@ -9629,7 +10498,7 @@ setup_screen() {
 			draw_volume
 			draw_equalizer
 			if [ "$initial_screen" == true ]; then
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				draw_position
 				return
 			else
@@ -9638,7 +10507,7 @@ setup_screen() {
 					redraw_buffer
 					draw_pitch
 				else
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 				fi
 				draw_position
 				return
@@ -9660,11 +10529,12 @@ setup_screen() {
 		elif [ "$inputchar" == "d" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
-			echo "$SETUP_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g;s/EDO/e d o/g;s/PCM/p,c,m/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
+			echo "$SETUP_HELP" | sed -n "$first,${last}p" | sed "s/$/\n/g;s/EDO/e d o/g;s/PCM/p,c,m/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v "$ESPEAK_LANGUAGE" -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -9672,7 +10542,7 @@ setup_screen() {
 			reset_dimensions
 			draw_volume
 			draw_equalizer
-			draw_banner "VOICE"
+			draw_banner "$(get_local_phrase "VOICE")"
 			draw_position
 			if [ "$NO_VERTICAL_PADDING" == true ]; then
 				number_per_page="$((LINES-2))"
@@ -9696,8 +10566,9 @@ setup_screen() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				if [ "$1" == true ]; then
@@ -9717,8 +10588,9 @@ setup_screen() {
 		else
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ "$2" == true ]; then
@@ -9876,7 +10748,7 @@ loop_help_screen() {
 	if [ "$NO_HELP" == true ]; then
 		return
 	fi
-	gtts_speak_chain "loop controls" "press d to read page" &
+	gtts_speak_chain "loop controls" &
 
 	width="$(echo -ne "$REPEAT_HELP" | wc -L)"
 	if [ "$COLUMNS" -ge "$(((width*2)+3))" ]; then
@@ -9929,10 +10801,11 @@ loop_help_screen() {
 		fi
 
 		local inputchar=
-		read -rsn1 inputchar <&1
+		read -rsn1 inputchar
 		if [ "$inputchar" == "j" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			gtts_speak "page down"
 			if [ "$((page+1))" -lt "${#REPEAT_HELP_BUFFER[@]}" ]; then
@@ -9942,6 +10815,7 @@ loop_help_screen() {
 		elif [ "$inputchar" == "k" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			gtts_speak "page up"
 			if [ "$page" -gt "0" ]; then
@@ -9951,11 +10825,12 @@ loop_help_screen() {
 		elif [ "$inputchar" == "d" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
-			echo "$REPEAT_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g;s/EDO/e d o/g;s/INT/interval/g;s/PCM/p c m/g;s/|/vertical slash/g;s/?/question mark/g;s/-/minus /g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
+			echo "$REPEAT_HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g;s/EDO/e d o/g;s/INT/interval/g;s/PCM/p c m/g;s/|/vertical slash/g;s/?/question mark/g;s/-/minus /g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v "$ESPEAK_LANGUAGE" -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -9964,14 +10839,15 @@ loop_help_screen() {
 			draw_volume
 			draw_equalizer
 			empty_pane
-			draw_banner "HELP" false false true
+			draw_banner "$(get_local_phrase "HELP")" false false true
 			tput cup $LINES $((COLUMNS-12))
 			echo -ne "${BLUE_BLACK}BEG$WHITE_BLACK:${BLUE_BLACK}END$WHITE_BLACK:${BLUE_BLACK}GAP$PADDING"
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			gtts_speak "closed" true
@@ -9993,8 +10869,9 @@ loop_help_screen() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				gtts_speak "closed" true
@@ -10020,7 +10897,7 @@ help_screen() {
 	if [ "$NO_HELP" == true ]; then
 		return
 	fi
-	gtts_speak_chain "key controls" "press d to read page" &
+	gtts_speak_chain "key controls" &
 	local initial_screen=$1
 
 	width="$(echo -ne "$HELP" | wc -L)"
@@ -10031,7 +10908,7 @@ help_screen() {
 	fi
 
 	page=0
-	until [ "$page" -lt "0" ] || [ "$page" -gt "${#HELP_BUFFER[@]}" ]; do
+	while true; do
 		if [ "$NO_VERTICAL_PADDING" == true ]; then
 			number_per_page=$((LINES-2))
 		else
@@ -10083,12 +10960,15 @@ help_screen() {
 			fi
 		fi
 
-		read -rsn1 inputchar <&1
+		read -rsn1 inputchar
 		if [ "$inputchar" == "j" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			gtts_speak "page down"
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			fi
 			if [ "$((page+1))" -lt "${#HELP_BUFFER[@]}" ]; then
 				page=$((page+1))
 				gtts_speak "page down"
@@ -10096,8 +10976,11 @@ help_screen() {
 		elif [ "$inputchar" == "k" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			gtts_speak "page up"
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
+				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+			fi
 			if [ "$page" -gt "0" ]; then
 				page=$((page-1))
 				gtts_speak "page up"
@@ -10105,11 +10988,12 @@ help_screen() {
 		elif [ "$inputchar" == "d" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
-			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g;s/-EDO/ EDO/g;s/EDO/e d o/g;s/INT/interval/g;s/PCM/p c m/g;s/'/single quote/g;s/\"/double quote/g;s/\./period/g;s/|/vertical slash/g;s/-[0-9]/minus &/g;s/\([a-zA-Z]\)\/\([a-zA-Z]\)/\1 or \2/g;s/?/question mark/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v en-us+m1 -k 2 >/dev/null 2>/dev/null &
+			echo "$HELP" | sed -n "$_first,${last}p" | sed "s/$/\n/g;s/-EDO/ EDO/g;s/EDO/e d o/g;s/INT/interval/g;s/PCM/p c m/g;s/'/single quote/g;s/\"/double quote/g;s/\./period/g;s/|/vertical slash/g;s/-[0-9]/minus &/g;s/\([a-zA-Z]\)\/\([a-zA-Z]\)/\1 or \2/g;s/?/question mark/g;s/[A-Z][A-Za-z]/\L&/g;s/\\/[A-Z]/\L&/g;s/[Aa] /&\n\n/g;s/I /I \n\n/g;s/  /\n\n/g;s/$/\n\n/g" | sed -E 's/\^([[:alpha:]])/\Lcontrol \1/g' | espeak-ng -p "$((VOICE_PITCH+50))" -a "$ESPEAK_VOICE_VOLUME" --stdin --punct -v "$ESPEAK_LANGUAGE" -k 2 >/dev/null 2>/dev/null &
 			ESPEAK_PID="$!"
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -10119,8 +11003,9 @@ help_screen() {
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			number_per_page="$original_number_per_page"
@@ -10128,7 +11013,7 @@ help_screen() {
 				gtts_speak "closed" true
 				draw_volume
 				draw_equalizer
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				draw_position
 			else
 				gtts_speak_chain "closed" "main screen" &
@@ -10152,8 +11037,9 @@ help_screen() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				number_per_page="$original_number_per_page"
@@ -10161,7 +11047,7 @@ help_screen() {
 					gtts_speak "closed" true
 					draw_volume
 					draw_equalizer
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 					draw_position
 				else
 					gtts_speak_chain "closed" "main screen" &
@@ -10172,13 +11058,11 @@ help_screen() {
 		else
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
-			gtts_speak "closed" true
-			number_per_page="$original_number_per_page"
-			return
 		fi
 	done
 }
@@ -10186,8 +11070,9 @@ help_screen() {
 start_search() {
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
-	draw_banner "SEARCH"
+	draw_banner "$(get_local_phrase "SEARCH")"
 	draw_position
 	tput rc
 	echo -ne "$BLUE_BLACK"
@@ -10243,7 +11128,7 @@ start_search() {
 					redraw_buffer
 					draw_pitch
 				else
-					draw_banner "MENU"
+					draw_banner "$(get_local_phrase "MENU")"
 				fi
 				draw_position
 			else
@@ -10271,10 +11156,14 @@ new_playlist() {
 	local initial_screen=$1
 	KEYWORD=""
 	gtts_speak "enter keywords to start new playlist"
-	draw_banner "INSERT"
+	draw_banner "$(get_local_phrase "INSERT")"
 	keyw="$(read_line)"
 	if [ "$keyw" == "" ]; then
-		draw_pitch
+		if [ "$initial_screen" != true ]; then
+			draw_pitch
+		else
+			draw_banner "$(get_local_phrase "MENU")"
+		fi
 	else
 		KEYWORD="${keyw// /.*}"
 		file_list="$(find "$MUSICDIR" -type f)"
@@ -10348,6 +11237,11 @@ search_queue() {
 		local number_per_page="$((LINES-2))"
 	else
 		local number_per_page="$((LINES-4))"
+		echo -ne "$NOCOLOR"
+		tput cup 1
+		tput el
+		tput cup $((LINES-2))
+		tput el
 	fi
 	local original_number_per_page="$number_per_page"
 
@@ -10415,11 +11309,12 @@ search_queue() {
 				empty_pane "$((number_per_page+2))"
 			fi
 		fi
-		draw_banner "SEARCH"
-		printf '%*s' $((COLUMNS - 14)) ""
+		phrase="$(get_local_phrase "SEARCH")"
+		draw_banner "$phrase"
+		printf '%*s' $((COLUMNS - (${#PADDING}*2) - ${#phrase} - 6)) ""
 		tput rc
 		if [ "$new_page" == true ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10435,7 +11330,7 @@ search_queue() {
 		fi
 
 		if [ "$already_said" != true ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10457,11 +11352,11 @@ search_queue() {
 		fi
 
 		if [ "$WEB_CLIENT" == "0" ]; then
-			read -rsn1 inputchar <&1
+			read -rsn1 inputchar
 		else
 			read -rsn1 -t 0.1 inputchar <"$ALETHEIA/web_client_pipe$$"
 			if [ "$inputchar" == "" ]; then
-				read -rsn1 inputchar <&1
+				read -rsn1 inputchar
 			fi
 		fi
 
@@ -10469,7 +11364,7 @@ search_queue() {
 			if (( (pos + number_per_page) <= total )); then
 				already_said=false
 				kill %% >/dev/null 2>/dev/null
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10495,7 +11390,7 @@ search_queue() {
 				FLAGGED=false
 			fi
 			kill %% >/dev/null 2>/dev/null
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10520,7 +11415,7 @@ search_queue() {
 				continue
 			fi
 			kill %% >/dev/null 2>/dev/null
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10557,7 +11452,7 @@ search_queue() {
 				continue
 			fi
 			kill %% >/dev/null 2>/dev/null
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10593,7 +11488,7 @@ search_queue() {
 				gtts_speak_chain "$one" "$two" &
 			fi
 		elif [ "$inputchar" == "" ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10633,7 +11528,7 @@ search_queue() {
 		elif [ "$inputchar" == "T" ]; then
 			FLAGGED=false
 		elif [ "$inputchar" == "d" ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -10644,11 +11539,12 @@ search_queue() {
 			gtts_speak_chain "${chained[@]}" &
 			FLAGGED=false
 		elif [ "$inputchar" == "q" ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$REDRAWN" == false ]; then
 				BUFFER="$BUFFER_BACKUP"
@@ -10662,8 +11558,10 @@ search_queue() {
 			else
 				gtts_speak "search canceled"
 			fi
-			draw_pitch
-			draw_position
+			if [ "$1" != true ]; then
+				draw_pitch
+				draw_position
+			fi
 			return
 		elif [ "$inputchar" == "z" ]; then
 			draw_wait false
@@ -10679,7 +11577,7 @@ search_queue() {
 			reset_buffer
 			draw_volume
 			draw_equalizer
-			draw_banner "SEARCH"
+			draw_banner "$(get_local_phrase "SEARCH")"
 			draw_position
 			FLAGGED=false
 			pos=1
@@ -10713,6 +11611,7 @@ search_queue() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				gtts_speak_chain "search canceled" "main screen" &
 				if [ "$REDRAWN" == false ]; then
@@ -10734,11 +11633,11 @@ search_queue() {
 queue_controls() {
 	SEARCHBUFFER="$(ls -1 "$ALETHEIA/playlists/")"
 	if [ "$SEARCHBUFFER" == "" ]; then
-		draw_banner "NO QUEUES"
+		draw_banner "$(get_local_phrase "NO QUEUES")"
 		gtts_speak "no queues" true
 		sleep "$BANNER_WAIT_TIME"
 		if [ "$1" == true ]; then
-			draw_banner "MENU"
+			draw_banner "$(get_local_phrase "MENU")"
 		else
 			draw_pitch
 			draw_position
@@ -10824,13 +11723,14 @@ queue_controls() {
 				empty_pane "$((number_per_page+2))"
 			fi
 		fi
-		draw_banner "SELECT LIST"
+		draw_banner "$(get_local_phrase "SELECT LIST")"
 
 		read -rsn1 inputchar
 
 		if [ "$inputchar" == "j" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$FLAGGED" == true ]; then
 				continue
@@ -10842,6 +11742,7 @@ queue_controls() {
 		elif [ "$inputchar" == "k" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$pos" == "1" ]; then
 				continue
@@ -10858,6 +11759,7 @@ queue_controls() {
 		elif [ "$(is_num "$inputchar")" == "1" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			jumpto="$(read_line "$inputchar" true)"
 			if [ "$?" == "1" ]; then
@@ -10894,7 +11796,7 @@ queue_controls() {
 			fi
 			return
 		elif [ "$inputchar" == "D" ]; then
-			draw_banner "DELETE"
+			draw_banner "$(get_local_phrase "DELETE")"
 			gtts_speak "enter number to delete"
 			read -rn1 c
 			if [ "$(is_num "$c")" == "1" ]; then
@@ -10904,7 +11806,7 @@ queue_controls() {
 					continue
 				fi
 				if [ "$c" -gt "0" ] && [ "$c" -le "$total" ]; then
-					draw_banner "DELETE" true
+					draw_banner "$(get_local_phrase "DELETE")" true
 
 					gtts_speak "delete $c?"
 					read -rsn1 z
@@ -10924,6 +11826,7 @@ queue_controls() {
 			if [ "$VOICE_ENABLED" == true ]; then
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 			fi
 			PICK="$(echo -ne "$SEARCHBUFFER" | head -1)"
@@ -10947,8 +11850,9 @@ queue_controls() {
 		elif [ "$inputchar" == "d" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			gtts_speak_chain "${chained[@]}" &
@@ -10957,7 +11861,7 @@ queue_controls() {
 				continue
 			fi
 			gtts_speak "save queue as?"
-			draw_banner "SAVE QUEUE"
+			draw_banner "$(get_local_phrase "SAVE QUEUE")"
 			tmp="$(read_line)"
 			if [ "$tmp" != "" ]; then
 				if [ ! -e "$ALETHEIA/playlists/" ]; then
@@ -10968,11 +11872,12 @@ queue_controls() {
 			else
 				gtts_speak "canceled"
 			fi
-			draw_banner "SELECT LIST"
+			draw_banner "$(get_local_phrase "SELECT LIST")"
 			draw_position
 		elif [ "$inputchar" == "q" ] || [ "$inputchar" == "i" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			if [ "$REDRAWN" == false ]; then
 				BUFFER="$BUFFER_BACKUP"
@@ -10984,7 +11889,7 @@ queue_controls() {
 				draw_pitch
 				draw_position
 			else
-				draw_banner "MENU"
+				draw_banner "$(get_local_phrase "MENU")"
 				echo -ne "$NOCOLOR"
 			fi
 			gtts_speak "closed"
@@ -11003,7 +11908,7 @@ queue_controls() {
 			reset_buffer
 			draw_volume
 			draw_equalizer
-			draw_banner "SELECT LIST"
+			draw_banner "$(get_local_phrase "SELECT LIST")"
 			draw_position
 			FLAGGED=false
 			pos=1
@@ -11014,6 +11919,7 @@ queue_controls() {
 			'[B')
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				if [ "$FLAGGED" == true ]; then
 					continue
@@ -11026,6 +11932,7 @@ queue_controls() {
 			'[A')
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				if [ "$pos" == "1" ]; then
 					continue
@@ -11043,6 +11950,7 @@ queue_controls() {
 			*)
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
 				if [ "$REDRAWN" == false ]; then
 					BUFFER="$BUFFER_BACKUP"
@@ -11063,7 +11971,7 @@ queue_controls() {
 
 set_equalizer() {
 	echo -ne "$WHITE_BLACK"
-	draw_banner "BASS"
+	draw_banner "$(get_local_phrase "BASS")"
 	gtts_speak "bass"
 	bass="$(read_number)"
 	if [ "$bass" == "" ]; then
@@ -11075,14 +11983,14 @@ set_equalizer() {
 	else
 		tput cup $((LINES-4))
 	fi
-	draw_banner "MID"
+	draw_banner "$(get_local_phrase "MID")"
 	gtts_speak "mid"
 	mid="$(read_number)"
 	if [ "$mid" == "" ]; then
 		gtts_speak "closed"
 		return
 	fi
-	draw_banner "TREBLE"
+	draw_banner "$(get_local_phrase "TREBLE")"
 	gtts_speak "treble"
 	treble="$(read_number)"
 	if [ "$treble" == "" ]; then
@@ -11120,14 +12028,15 @@ set_equalizer() {
 print_queue() {
 	if [ -n "$ESPEAK_PID" ]; then
 		kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+		unset ESPEAK_PID
 	fi
-	if [ "$USE_GTTS" == true ]; then
+	if [ "$GTTS_NATURAL_VOICE" == true ]; then
 		pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 	fi
 
 	up() {
 		already_said=false
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -11153,7 +12062,7 @@ print_queue() {
 
 	down() {
 		already_said=false
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -11185,7 +12094,7 @@ print_queue() {
 		pos=1
 		current=1
 		already_said=false
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -11200,7 +12109,7 @@ print_queue() {
 		pos=$((TOTAL_QUEUE - number_per_page + 1))
 		current=$TOTAL_QUEUE
 		already_said=false
-		if [ "$USE_GTTS" == true ]; then
+		if [ "$GTTS_NATURAL_VOICE" == true ]; then
 			pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 		fi
 		if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -11397,7 +12306,7 @@ print_queue() {
 			echo -ne "$new_buf"
 
 			if [ "$already_said" == false ]; then
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 				fi
 				if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -11426,11 +12335,12 @@ print_queue() {
 			continue
 		fi
 
-		draw_banner "QUEUE"
+		draw_banner "$(get_local_phrase "QUEUE")"
 		tput rc
 		
 		read -rsn1 inputchar
 		tput civis
+		stty -ixon
 		if [ "$inputchar" == "k" ]; then
 			up
 		elif [ "$inputchar" == "j" ]; then
@@ -11439,7 +12349,7 @@ print_queue() {
 			if [ "$current" == "$TOTAL_QUEUE" ]; then
 				continue
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			if [ "$ESPEAK_DIGITAL_VOICE" == true ]; then
@@ -11475,7 +12385,7 @@ print_queue() {
 					kill "$(<"$ALETHEIA/espeak.pid")" >/dev/null 2>/dev/null
 				fi
 			fi
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*voices.*" >/dev/null 2>/dev/null
 			fi
 			current=$((current-1))
@@ -11531,7 +12441,7 @@ print_queue() {
 				return $RETURN_BACK
 			fi
 		elif [ "$inputchar" == "n" ]; then
-			if [ "$USE_GTTS" == true ]; then
+			if [ "$GTTS_NATURAL_VOICE" == true ]; then
 				pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 			fi
 			kill "$MPLAYER_PID" >/dev/null 2>/dev/null
@@ -11544,10 +12454,10 @@ print_queue() {
 			fi
 		elif [ "$inputchar" == "" ]; then
 			if [ "$USE_TAGS" == true ]; then
-				draw_banner "FILENAME"
+				draw_banner "$(get_local_phrase "FILENAME")"
 				USE_TAGS=false
 			else
-				draw_banner "TAGS"
+				draw_banner "$(get_local_phrase "TAGS")"
 				USE_TAGS=true
 			fi
 			sleep $BANNER_WAIT_TIME
@@ -11599,7 +12509,7 @@ print_queue() {
 			original_number_per_page=$number_per_page
 			draw_volume
 			draw_equalizer
-			draw_banner "QUEUE"
+			draw_banner "$(get_local_phrase "QUEUE")"
 			draw_position
 			reset_buffer
 			continue
@@ -11648,6 +12558,7 @@ print_queue() {
 				if [ "$current" -gt "$truepos" ]; then
 					if [ -n "$ESPEAK_PID" ]; then
 						kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+						unset ESPEAK_PID
 					fi
 					CHANGED=true
 					if [ "$FLAGGED" == true ]; then
@@ -11676,6 +12587,7 @@ print_queue() {
 				if [ "$current" -lt "$((truepos-number_per_page+1))" ]; then
 					if [ -n "$ESPEAK_PID" ]; then
 						kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+						unset ESPEAK_PID
 					fi
 					CHANGED=true
 					if [ "$pos" == "1" ]; then
@@ -11783,6 +12695,7 @@ print_queue() {
 		elif [ "$inputchar" == "" ]; then
 			if [ -n "$ESPEAK_PID" ]; then
 				kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+				unset ESPEAK_PID
 			fi
 			kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 			JUMP="$current"
@@ -11794,26 +12707,26 @@ print_queue() {
 }
 
 _save_setting() {
-	if [ "$(echo "$CONFIG" | grep -i "$1")" == "" ]; then
+	if [ "$(echo "$CONFIG" | grep -i "^$1[[:space:]]*=")" == "" ]; then
 		if [ -z "$CONFIG" ]; then
 			CONFIG="$1=$2"
 		else
 			CONFIG="$CONFIG\n$1=$2"
 		fi
 	else
-		CONFIG="$(echo -ne "$CONFIG" | sed -e "/$1/s/.*/$1=$2/g")"
+		CONFIG="$(echo -ne "$CONFIG" | sed -e "/^$1[[:space:]]*=/s/.*/$1=$2/g")"
 	fi
 }
 
 save_settings() {
-	draw_banner "SAVE" true
+	draw_banner "$(get_local_phrase "SAVE")" true
 	gtts_speak "save settings?"
 	while true; do
 		read -rsn1 yesno
 		if [ "$yesno" == "z" ]; then
 			draw_wait false
 			reset_dimensions
-			draw_banner "SAVE" true
+			draw_banner "$(get_local_phrase "SAVE")" true
 			redraw_screen false 1 1 0 0
 		else
 			break
@@ -11823,6 +12736,8 @@ save_settings() {
 		_save_setting "VOICE_PITCH" "$VOICE_PITCH"
 		_save_setting "DEFAULT_VOLUME" "$DEFAULT_VOLUME"
 		_save_setting "VOICE_VOLUME" "$VOICE_VOLUME"
+		_save_setting "VOICE_ENABLED" "$VOICE_ENABLED"
+		_save_setting "VOICE_ENGINE" "$VOICE_ENGINE"
 		_save_setting "PANELS_ENABLED" "$PANELS_ENABLED"
 		_save_setting "ONLY_VOICE_TITLES" "$ONLY_VOICE_TITLES"
 		_save_setting "THEME_ENABLED" "$THEME_ENABLED"
@@ -11834,19 +12749,19 @@ save_settings() {
 			_save_setting "VOICE_ENABLED" "false"
 		fi
 		echo -e "$CONFIG" >"$ALETHEIA/config"
-		gtts_speak "saved"
+		gtts_speak "saved" true
 	else
-		gtts_speak "canceled"
+		gtts_speak "canceled" true
 	fi
 	draw_pitch
 	draw_position
 }
 
 main() {
-	#rm -f "$ALETHEIA"/pipe* >/dev/null 2>/dev/null
-	if [ ! -e "$ALETHEIA/pipe$$" ]; then
-		mkfifo "$ALETHEIA/pipe$$"
+	if [ -e "$ALETHEIA/pipe$$" ]; then
+		rm -f "$ALETHEIA/pipe$$"
 	fi
+	mkfifo "$ALETHEIA/pipe$$"
 	exec 3<> "$ALETHEIA/pipe$$"
 	PAUSE=false
 	MUTE=false
@@ -11929,7 +12844,7 @@ main() {
 		ARTISTSONG="$TITLE"
 	fi
 	if [ "$ONLY_VOICE_TITLES" == true ]; then
-		gtts_speak "$ARTISTSONG" false false true &
+		gtts_speak "$ARTISTSONG" false false true
 	else
 		gtts_speak "$ARTISTSONG"
 	fi
@@ -11963,7 +12878,7 @@ main() {
 
 	# shellcheck disable=SC2086
 	# Uses word splitting to expand $FLAGS for use by mplayer
-	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output$$" 2>"$ALETHEIA/mplayer_output_stderr$$" &
+	"${MPLAYER_PATH}"mplayer -slave -osdlevel 0 -softvol -softvol-max 100 -hr-mp3-seek -quiet -input file="$ALETHEIA/pipe$$" -noconfig all $FLAGS "$var1" >"$ALETHEIA/mplayer_output$$" 2>"$ALETHEIA/mplayer_output_stderr$$" </dev/null &
 
 	MPLAYER_PID="$!"
 
@@ -11995,9 +12910,9 @@ main() {
 			reset_dimensions
 			redraw_screen false
 			if [ "$MUTE" == true ]; then
-				draw_banner "MUTE"
+				draw_banner "$(get_local_phrase "MUTE")"
 			elif [ "$PAUSE" == true ]; then
-				draw_banner "PAUSE"
+				draw_banner "$(get_local_phrase "PAUSE")"
 			fi
 			gtts_speak "screen redrawn"
 			old_LINES=$LINES
@@ -12063,11 +12978,11 @@ main() {
 						continue
 					fi
 				fi
-		else
-			read -rsn1 -t 0.4 input
-			if [ "$input" == "" ] && [ "$WEB_CLIENT" == "1" ]; then
-				read -rsn1 -t 0.3 input <"$ALETHEIA/web_client_pipe$$"
-			fi
+		#else
+		#	read -rsn1 -t 0.2 input
+			#if [ "$input" == "" ] && [ "$WEB_CLIENT" == "1" ]; then
+			#	read -rsn1 -t 0.3 input <"$ALETHEIA/web_client_pipe$$"
+			#fi
 		fi
 
 		if ! ps -p "$MPLAYER_PID" >/dev/null 2>/dev/null; then
@@ -12135,8 +13050,9 @@ main() {
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				if [ "$TRACK_RANDOM" == true ]; then
@@ -12154,9 +13070,10 @@ main() {
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
 				if [ -n "$ESPEAK_PID" ]; then
 					kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+					unset ESPEAK_PID
 				fi
-				if [ "$USE_GTTS" == true ]; then
-					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
+					pkill -f "^play.*$ALETHEIA/voices.*" >/dev/null 2>/dev/null
 				fi
 				if [ "$TRACK_RANDOM" == true ]; then
 					return $RETURN_TRACK_RANDOM_BACK
@@ -12216,7 +13133,7 @@ main() {
 						return $RETURN_QUIT
 					fi
 				fi
-				draw_banner "QUIT" true
+				draw_banner "$(get_local_phrase "QUIT")" true
 				if [ "$VOICE_ENABLED" == true ]; then
 					gtts_speak "do you want to quit?"
 				fi
@@ -12232,8 +13149,9 @@ main() {
 					elif [ "$input_char" == "q" ] || [ "$input_char" == $'\e' ]; then
 						if [ -n "$ESPEAK_PID" ]; then
 							kill "$ESPEAK_PID" >/dev/null 2>/dev/null
+							unset ESPEAK_PID
 						fi
-						if [ "$USE_GTTS" == true ]; then
+						if [ "$GTTS_NATURAL_VOICE" == true ]; then
 							pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 						fi
 						draw_pitch
@@ -12511,7 +13429,7 @@ main() {
 					fi
 
 					if [ "$MUTE" == true ]; then
-						draw_banner "MUTE"
+						draw_banner "$(get_local_phrase "MUTE")"
 					else
 						draw_pitch
 					fi
@@ -12523,7 +13441,7 @@ main() {
 				gtts_speak "position saved"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep 0.05
-				draw_banner "POS SAVED"
+				draw_banner "$(get_local_phrase "POS SAVED")"
 				sleep $BANNER_WAIT_TIME
 				if [ "${#SAVED_POSITION[@]}" == "0" ]; then
 					SAVED_TOTAL=1
@@ -12544,17 +13462,21 @@ main() {
 				fi
 				;;
 			'`')
-				draw_banner "COMMAND"
+				draw_banner "$(get_local_phrase "COMMAND")"
+				gtts_speak "enter command"
 				command="$(read_line)"
 				if [ "$command" == "about" ]; then
 					about
 					read -rsn1 _
+				elif [ "${command%% *}" == "say" ]; then
+					command="${command#* }"
+					gtts_speak "$command"
 				elif [ "$command" != "" ]; then
 					echo -e "$command" >"$ALETHEIA/pipe$$" &
 					sleep $MPLAYER_WAIT_TIME
 					empty_pane
 					tput cup $((LINES-3))
-					echo -ne "$PADDING$CYAN$(tail -1 "$ALETHEIA/mplayer_output$$")"
+					echo -ne "$PADDING$WHITE$(tail -1 "$ALETHEIA/mplayer_output$$")"
 					tput el
 					read -rn1 input_char
 				fi
@@ -12582,7 +13504,7 @@ main() {
 				fi
 				;;
 			'5')
-				draw_banner "START"
+				draw_banner "$(get_local_phrase "START")"
 				gtts_speak "start"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
@@ -12595,7 +13517,7 @@ main() {
 				;;
 			'%')
 				if [ -e "$FILENAME.repeats" ]; then
-					draw_banner "DELETE LOOPS" true
+					draw_banner "$(get_local_phrase "DELETE LOOPS")" true
 					gtts_speak "delete loops?"
 					read -rsn1 tmp_
 					if [ "$tmp_" == "y" ] || [ "$tmp_" == "Y" ]; then
@@ -12622,7 +13544,7 @@ main() {
 				fi
 				;;
 			'7')
-				draw_banner "END"
+				draw_banner "$(get_local_phrase "END")"
 				gtts_speak "end"
 				echo "get_time_pos" >"$ALETHEIA/pipe$$" &
 				sleep $MPLAYER_WAIT_TIME
@@ -12645,7 +13567,7 @@ main() {
 					return $RETURN_JUMP
 				else
 					gtts_speak "none"
-					draw_banner "NONE"
+					draw_banner "$(get_local_phrase "NONE")"
 					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
@@ -12673,7 +13595,7 @@ main() {
 
 				gtts_speak "balancing volume"
 
-				draw_banner "BALANCING"
+				draw_banner "$(get_local_phrase "BALANCING")"
 
 				flaggy=false
 				while [ "$tmp_volume_left" != "$tmp_volume_right" ]; do
@@ -12707,7 +13629,7 @@ main() {
 						draw_wait false
 						reset_dimensions
 						redraw_screen false 1 1 0 1
-						draw_banner "BALANCING"
+						draw_banner "$(get_local_phrase "BALANCING")"
 					fi
 				done
 				draw_pitch
@@ -12749,7 +13671,7 @@ main() {
 					echo "mute" >"$ALETHEIA/pipe$$" &
 					MUTE=false
 				fi
-				draw_banner "INVERT" false true
+				draw_banner "$(get_local_phrase "INVERT")" false true
 				old_int="$INTERVAL"
 				INTERVAL="$((-(INTERVAL)))"
 				gtts_speak "scaling"
@@ -12774,7 +13696,7 @@ main() {
 						draw_position
 						return
 					fi
-					secondary_scale_func "$c" "INVERT"
+					secondary_scale_func "$c" "$(get_local_phrase "INVERT")"
 					if [ "$c" == "c" ]; then
 						x=$((result-x))
 						if [ "$NEGATIVE" == true ]; then
@@ -12792,12 +13714,12 @@ main() {
 						draw_wait false
 						reset_dimensions
 						redraw_screen false 1 1 1 0
-						draw_banner "INVERT" false true
+						draw_banner "$(get_local_phrase "INVERT")" false true
 						x=$x2
 					elif [ "$c" == "d" ]; then
 						toggle_voice
 						draw_pitch
-						draw_banner "INVERT" false true
+						draw_banner "$(get_local_phrase "INVERT")" false true
 					elif [ "$c" == "q" ] || [ "$c" == $'\e' ] || [ "$c" == "m" ]; then
 						break
 					elif [ "$c" == "" ]; then
@@ -12854,13 +13776,13 @@ main() {
 				if [ "$VIDEO" == true ]; then
 					gtts_speak "video disabled"
 					VIDEO=false
-					draw_banner "OFF"
+					draw_banner "$(get_local_phrase "OFF")"
 					echo "vo_ontop 0" >"$ALETHEIA/pipe$$" &
 				else
 					gtts_speak "video enabled"
 					VIDEO=true
 					VIDEO_FLAGGED=true
-					draw_banner "VIDEO ON"
+					draw_banner "$(get_local_phrase "VIDEO ON")"
 					echo "vo_ontop 1" >"$ALETHEIA/pipe$$" &
 				fi
 				kill "$MPLAYER_PID" >/dev/null 2>/dev/null
@@ -12872,12 +13794,12 @@ main() {
 					echo "pausing_keep vo_fullscreen 1" >"$ALETHEIA/pipe$$" &
 					FULLSCREEN=true
 					gtts_speak "video fullscreen"
-					draw_banner "FULLSCREEN"
+					draw_banner "$(get_local_phrase "FULLSCREEN")"
 				else
 					gtts_speak "video normal"
 					echo "pausing_keep vo_fullscreen 0" >"$ALETHEIA/pipe$$" &
 					FULLSCREEN=false
-					draw_banner "OFF"
+					draw_banner "$(get_local_phrase "OFF")"
 				fi
 				stty -echo
 				sleep $BANNER_WAIT_TIME
@@ -12891,7 +13813,7 @@ main() {
 				;;
 			'Z')
 				gtts_speak "save queue as?"
-				draw_banner "SAVE QUEUE"
+				draw_banner "$(get_local_phrase "SAVE QUEUE")"
 				tmp="$(read_line)"
 				if [ "$tmp" != "" ]; then
 					if [ ! -e "$ALETHEIA/playlists/" ]; then
@@ -12964,7 +13886,7 @@ main() {
 					return $RETURN_JUMP
 				else
 					gtts_speak "nothing downloaded"
-					draw_banner "NONE"
+					draw_banner "$(get_local_phrase "NONE")"
 					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
@@ -12972,10 +13894,10 @@ main() {
 				;;
 			'')
 				if [ "$USE_TAGS" == true ]; then
-					draw_banner "FILENAME"
+					draw_banner "$(get_local_phrase "FILENAME")"
 					USE_TAGS=false
 				else
-					draw_banner "TAGS"
+					draw_banner "$(get_local_phrase "TAGS")"
 					USE_TAGS=true
 				fi
 				sleep $BANNER_WAIT_TIME
@@ -12992,7 +13914,7 @@ main() {
 					return $RETURN_JUMP
 				else
 					gtts_speak "nothing downloaded"
-					draw_banner "NONE"
+					draw_banner "$(get_local_phrase "NONE")"
 					sleep $BANNER_WAIT_TIME
 					draw_pitch
 					draw_position
@@ -13038,13 +13960,14 @@ main() {
 					check_colors true
 				fi
 				tput civis
+				stty -ixon
 				draw_wait false
 				reset_dimensions
 				redraw_screen false
 				if [ "$MUTE" == true ]; then
-					draw_banner "MUTE"
+					draw_banner "$(get_local_phrase "MUTE")"
 				elif [ "$PAUSE" == true ]; then
-					draw_banner "PAUSE"
+					draw_banner "$(get_local_phrase "PAUSE")"
 				fi
 				gtts_speak "screen redrawn"
 				;;
@@ -13055,7 +13978,7 @@ main() {
 				fi
 				;;
 			',')
-				if [ "$USE_GTTS" == true ]; then
+				if [ "$GTTS_NATURAL_VOICE" == true ]; then
 					pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 				fi
 				gtts_speak "$TITLE" true
@@ -13182,7 +14105,7 @@ main() {
 				save_settings
 				;;
 			'r')
-				draw_banner "RENAME" true
+				draw_banner "$(get_local_phrase "RENAME")" true
 				gtts_speak "rename file?"
 				read -rsn1 yesno
 				if [ "$yesno" == "y" ]; then
@@ -13206,8 +14129,8 @@ main() {
 						continue
 					fi
 					mv "$FILENAME" "${path}/$newname.$ext" >/dev/null 2>/dev/null
-					if [ -e "$ALETHEIA/voices/$TITLE.mp3" ]; then
-						rm -f "$ALETHEIA/voices/$TITLE.mp3"
+					if [ -e "$ALETHEIA/voices$VOICE_APPEND/$TITLE.mp3" ]; then
+						rm -f "$ALETHEIA/voices$VOICE_APPEND/$TITLE.mp3"
 					fi
 					if [ -e "$FILENAME.locked" ]; then
 						mv "$FILENAME.locked" "${path}/$newname.$ext.locked" >/dev/null 2>/dev/null
@@ -13273,7 +14196,7 @@ main() {
 				if [ "$?" == 200 ]; then
 					JUMP=1
 					kill "$MPLAYER_PID" >/dev/null 2>/dev/null
-					if [ "$USE_GTTS" == true ]; then
+					if [ "$GTTS_NATURAL_VOICE" == true ]; then
 						pkill -f "^play.*$ALETHEIA/voices" >/dev/null 2>/dev/null
 					fi
 					return $RETURN_JUMP
@@ -13292,17 +14215,17 @@ main() {
 				redraw_buffer
 				;;
 			'')
-				toggle_panels true
+				toggle_pause false true
 				;;
 			'')
 				if [ "$LOCKED_OFF" == true ]; then
 					LOCKED_OFF=false
 					gtts_speak "locked on"
-					draw_banner "LOCK ON"
+					draw_banner "$(get_local_phrase "LOCK ON")"
 				else
 					LOCKED_OFF=true
 					gtts_speak "locked off"
-					draw_banner "LOCK OFF"
+					draw_banner "$(get_local_phrase "LOCK OFF")"
 				fi
 				sleep $BANNER_WAIT_TIME
 				draw_pitch
@@ -13366,8 +14289,8 @@ main() {
 	done
 }
 
-if [ ! -d "$ALETHEIA/voices/" ]; then
-	mkdir "$ALETHEIA/voices/"
+if [ ! -d "$ALETHEIA/voices$VOICE_APPEND/" ]; then
+	mkdir "$ALETHEIA/voices$VOICE_APPEND/"
 fi
 
 if [ ! -d "$ALETHEIA/playlists/" ]; then
@@ -13385,6 +14308,38 @@ fi
 if [ ! -d "$VIDEODIR" ]; then
 	mkdir -p "$VIDEODIR"
 fi
+
+for pid in "$ALETHEIA/mplayer_output_stderr"*; do
+	_pid="${pid##*/}"
+	_pid="${_pid//mplayer_output_stderr/}"
+	if ! pgrep -x "aletheia" | grep -wq "$_pid"; then
+		rm -f "$pid" >/dev/null 2>&1
+	fi
+done
+
+for pid in "$ALETHEIA/mplayer_output"*; do
+	_pid="${pid##*/}"
+	_pid="${_pid//mplayer_output/}"
+	if ! pgrep -x "aletheia" | grep -wq "$_pid" && ! grep -q "stderr" <<<"$_pid"; then
+		rm -f "$pid" >/dev/null 2>&1
+	fi
+done
+
+for pid in "$ALETHEIA/pipe"*; do
+	_pid="${pid##*/}"
+	_pid="${_pid//pipe/}"
+	if ! pgrep -x "aletheia" | grep -wq "$_pid"; then
+		rm -f "$pid" >/dev/null 2>&1
+	fi
+done
+
+for pid in "$ALETHEIA/start"*; do
+	_pid="${pid##*/}"
+	_pid="${_pid//start/}"
+	if ! pgrep -x "aletheia" | grep -wq "$_pid"; then
+		rm -f "$pid" >/dev/null 2>&1
+	fi
+done
 
 if [ "$1" == "--server" ]; then
 	WEB_CLIENT=1
@@ -13573,7 +14528,7 @@ while (( (POSITION <= TOTAL_QUEUE) && (POSITION >= 1) )); do
 	LOOP_ON=false
 
 	if [ ! -e "$FILENAME" ]; then
-		draw_banner "MISSING"
+		draw_banner "$(get_local_phrase "MISSING")"
 		sleep $BANNER_WAIT_TIME
 		for i in $(seq "$POSITION" $((TOTAL_QUEUE-1))); do
 			queue_array[i-1]=${queue_array[$i]}

@@ -29,7 +29,7 @@ fi
 
 run_gnome() {
 	/usr/libexec/gnome-terminal-server --app-id=org.gnome.aletheia --class=org.gnome.aletheia --name=org.gnome.aletheia >/dev/null 2>/dev/null &
-	sleep 0.1
+	sleep 0.2
 	gnome-terminal --app-id=org.gnome.aletheia --hide-menubar --geometry=48x15 --title "Aletheia" -- "$ALETHEIA_PATH"
 }
 

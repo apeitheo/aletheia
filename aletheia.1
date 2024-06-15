@@ -42,6 +42,10 @@ Use a playlist file instead of generating one from available media. FILE should 
 Specifies a location to search for the mplayer binary. Useful for debugging the latest mplayer development code.
 
 .TP
+.B --vanish (EXPERIMENTAL)
+Vanish text editor.
+
+.TP
 .B --server (EXPERIMENTAL)
 Allows for remote control of Aletheia using a yet-to-be-released aletheiactl script and web interface using NodeJS. Not in working condition at the moment.
 
@@ -492,12 +496,16 @@ Combines the above two actions to add and jump to new files.
 This area consolidates settings related to voice feedback (specifically voice pitch and volume), toggling the panel, and toggling use of metadata tags.
 
 .TP
+.B ^V
+Toggles between gtts-cli and espeak-ng for voice feedback. (Default: espeak-ng).
+
+.TP
 .B ^T
 Toggle use of metadata tags versus filename. Requires that media files are cached with the 'c' key control. (Default: off).
 
 .TP
 .B c
-Uses GNU Parallel to create an SQLite3 database with the metadata of the available media in ~/Music/. Please be patient as this may take a while with large collections.
+Creates an SQLite3 database with the metadata of the available media in ~/Music/. Please be patient as this may take a while with large collections. You can use GNU Parallel to speed it up by setting PARALLEL_CACHE_ENABLED to true and optionally specifying the number of tags to cache at a time with PARALLEL_CACHE_JOBS in ~/.aletheia/config.
 
 .RE
 .SS SLEEP MODE
@@ -531,19 +539,23 @@ The SQLite3 database for metadata tags and time, if media has been cached on the
 
 .TP
 .B ~/.aletheia/playlists/
-The Aletheia playlists directory.
+The playlists directory.
 
 .TP
-.B ~/.aletheia/voices/
-The cache directory for optional auto-generated gTTS voice files.
+.B ~/.aletheia/voices.xx/
+The cache directory for optional auto-generated gTTS voice files. 'xx' represents the two-digit country code.
 
 .TP
 .B ~/.aletheia/deleted/
-The directory where files removed with the 'D' key are sent.
+The directory where files archived with the 'D' key are sent.
 
 .TP
 .B ~/.aletheia/themes/
 Optional directory for themes.
+
+.TP
+.B ~/.aletheia/languages/
+Optional directory for translations.
 
 .SH AVAILABLE CONFIGURATION OPTIONS
 Format of ~/.aletheia/config is KEY=VALUE separated by newline. '#' not required for hex color codes.
@@ -562,7 +574,15 @@ Video directory. (Default: $HOME/Videos/).
 
 .TP
 .B VOICE_ENABLED=
-Status of voice feedback. If ESPEAK_DIGITAL_VOICE is not set to true, Aletheia will use gTTS which sends filenames to the Internet to generate voice clips as they appear. (Default: false).
+Status of voice feedback. (Default: false).
+
+.TP
+.B VOICE_ENGINE=
+Selects which program to use for voice feedback. VOICE_ENABLED must be true. Options are either gtts-cli or espeak-ng. The default, espeak-ng is fast and doesn't require an Internet connection, whereas gtts-cli requires a fast connection and space to store downloaded audio clips. (Default: espeak-ng).
+
+.TP
+.B LANGUAGE=
+Selects which language to use. Enter a two-digit country code. Requires corresponding translation files in either the system directory (e.g. /usr/local/share/aletheia/languages/) or ~/.aletheia/languages/. (Default: en).
 
 .TP
 .B DEFAULT_EQUALIZER=
@@ -578,7 +598,7 @@ Uses this EDO by default. (Default: 60).
 
 .TP
 .B VOICE_PITCH=
-Transpose voice feedback by this value in 60-EDO. Input -156 to 120, but should be within reason. Caches all voice feedback clips in the specified interval in ~/.aletheia/voices/. (Default: 0).
+Transpose voice feedback by this value in 60-EDO. Input -156 to 120, but should be within reason. Caches all voice feedback clips in the specified interval in ~/.aletheia/voices.xx/, where 'xx' is the two-digit country code. (Default: 0).
 
 .TP
 .B DEFAULT_VOLUME=

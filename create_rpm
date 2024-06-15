@@ -9,7 +9,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=8
+REVISION=9
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
 
@@ -25,6 +25,7 @@ mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/applications"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/vimrc/"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 
 cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 cp "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
@@ -34,6 +35,7 @@ cp "$SRCDIR/aletheia.png" "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
 cp "$SRCDIR/example.config" "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/"
 cp "$SRCDIR/themes/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
 cp "$SRCDIR/vimrc/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/vimrc/"
+cp "$SRCDIR/languages/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 cp "$SRCDIR/aletheia.spec" "$TMPDIR/rpmbuild/SPECS/"
 
 sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"/usr/share/aletheia/\"#g" "$TMPDIR/rpmbuild/SOURCES/usr/bin/aletheia"

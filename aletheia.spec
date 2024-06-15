@@ -31,18 +31,18 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc" "
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.lock" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.lock"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.queue" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.queue"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/example.config" "%{buildroot}/%{_datadir}/aletheia/example.config"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Aether" "%{buildroot}/%{_datadir}/aletheia/themes/Aether"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Desert" "%{buildroot}/%{_datadir}/aletheia/themes/Desert"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Ember" "%{buildroot}/%{_datadir}/aletheia/themes/Ember"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Aurora" "%{buildroot}/%{_datadir}/aletheia/themes/Aurora"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Forest" "%{buildroot}/%{_datadir}/aletheia/themes/Forest"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Midnight" "%{buildroot}/%{_datadir}/aletheia/themes/Midnight"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Mint" "%{buildroot}/%{_datadir}/aletheia/themes/Mint"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Jade" "%{buildroot}/%{_datadir}/aletheia/themes/Jade"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Misty" "%{buildroot}/%{_datadir}/aletheia/themes/Misty"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Moss" "%{buildroot}/%{_datadir}/aletheia/themes/Moss"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Nordic" "%{buildroot}/%{_datadir}/aletheia/themes/Nordic"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Oasis" "%{buildroot}/%{_datadir}/aletheia/themes/Oasis"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Ocean" "%{buildroot}/%{_datadir}/aletheia/themes/Ocean"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Slate" "%{buildroot}/%{_datadir}/aletheia/themes/Slate"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Solarized" "%{buildroot}/%{_datadir}/aletheia/themes/Solarized"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/SolarizedLight" "%{buildroot}/%{_datadir}/aletheia/themes/SolarizedLight"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Tropical" "%{buildroot}/%{_datadir}/aletheia/themes/Tropical"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Verdant" "%{buildroot}/%{_datadir}/aletheia/themes/Verdant"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" "%{buildroot}/%{_datadir}/aletheia/languages/en"
 
 %files
 %attr(0755, root, root) %{_bindir}/aletheia
@@ -54,18 +54,18 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Verdant
 %attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.lock
 %attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.queue
 %attr(0644, root, root) %{_datadir}/aletheia/example.config
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Aether
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Desert
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Ember
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Aurora
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Forest
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Midnight
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Mint
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Jade
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Misty
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Moss
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Nordic
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Oasis
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Ocean
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Slate
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Solarized
-%attr(0644, root, root) %{_datadir}/aletheia/themes/SolarizedLight
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Tropical
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Verdant
+%attr(0644, root, root) %{_datadir}/aletheia/languages/en
 
 %changelog
 * %%DATE%% Brad Hermanson %%VERSION%%-%%REVISION%%

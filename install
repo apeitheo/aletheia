@@ -104,6 +104,7 @@ mkdir -p "$DESTDIR/share/man/man1/"
 mkdir -p "$DESTDIR/share/applications/"
 mkdir -p "$DESTDIR/share/aletheia/themes/"
 mkdir -p "$DESTDIR/share/aletheia/vimrc/"
+mkdir -p "$DESTDIR/share/aletheia/languages/"
 mkdir -p "$DESTDIR/share/icons/"
 
 if ! install -m 755 aletheia "$DESTDIR/bin/"; then
@@ -127,6 +128,9 @@ fi
 if ! install -m 644 ./vimrc/* "$DESTDIR/share/aletheia/vimrc/"; then
 	FAIL=true
 fi
+if ! install -m 644 ./languages/en "$DESTDIR/share/aletheia/languages/"; then
+	FAIL=true
+fi
 if ! install -m 644 example.config "$DESTDIR/share/aletheia/"; then
 	FAIL=true
 fi
@@ -141,6 +145,7 @@ FILES[4]="${DESTDIR}/share/icons/aletheia.png"
 FILES[5]="${DESTDIR}/share/aletheia/example.config"
 FILES+=("${DESTDIR}/share/aletheia/vimrc/"*)
 FILES+=("${DESTDIR}/share/aletheia/themes/"*)
+FILES+=("${DESTDIR}/share/aletheia/languages/"*)
 
 for i in $(seq 0 $((${#FILES[@]}-1))); do
 	chown "$USER:$USER" "${FILES[i]}"
@@ -160,7 +165,6 @@ if ! $FAIL; then
 	for i in $(seq 0 $((${#FILES[@]}-1))); do
 		path="${FILES[i]%/*}"
 		file="${FILES[i]##*/}"
-		#echo "${FILES[i]}"
 		echo -e "$NOCOLOR$path/$GREEN$file"
 	done
 
@@ -171,6 +175,6 @@ if ! $FAIL; then
 	fi
 	exit 0
 else
-	echo -e "${RED}failed$NOCOLOR"
+	echo -e "${RED}failed$NOCOLOR\n"
 	exit 1
 fi

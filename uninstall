@@ -43,6 +43,9 @@ fi
 if [ -d "$DESTDIR/share/aletheia/vimrc/" ]; then
 	FILES+=("${DESTDIR}/share/aletheia/vimrc/"*)
 fi
+if [ -d "$DESTDIR/share/aletheia/languages/" ]; then
+	FILES+=("${DESTDIR}/share/aletheia/languages/"*)
+fi
 
 FAIL=false
 for i in $(seq 0 $((${#FILES[@]}-1))); do
@@ -64,6 +67,12 @@ if [ -e "$DESTDIR/share/aletheia" ]; then
 	if [ -z "$(ls -1 "$DESTDIR/share/aletheia/vimrc")" ]; then
 		if ! rmdir "$DESTDIR/share/aletheia/vimrc" >/dev/null 2>/dev/null; then
 			echo -e "${RED}Failed:${NOCOLOR} Empty directory $DESTDIR/share/aletheia/vimrc/ not deleted."
+			FAIL=true
+		fi
+	fi
+	if [ -z "$(ls -1 "$DESTDIR/share/aletheia/languages")" ]; then
+		if ! rmdir "$DESTDIR/share/aletheia/languages" >/dev/null 2>/dev/null; then
+			echo -e "${RED}Failed:${NOCOLOR} Empty directory $DESTDIR/share/aletheia/languages/ not deleted."
 			FAIL=true
 		fi
 	fi
