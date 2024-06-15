@@ -85,7 +85,7 @@ Slackware users will need exiftool, eyeD3, sqlite3, and eyeDB's dependencies fro
 
 To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "**Help**" option in the menu, or by pressing the '**?**' key at any time. Use the '**j**' and '**k**' keys to page down or up, and '**q**' to go back or quit. If you need voice feedback, hit '**d**' followed by '**#**' to save your choice.
 
-If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (gTTS on PyPI) that downloads voice clips based on the Google Assistant voice. It can be enabled via setting **USE_GTTS** and **VOICE_ENABLED** to **true** in *~/.aletheia/config* and ensuring the packages for your distribution containing *gtts-cli* and *play* are installed.
+If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (gTTS on PyPI) that downloads voice clips based on the Google Assistant voice. It can be enabled via setting **VOICE_ENGINE** to *gtts-cli* and **VOICE_ENABLED** to **true** in *~/.aletheia/config* and ensuring the packages for your distribution containing *gtts-cli* and *play* are installed.
 
 If you have a large media collection, parallel processing of metadata is available via setting **PARALLEL_CACHE_ENABLED** to **true**, and optionally setting the number of tags to process at one time with **PARALLEL_CACHE_JOBS**. Requires *parallel* to be installed. May cause performance issues on slower machines.
 
@@ -131,6 +131,8 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/local/share/man/man1/aletheia.1
 - /usr/local/share/applications/aletheia.desktop
 - /usr/local/share/icons/aletheia.png
+- /usr/local/share/aletheia/example.config
+- /usr/local/share/aletheia/languages/en
 - /usr/local/share/aletheia/themes/*
 - /usr/local/share/aletheia/vimrc/*
 
@@ -141,6 +143,8 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/share/man/man1/aletheia.1.gz
 - /usr/share/applications/aletheia.desktop
 - /usr/share/icons/aletheia.png
+- /usr/share/aletheia/example.config
+- /usr/share/aletheia/languages/en
 - /usr/share/aletheia/themes/*
 - /usr/share/aletheia/vimrc/*
 
@@ -151,6 +155,8 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/man/man1/aletheia.1.gz
 - /usr/share/applications/aletheia.desktop
 - /usr/share/icons/aletheia.png
+- /usr/share/aletheia/example.config
+- /usr/share/aletheia/languages/en
 - /usr/share/aletheia/themes/*
 - /usr/share/aletheia/vimrc/*
 
