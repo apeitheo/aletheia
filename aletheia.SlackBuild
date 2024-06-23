@@ -26,7 +26,7 @@ cd "$(dirname "$0")"; CWD="$(pwd)"
 
 PRGNAM=aletheia
 VERSION=${VERSION:-0.9.6}
-BUILD=${BUILD:-7}
+BUILD=${BUILD:-8}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 ARCH=noarch
@@ -56,7 +56,7 @@ else
 	exit 1
 fi
 
-cd "$PRGNAM-$VERSION"
+cd "$PRGNAM-$VERSION" 2>/dev/null || cd "$PRGNAM"
 chown -R root:root .
 install -D -m 755 aletheia "$PKG/usr/bin/aletheia"
 install -D -m 755 aletheia_desktop_launcher "$PKG/usr/bin/aletheia_desktop_launcher"

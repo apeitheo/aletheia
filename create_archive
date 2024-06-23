@@ -3,13 +3,13 @@
 CWD="$(pwd)"
 SRCDIR="${SRCDIR:-..}"
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
+DIR="aletheia-$VERSION"
 
 cd "$SRCDIR" || exit 1
 if [ ! -d "aletheia-$VERSION" ]; then
-	echo "Error: Source directory should be named aletheia-$VERSION"
-	exit 1
+	DIR="aletheia"
 fi
 
-tar -czvf "$CWD/aletheia-$VERSION.tar.gz" --exclude=.git --exclude=.github --exclude="aletheia-$VERSION.tar.gz" --owner "$(whoami)" --group "$(groups | cut -d' ' -f1)" "aletheia-$VERSION/"
+tar -czvf "$CWD/aletheia-$VERSION.tar.gz" --exclude=.git --exclude=.github --exclude="aletheia-$VERSION.tar.gz" --owner "$(whoami)" --group "$(groups | cut -d' ' -f1)" "$DIR"
 
 echo -e "\n$CWD/aletheia-$VERSION.tar.gz\n"

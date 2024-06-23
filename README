@@ -72,24 +72,26 @@ Create and Install Packages:
 
     sudo apt update
     sudo ./create_deb
-    sudo apt install ./aletheia_0.9.6-11_all.deb
+    sudo apt install ./aletheia_0.9.6-"$(awk -F= '/^REVISION=/ {print $2}' <create_deb)"_all.deb
 
   Fedora
 
     sudo dnf update
+    sudo dnf install rpm-build
     sudo ./create_rpm
-    sudo dnf install ./aletheia-0.9.6-11.fc40.noarch.rpm
+    sudo dnf install ./aletheia-0.9.6-"$(awk -F= '/^REVISION=/ {print $2}' <create_rpm)".fc"$(sed -n "/^VERSION_ID=/p" /etc/os-release | cut -d'=' -f2)".noarch.rpm
 
   openSUSE
 
     sudo zypper refresh
+    sudo dnf install rpm-build
     sudo ./create_rpm
-    sudo zypper install ./aletheia-0.9.6-11.noarch.rpm
+    sudo zypper install ./aletheia-0.9.6-"$(awk -F= '/^REVISION=/ {print $2}' <create_rpm)".noarch.rpm
 
   Slackware
 
     ./create_archive && sudo ./aletheia.SlackBuild
-    sudo installpkg /tmp/aletheia-0.9.6-noarch-7_SBo.tgz
+    sudo installpkg /tmp/aletheia-0.9.6-noarch-"$(awk -F'[-}]' '/^BUILD=/ {print $2}' aletheia.SlackBuild)"_SBo.tgz
 
 Install to /usr/local:
 

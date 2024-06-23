@@ -1,5 +1,7 @@
 ![Screenshot of Aletheia](https://github.com/apeitheo/aletheia/blob/main/screenshot.png)
 
+![Screenshot of Aletheia](https://github.com/apeitheo/aletheia/blob/main/screenshot2.png)
+
 ## Aletheia: Media Player with Pitch and Tempo Controls
 
 ## Key Features
@@ -18,68 +20,63 @@
 
 ## Get Started
 
-### Clone Aletheia
-
-Open your terminal and run the following command to clone the Aletheia repository from GitHub:
+## Download
 
 ```bash
 git clone https://github.com/apeitheo/aletheia.git
 ```
 
-### Navigate to the Directory
-
 ```bash
 cd aletheia
 ```
 
-## Try Without Installing
+## Test
 
 ```bash
 ./aletheia
 ```
 
-## Installation to /usr/local
+## Install to /usr/local
 
 ```bash
 sudo ./install
 ```
 
-## Uninstallation from /usr/local
+## Uninstall from /usr/local
 
 ```bash
 sudo ./uninstall
 ```
 
-## Package Installation
+## Install Package
 
 - **Debian/Ubuntu Package**
 ```bash
 sudo apt update
 sudo ./create_deb
-sudo apt install ./aletheia_0.9.6-11_all.deb
+sudo apt install ./aletheia_0.9.6-"$(awk -F= '/^REVISION=/ {print $2}' <create_deb)"_all.deb
 ```
 
 - **Fedora Package**
 ```bash
 sudo dnf update
+sudo dnf install rpm-build
 sudo ./create_rpm
-sudo dnf install ./aletheia-0.9.6-11.fc40.noarch.rpm
+sudo dnf install ./aletheia-0.9.6-"$(awk -F= '/^REVISION=/ {print $2}' <create_rpm)".fc"$(sed -n "/^VERSION_ID=/p" /etc/os-release | cut -d'=' -f2)".noarch.rpm
 ```
 
 - **openSUSE Package**
-
-Ignore the signature verification when it prompts for it (for now).
-
 ```bash
 sudo zypper refresh
+sudo zypper install rpm-build
 sudo ./create_rpm
-sudo zypper install ./aletheia-0.9.6-11.noarch.rpm
+sudo zypper install ./aletheia-0.9.6-"$(awk -F= '/^REVISION=/ {print $2}' <create_rpm)".noarch.rpm
 ```
 
 - **Slackware Package**
 ```bash
 ./create_archive && sudo ./aletheia.SlackBuild
-sudo installpkg /tmp/aletheia-0.9.6-noarch-7_SBo.tgz
+sudo installpkg /tmp/aletheia-0.9.6-noarch-"$(awk -F'[-}]' '/^BUILD=/ {print $2}' aletheia.SlackBuild)"_SBo.tgz
 ```
 
 ## Dependencies
@@ -125,9 +122,11 @@ sudo installpkg /tmp/aletheia-0.9.6-noarch-7_SBo.tgz
 
 ## Slackware gTTS Installation (Optional)
 
-- pip install gtts
+```bash
+pip install gtts
+```
 
-### Getting Started
+## Getting Started
 
 The '**i**' key toggles the main menu.
 
@@ -135,7 +134,7 @@ To view the full list of key controls, select the **Help** option in the menu, o
 
 ## Basics
 
-In the same style as VIM, use the '**k**' and '**j**' keys to raise or lower pitch and tempo. '**o**' and '**m**' keys increase or decrease precision in pitch adjustments by double or half. To seek backward and foreward you use '**h**' and '**l**'. Next song is '**n**' and previous song '**b**'. To pause, press '**p**' or **space**. **Escape** key or '**q**' to return to a previous screen or quit. Sometimes it's necessary to refresh the screen, which can be done at any time with '**z**'. Set the equalizer with '**a**'. Sort is '**A**' and shuffle is '**R**'. Rename is '**r**' and delete is **Ctrl-D**, with an archive option of '**D**'. Mute is '**c**'. On the left, '**1**' and '**2**' lower or raise PCM volume, and on the right '**8**' and '**9**' lower and raise master volume. '**\**' restarts the song. '**;**' opens the queue. '**g**' opens a VIM template to edit the mp3 metadata. '**s**' allows you to enter keywords to search for in the current playlist.
+In the same style as VIM, use the '**k**' and '**j**' keys to raise or lower pitch and tempo. '**o**' and '**m**' keys increase or decrease precision in pitch adjustments by double or half. To seek backward and foreward you use '**h**' and '**l**'. Next song is '**n**' and previous song '**b**'. To pause, press '**p**' or **space**. **Escape** key or '**q**' to return to a previous screen or quit. Sometimes it's necessary to refresh the screen, which can be done at any time with '**z**'. Set the equalizer with '**a**'. Sort is '**A**' and shuffle is '**R**'. Rename is '**r**' and delete is **Ctrl-D**, with an archive option of '**D**'. Mute is '**c**'. On the left, '**1**' and '**2**' lower or raise PCM volume, and on the right '**8**' and '**9**' lower and raise master volume. '**\\**' restarts the song. '**;**' opens the queue. '**g**' opens a VIM template to edit the mp3 or flac metadata. '**s**' allows you to enter keywords to search for in the current playlist.
 
 ## Loop Creation
 
@@ -157,10 +156,12 @@ For detailed information, refer to the man page, which can be accessed by pressi
 
 Add or change the following in *~/.aletheia/config*
 
-  **PARALLEL_CACHE_ENABLED=true**
-  **PARALLEL_CACHE_JOBS=4**
+```bash
+PARALLEL_CACHE_ENABLED=true
+PARALLEL_CACHE_JOBS=4
+```
 
-### Custom Location
+## Custom Location
 
 To install somewhere other than /usr/local when using ./install:
 
@@ -176,7 +177,7 @@ DESTDIR=/path/to/directory/ ./install
 
 ## List of Installed Files
 
-### Using ./install:
+## Using ./install:
 
 - /usr/local/bin/aletheia
 - /usr/local/bin/aletheia\_desktop\_launcher
@@ -188,7 +189,7 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/local/share/aletheia/themes/*
 - /usr/local/share/aletheia/vimrc/*
 
-### DEB/RPM Packages:
+## DEB/RPM Packages:
 
 - /usr/bin/aletheia
 - /usr/bin/aletheia\_desktop\_launcher
@@ -200,7 +201,7 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/share/aletheia/themes/*
 - /usr/share/aletheia/vimrc/*
 
-### Slackware Package:
+## Slackware Package:
 
 - /usr/bin/aletheia
 - /usr/bin/aletheia\_desktop\_launcher
