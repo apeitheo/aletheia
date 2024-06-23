@@ -76,5 +76,8 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" 
 %attr(0644, root, root) %{_datadir}/aletheia/languages/en
 
 %changelog
+* Sat Jun 22 2024 Brad Hermanson 1.0-2
+- Fixed shellcheck warning.
+
 * Thu Jun 20 2024 Brad Hermanson 1.0-1
 - Added 'flac' dependency and updated list of themes.

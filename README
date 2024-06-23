@@ -78,13 +78,13 @@ Create and Install Packages:
 
     sudo dnf update
     sudo ./create_rpm
-    sudo dnf install ./aletheia-0.9.6-10.fc40.noarch.rpm
+    sudo dnf install ./aletheia-0.9.6-11.fc40.noarch.rpm
 
   openSUSE
 
     sudo zypper refresh
     sudo ./create_rpm
-    sudo zypper install ./aletheia-0.9.6-10.noarch.rpm
+    sudo zypper install ./aletheia-0.9.6-11.noarch.rpm
 
   Slackware
 

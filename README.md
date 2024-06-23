@@ -63,7 +63,7 @@ sudo apt install ./aletheia_0.9.6-11_all.deb
 ```bash
 sudo dnf update
 sudo ./create_rpm
-sudo dnf install ./aletheia-0.9.6-10.fc40.noarch.rpm
+sudo dnf install ./aletheia-0.9.6-11.fc40.noarch.rpm
 ```
 
 - **openSUSE Package**
@@ -73,7 +73,7 @@ Ignore the signature verification when it prompts for it (for now).
 ```bash
 sudo zypper refresh
 sudo ./create_rpm
-sudo zypper install ./aletheia-0.9.6-10.noarch.rpm
+sudo zypper install ./aletheia-0.9.6-11.noarch.rpm
 ```
 
 - **Slackware Package**

@@ -10,7 +10,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=10
+REVISION=11
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
 
@@ -57,7 +57,8 @@ fi
 
 rm -f "$path/RPMS/noarch/aletheia-${VERSION}-"*".noarch.rpm" >/dev/null 2>&1
 
-cd "$TMPDIR"
+cd "$TMPDIR" || exit 1
+
 if ! rpmbuild -bb rpmbuild/SPECS/aletheia.spec; then
 	echo -e "\n${RED}Error: ${NOCOLOR}Package creation failed\n"
 	exit 1
