@@ -1,0 +1,18 @@
+# Based on 'Gruvbox' by Pavel Pertsev
+# https://github.com/morhetz/gruvbox
+
+COLOR_WARNING       =d65d0e
+COLOR_HIGHLIGHT     =b8bb26
+COLOR_MENU_BORDER   =b8bb26
+COLOR_UNSELECTED    =ebdbb2
+COLOR_PANEL         =3c3836
+COLOR_BACKGROUND    =282828
+COLOR_DELETE        =fb4934
+COLOR_KEYS          =83a598
+COLOR_TRACKNUMBER   =83a598
+COLOR_ALBUM         =83a598
+COLOR_MENU_SELECTED =83a598
+COLOR_SEPARATOR     =83a598
+COLOR_MENU          =1d2021
+COLOR_MENU_END      =b8bb26
+COLOR_ARROW         =b8bb26

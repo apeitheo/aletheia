@@ -1,6 +1,7 @@
 #!/bin/bash
 
 RED="\033[1;31m"
+GREEN="\033[1;32m"
 NOCOLOR="\033[0m"
 
 if [ "$(whoami)" != "root" ]; then
@@ -9,9 +10,12 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=9
+REVISION=10
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
+
+OS="$(grep -E "^NAME[[:space:]]*=" /etc/os-release)"
+OS="${OS#*=}"
 
 if [ -e "$TMPDIR" ]; then
 	rm -rf "$TMPDIR"
@@ -23,9 +27,9 @@ mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/applications"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
+mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
 mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/vimrc/"
-mkdir -p "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 
 cp "$SRCDIR/aletheia" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 cp "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
@@ -33,18 +37,34 @@ cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
 cp "$SRCDIR/aletheia.desktop" "$TMPDIR/rpmbuild/SOURCES/usr/share/applications/"
 cp "$SRCDIR/aletheia.png" "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
 cp "$SRCDIR/example.config" "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/"
+cp "$SRCDIR/languages/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 cp "$SRCDIR/themes/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
 cp "$SRCDIR/vimrc/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/vimrc/"
-cp "$SRCDIR/languages/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 cp "$SRCDIR/aletheia.spec" "$TMPDIR/rpmbuild/SPECS/"
 
 sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"/usr/share/aletheia/\"#g" "$TMPDIR/rpmbuild/SOURCES/usr/bin/aletheia"
 sed -i "s/%%DATE%%/$(date +"%a %b %e %Y")/g;s/%%VERSION%%/$VERSION/g;s/%%REVISION%%/$REVISION/g;s/%%TMPDIR%%/${TMPDIR//\//\\\/}/g" "$TMPDIR/rpmbuild/SPECS/aletheia.spec"
 
-cd "$TMPDIR" || exit 1
-rpmbuild -bb rpmbuild/SPECS/aletheia.spec
+if [[ "$OS" == *"openSUSE"* ]]; then
+	sed -i "s/perl-Image-ExifTool/exiftool/g" "$TMPDIR/rpmbuild/SPECS/aletheia.spec"
+fi
 
-for file in "$HOME/rpmbuild/RPMS/"*"/aletheia-${VERSION}-${REVISION}"*".rpm"; do
-	mv "$file" "$SRCDIR"
-	echo -e "\n$SRCDIR/${file##*/}\n"
-done
+if [[ "$OS" == *"openSUSE"* ]]; then
+	path="/usr/src/packages"
+else
+	path="$HOME/rpmbuild"
+fi
+
+rm -f "$path/RPMS/noarch/aletheia-${VERSION}-"*".noarch.rpm" >/dev/null 2>&1
+
+cd "$TMPDIR"
+if ! rpmbuild -bb rpmbuild/SPECS/aletheia.spec; then
+	echo -e "\n${RED}Error: ${NOCOLOR}Package creation failed\n"
+	exit 1
+fi
+
+mv "$path/RPMS/noarch/aletheia-${VERSION}-"*".noarch.rpm" "$SRCDIR"
+file="$(ls "$SRCDIR/aletheia-${VERSION}-"*".noarch.rpm")"
+echo -e "\n${GREEN}Install:\n\n$NOCOLOR sudo dnf install ./${file##*/}\n"
+
+exit 0

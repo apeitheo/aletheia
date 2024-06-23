@@ -1,0 +1,14 @@
+# Based on 'Everforest' by Sainnhe Park
+# https://github.com/sainnhe/everforest
+
+COLOR_BACKGROUND    =343f44
+COLOR_PANEL         =2d353b
+COLOR_HIGHLIGHT     =7fbbb3
+COLOR_MENU_SELECTED =a7c080
+COLOR_UNSELECTED    =d3c6aa
+COLOR_SEPARATOR     =dbbc7f
+COLOR_ALBUM         =dbbc7f
+COLOR_MENU_END      =d699b6
+COLOR_TRACKNUMBER   =e69875
+COLOR_CURRENT_SONG  =83c092
+COLOR_ARROW         =d699b6

@@ -1,21 +1,20 @@
-# Aletheia: CLI Media Player with Pitch and Tempo Control
+![Screenshot of Aletheia](https://github.com/apeitheo/aletheia/blob/main/screenshot.png)
 
-Aletheia is a command-line media player for GNU/Linux focused on precise pitch and tempo control, but offers much more as well:
+## Aletheia: Media Player with Pitch and Tempo Controls
 
 ## Key Features
 
-- **Real-Time Pitch and Tempo Adjustment:** Change tonality with customizable intervals.
-- **Seamless Loop Creation:** Set custom start and end points and export loops.
-- **Versatile Media Support:** Supports all common media formats due to its robust **mplayer** backend.
-- **Voice Feedback:** Optional digital or natural voice feedback.
-- **Playlist Management:** Manage and export playlists with ease.
-- **Advanced Scaling Features:** Smoothly transition between different intervals.
+- **Save Pitch and Tempo Adjustments**
+- **Create seamless loops with start and end points**
+- **Edit mp3/flac metadata**
+- **Import downloads**
+- **Export playlists**
 
-## User-Friendly Controls
+- **Support for most audio and video formats**
+- **Customizable with themes**
 
-- **Simple Navigation:** Uses intuitive key controls.
-- **Customizable Interface:** Comes with a selection of themes and support for adding your own.
-- **Metadata Support:** Manage media tags on the go.
+- **On-demand voice feedback**
+- **Support for translations**
 
 ## Get Started
 
@@ -33,28 +32,54 @@ git clone https://github.com/apeitheo/aletheia.git
 cd aletheia
 ```
 
-## Testing
-
-Before installation, you can test Aletheia by running the following command. It will automatically check dependencies for you.
+## Try Without Installing
 
 ```bash
 ./aletheia
 ```
 
-## Installation
-
-Run the installation script to set up Aletheia on your system.
+## Installation to /usr/local
 
 ```bash
-./install
+sudo ./install
 ```
 
-## Uninstallation
-
-If you ever need to uninstall Aletheia, you can run the uninstallation script:
+## Uninstallation from /usr/local
 
 ```bash
-./uninstall
+sudo ./uninstall
+```
+
+## Package Installation
+
+- **Debian/Ubuntu Package**
+```bash
+sudo apt update
+sudo ./create_deb
+sudo apt install ./aletheia_0.9.6-11_all.deb
+```
+
+- **Fedora Package**
+```bash
+sudo dnf update
+sudo ./create_rpm
+sudo dnf install ./aletheia-0.9.6-10.fc40.noarch.rpm
+```
+
+- **openSUSE Package**
+
+Ignore the signature verification when it prompts for it (for now).
+
+```bash
+sudo zypper refresh
+sudo ./create_rpm
+sudo zypper install ./aletheia-0.9.6-10.noarch.rpm
+```
+
+- **Slackware Package**
+```bash
+./create_archive && sudo ./aletheia.SlackBuild
+sudo installpkg /tmp/aletheia-0.9.6-noarch-7_SBo.tgz
 ```
 
 ## Dependencies
@@ -64,7 +89,6 @@ If you ever need to uninstall Aletheia, you can run the uninstallation script:
 - calc
 - espeak-ng
 - exiftool
-- eyeD3
 - ffmpeg
 - ffprobe
 - mplayer
@@ -75,38 +99,66 @@ If you ever need to uninstall Aletheia, you can run the uninstallation script:
 
 ## Optional Dependencies
 
-- gtts-cli
-- play
-- parallel
+- eyeD3 (Edit mp3 tags)
+- flac (Edit flac tags)
+- gtts-cli (Natural voice feedback)
+- parallel (Parallel metadata caching)
 
-Slackware users will need exiftool, eyeD3, sqlite3, and eyeDB's dependencies from SlackBuilds.org
+## Fedora Dependencies
+
+- rpm-build (Needed for building package)
+- ffmpeg (RPMFusion)
+- mplayer (RPMFusion)
+
+## openSUSE Dependencies
+
+- rpm-build (Needed for building package)
+- ffmpeg (Packman)
+- mplayer (Packman)
+
+## Slackware Dependencies (SlackBuilds.org)
+
+- calc
+- exiftool
+- sqlite3
+- eyeD3 (optional)
+
+## Slackware gTTS Installation (Optional)
+
+- pip install gtts
+
+### Getting Started
+
+The '**i**' key toggles the main menu.
+
+To view the full list of key controls, select the **Help** option in the menu, or by press the '**?**' key at any time for function-specific controls.
+
+## Basics
+
+In the same style as VIM, use the '**k**' and '**j**' keys to raise or lower pitch and tempo. '**o**' and '**m**' keys increase or decrease precision in pitch adjustments by double or half. To seek backward and foreward you use '**h**' and '**l**'. Next song is '**n**' and previous song '**b**'. To pause, press '**p**' or **space**. **Escape** key or '**q**' to return to a previous screen or quit. Sometimes it's necessary to refresh the screen, which can be done at any time with '**z**'. Set the equalizer with '**a**'. Sort is '**A**' and shuffle is '**R**'. Rename is '**r**' and delete is **Ctrl-D**, with an archive option of '**D**'. Mute is '**c**'. On the left, '**1**' and '**2**' lower or raise PCM volume, and on the right '**8**' and '**9**' lower and raise master volume. '**\**' restarts the song. '**;**' opens the queue. '**g**' opens a VIM template to edit the mp3 metadata. '**s**' allows you to enter keywords to search for in the current playlist.
+
+## Loop Creation
+
+If you want to create a loop, wait until you've reached the beginning of the section in the song, hit the '**5**' key to indicate starting position, wait until the section is over, and hit '**7**' to indicate ending position. '**6**' opens the loop editor where you can finely adjust start and end points using '**s**' and '**g**' or '**h**' and '**l**'.
+
+## Video Playback
+
+Toggle with '**<**' and enable full-screen video with '**>**'.
+
+## Voice Feedback
+
+You can toggle voice feedback and read aloud any key control page by pressing '**d**'. The Setup screen has an option to toggle between digital and natural voice feedback if gTTS is installed.
 
 ## Additional Information
 
-To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "**Help**" option in the menu, or by pressing the '**?**' key at any time. Use the '**j**' and '**k**' keys to page down or up, and '**q**' to go back or quit. If you need voice feedback, hit '**d**' followed by '**#**' to save your choice.
+For detailed information, refer to the man page, which can be accessed by pressing the '**m**' key on the **Help** screen.
 
-If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (gTTS on PyPI) that downloads voice clips based on the Google Assistant voice. It can be enabled via setting **VOICE_ENGINE** to *gtts-cli* and **VOICE_ENABLED** to **true** in *~/.aletheia/config* and ensuring the packages for your distribution containing *gtts-cli* and *play* are installed.
+## Parallel Metadata Caching (Optional):
 
-If you have a large media collection, parallel processing of metadata is available via setting **PARALLEL_CACHE_ENABLED** to **true**, and optionally setting the number of tags to process at one time with **PARALLEL_CACHE_JOBS**. Requires *parallel* to be installed. May cause performance issues on slower machines.
+Add or change the following in *~/.aletheia/config*
 
-## Package Build Scripts
-
-The following are package build scripts for Debian, Fedora, and Slackware-based distributions:
-
-- **Debian Package:**
-```bash
-./create_deb
-```
-
-- **Fedora Package:**
-```bash
-./create_rpm
-```
-
-- **Slackware Package:**
-```bash
-./create_archive && ./aletheia.SlackBuild
-```
+  **PARALLEL_CACHE_ENABLED=true**
+  **PARALLEL_CACHE_JOBS=4**
 
 ### Custom Location
 
@@ -160,6 +212,6 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/share/aletheia/themes/*
 - /usr/share/aletheia/vimrc/*
 
-## Support (Optional)
+## Donate (Optional)
 
 - **Patreon:** [https://www.patreon.com/aletheia_project](https://www.patreon.com/aletheia_project)

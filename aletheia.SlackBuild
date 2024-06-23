@@ -26,7 +26,7 @@ cd "$(dirname "$0")"; CWD="$(pwd)"
 
 PRGNAM=aletheia
 VERSION=${VERSION:-0.9.6}
-BUILD=${BUILD:-6}
+BUILD=${BUILD:-7}
 TAG=${TAG:-_SBo}
 PKGTYPE=${PKGTYPE:-tgz}
 ARCH=noarch
@@ -67,6 +67,8 @@ install -D -m 644 example.config "$PKG/usr/share/aletheia/"
 install -D -m 644 ./languages/* "$PKG/usr/share/aletheia/languages/"
 install -D -m 644 ./themes/* "$PKG/usr/share/aletheia/themes/"
 install -D -m 644 ./vimrc/* "$PKG/usr/share/aletheia/vimrc/"
+
+sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"/usr/share/aletheia/\"#g" "$PKG/usr/bin/aletheia"
 
 find "$PKG/usr/man" -type f -exec gzip -9 "{}" \;
 find "$PKG/usr/man" -type l -print0 | while IFS= read -r -d '' i; do

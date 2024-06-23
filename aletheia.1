@@ -1,4 +1,4 @@
-.TH ALETHEIA 1 "17 May 2024" "Aletheia User Manual"
+.TH ALETHEIA 1 "20 June 2024" "Aletheia User Manual"
 
 .SH NAME
 Aletheia - command-line media player that allows for easy, real-time adjustment of pitch and tempo for a personalized listening experience
@@ -67,9 +67,9 @@ The main menu is presented initially when loading Aletheia without any options. 
 
 Next, "Empty" starts a new playlist with a search keyword and can be added to with ^I or tab. The next option, Queue, presents the user with available playlists in ~/.aletheia/playlists/, which are just regular text files of the relative or full paths of media files, separated by newline.
 
-The Setup screen has an caching 'c' option to cache and utilize metadata tags, and toggle on and off the display of tags for the main screen with the '^T' key. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference.
+The Setup screen's 'c' option updates metadata cache, and you can toggle the display of tags for the main screen with the '^T' key. Help is available from the menu and at any time via the '?' key, and offers several pages of commands for quick reference.
 
-If you need voice feedback, press 'd' while in a help screen to read the page aloud, and "d" in the menu or on the main screen to enable voice feedback. The '#' key allows you to save voice feedback and tag display. Optional gTTS feedback is also available, but is disabled by default for those who prefer privacy. VOICE_ENABLED=true and ESPEAK_DIGITAL_VOICE=false in ~/.aletheia/config for those who want to enable it. gTTS requires an Internet connection.
+If you need voice feedback, press 'd' while in a help screen to read the page aloud, and 'd' in the menu or on the main screen to enable voice feedback.
 
 .TP
 .B i
@@ -78,7 +78,7 @@ Toggle main menu. Use 'l' and 'h' keys to open and close submenus.
 .RE
 .SS VOICE FEEDBACK
 
-Voice feedback is disabled by default, but can be toggled via the 'd' key. To save your selection for next time, use the '#' key. The 'T' key is also available to only speak the artist and track title, rather than general voice feedback.
+Voice feedback is disabled by default, but can be toggled via the 'd' key. The 'T' key is also available to only speak the artist and track title, rather than general voice feedback.
 
 .TP
 .B d
@@ -95,10 +95,6 @@ Read aloud the current interval adjustment.
 .TP
 .B ^S
 Read locked file information for intervals and loops.
-
-.TP
-.B #
-Saves all voice, panel, tag, and color settings. Asks for confirmation before saving (y/n).
 
 .TP
 .B ,
@@ -621,32 +617,12 @@ In lieu of full voice feedback, speak only track title. Input: true or false. (D
 Toggle whether to use a theme or the COLOR options in ~/.aletheia/config. Input: true or false. (Default: true).
 
 .TP
-.B PANELS_ENABLED=
-Toggle whether to display panels for the top and bottom of the screen, as well as for the current selection. Input: true or false. (Default: true).
-
-.TP
 .B VOICE_VOLUME=
 Volume of voice feedback. Input: 0.0 to 1.0. (Default: 0.3).
 
 .TP
-.B COLOR_HIGHLIGHT=
-Hex color code for the primary color. THEME_ENABLED needs to be set. (Default: ).
-
-.TP
-.B COLOR_UNSELECTED=
-Hex color code for the secondary color. THEME_ENABLED needs to be set. (Default: ).
-
-.TP
-.B COLOR_PANEL=
-Hex color code for the panel color. THEME_ENABLED needs to be set. (Default: ).
-
-.TP
-.B COLOR_BACKGROUND=
-Hex color code for the background color. THEME_ENABLED needs to be set. Set this to 'transparent' to allow for transparency. (Default: ).
-
-.TP
 .B THEME_FILE=
-If specified, selects the file with that name in either ~/.aletheia/themes/ or the system theme directory. (Default: Forest).
+If specified, selects the file with that name in ~/.aletheia/themes/ or the system theme directory. (Default: Slate).
 
 .TP
 .B NO_HELP=

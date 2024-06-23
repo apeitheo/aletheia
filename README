@@ -1,65 +1,228 @@
 Welcome to Aletheia 0.9.6!
+--------------------------
 
-Aletheia is a command-line media player with a wide range of features designed to make it easy to adjust pitch and tempo in real-time using customizable intervals, allowing precise control over the playback speed and tonality of media files. It also supports loop creation with customizable start and end points for seamless looping. Aletheia has optional voice feedback and the ability to play videos, import downloads, and export playlists and loops. In addition, it offers various scaling features to smoothly transition between separate intervals.
+Aletheia is a media player that makes it easy to adjust pitch and tempo.
+
+Features:
+
+  - Save pitch and tempo adjustments
+  - Create seamless loops with start and end points
+  - Edit mp3/flac metadata
+  - Import downloads
+  - Export playlists
+
+  - Support for most audio and video formats
+  - Collection of themes with the ability to create your own
+
+  - On-demand voice feedback
+  - Support for translations
 
 Dependencies:
 
-bash, bc, calc, espeak-ng, exiftool, eyeD3, ffmpeg, ffprobe, mplayer, pactl, sox, sqlite3, vim
+  - bash
+  - bc
+  - calc
+  - espeak-ng
+  - exiftool
+  - ffmpeg
+  - ffprobe
+  - mplayer
+  - pactl
+  - sox
+  - sqlite3
+  - vim
 
-Optional dependencies:
+Optional Dependencies:
 
-gtts-cli (USE_GTTS=true in ~/.aletheia/config enables natural-sounding voice feedback when VOICE_ENABLED is true)
-play     (Needed for gtts-cli)
-parallel (PARALLEL_CACHE_ENABLED=true enables parallel metadata caching to speed things up)
-         (PARALLEL_CACHE_JOBS=[0-9]+ sets the number of tags to scan in parallel)
+  - eyeD3 (Edit mp3 tags)
+  - flac (Edit flac tags)
+  - gtts-cli (Natural voice feedback)
+  - parallel (Parallel metadata caching)
 
-Slackware users should make sure to install exiftool, eyeD3, sqlite3, and their associated dependencies from SlackBuilds.org.
+Fedora Dependencies:
 
-To learn the basics of Aletheia, read the manpage and check out the controls by clicking the "Help" option in the menu, or by pressing the '?' key at any time. Use the 'j' and 'k' keys to page down or up, and 'q' to go back or quit. If you need voice feedback, hit 'd' followed by '#' to save your choice.
+  - rpm-build (Needed for building package)
+  - ffmpeg (RPMFusion)
+  - mplayer (RPMFusion)
 
-If you prefer a natural-sounding voice feedback, gtts-cli is part of the gTTS project (https://pypi.org/project/gTTS/) that downloads voice clips based on the Google Assistant voice.
+openSUSE Dependencies:
 
-If your distribution isn't listed below, you can use the provided install and uninstall scripts:
+  - rpm-build (Needed for building package)
+  - ffmpeg (Packman)
+  - mplayer (Packman)
 
-Test: ./aletheia
-Install: ./install
-Uninstall: ./uninstall
+Slackware Dependencies (SlackBuilds.org):
 
-Debian Package: ./create_deb
-Fedora Package: ./create_rpm
-Slackware Package: ./create_archive && ./aletheia.SlackBuild
+  - calc
+  - exiftool
+  - sqlite3
+  - eyeD3 (optional)
 
-Use ./install --destdir /path/to/directory to install somewhere other than /usr/local or use the DESTDIR environment variable.
+Installation of gTTS on Slackware (optional):
 
-List of installed files when using ./install:
+  sudo pip install gtts
 
-/usr/local/bin/aletheia
-/usr/local/bin/aletheia_desktop_launcher
-/usr/local/share/man/man1/aletheia.1
-/usr/local/share/applications/aletheia.desktop
-/usr/local/share/icons/aletheia.png
-/usr/local/share/aletheia/themes/*
-/usr/local/share/aletheia/vimrc/*
+Testing:
 
-List of installed files for DEB/RPM packages:
+  ./aletheia
 
-/usr/bin/aletheia
-/usr/bin/aletheia_desktop_launcher
-/usr/share/man/man1/aletheia.1.gz
-/usr/share/applications/aletheia.desktop
-/usr/share/icons/aletheia.png
-/usr/share/aletheia/themes/*
-/usr/share/aletheia/vimrc/*
+Create and Install Packages:
 
-List of installed files for Slackware package:
+  Debian/Ubuntu
 
-/usr/bin/aletheia
-/usr/bin/aletheia_desktop_launcher
-/usr/man/man1/aletheia.1.gz
-/usr/share/applications/aletheia.desktop
-/usr/share/icons/aletheia.png
-/usr/share/aletheia/themes/*
-/usr/share/aletheia/vimrc/*
+    sudo apt update
+    sudo ./create_deb
+    sudo apt install ./aletheia_0.9.6-11_all.deb
 
-Patreon: https://www.patreon.com/aletheia_project
+  Fedora
+
+    sudo dnf update
+    sudo ./create_rpm
+    sudo dnf install ./aletheia-0.9.6-10.fc40.noarch.rpm
+
+  openSUSE
+
+    sudo zypper refresh
+    sudo ./create_rpm
+    sudo zypper install ./aletheia-0.9.6-10.noarch.rpm
+
+  Slackware
+
+    ./create_archive && sudo ./aletheia.SlackBuild
+    sudo installpkg /tmp/aletheia-0.9.6-noarch-7_SBo.tgz
+
+Install to /usr/local:
+
+  Install
+
+    sudo ./install
+
+  Uninstall
+
+    sudo ./uninstall
+
+Basic Controls:
+
+    i  Toggle Main Menu
+    ?  List of Key Controls
+
+  Positional
+
+    h  Seek Left 5%
+    l  Seek Right 5%
+
+    k  Up
+    j  Down
+
+  Precision
+
+    o  Increase Precision
+    m  Decrease Precision
+
+  Playback Controls
+
+    n  Next Song
+    b  Previous Song
+    \  Restart Song
+    p  Pause
+
+    ;  Playlist
+    A  Sort
+    R  Shuffle
+    s  Search
+
+  Volume Controls
+
+    1  PCM Volume 5% Down
+    2  PCM Volume 5% Up
+
+    8  Master Volume 5% Down
+    9  Master Volume 5% Up
+
+    c  Mute
+
+  Loop Creation
+
+    5  Set Start Point
+    7  Set End Point
+
+    6  Enter Loop Editor
+
+    s  Move Start Point Back
+    g  Move Start Point Forward
+
+    h  Move End Point Back
+    l  Move End Point Forward
+
+  Other
+
+    a  Set 3-band Equalizer
+
+    g  Edit Mp3/Flac Metadata
+    r  Rename File Basename
+
+    D  Archive File
+    ^D Delete File
+
+    z  Refresh Screen
+
+  Video Playback
+
+    <  Enable/Disable
+    <  Enable/Disable Full-Screen
+
+  Voice Feedback
+
+    d  Enable/Disable
+
+Enable Parallel Metadata Caching (Optional):
+
+  Add the following to ~/.aletheia/config
+
+    PARALLEL_CACHE_ENABLED=true
+    PARALLEL_CACHE_JOBS=4
+
+  Warning: Not setting, or using too high a value for PARALLEL_CACHE_JOBS can
+  cause performance issues.
+
+Installed files:
+
+  ./install
+
+    /usr/local/bin/aletheia
+    /usr/local/bin/aletheia_desktop_launcher
+    /usr/local/share/man/man1/aletheia.1
+    /usr/local/share/applications/aletheia.desktop
+    /usr/local/share/icons/aletheia.png
+    /usr/local/share/aletheia/example.config
+    /usr/local/share/aletheia/languages/en
+    /usr/local/share/aletheia/themes/*
+    /usr/local/share/aletheia/vimrc/*
+
+  DEB/RPM
+
+    /usr/bin/aletheia
+    /usr/bin/aletheia_desktop_launcher
+    /usr/share/man/man1/aletheia.1.gz
+    /usr/share/applications/aletheia.desktop
+    /usr/share/icons/aletheia.png
+    /usr/share/aletheia/example.config
+    /usr/share/aletheia/languages/en
+    /usr/share/aletheia/themes/*
+    /usr/share/aletheia/vimrc/*
+
+  Slackware
+
+    /usr/bin/aletheia
+    /usr/bin/aletheia_desktop_launcher
+    /usr/man/man1/aletheia.1.gz
+    /usr/share/applications/aletheia.desktop
+    /usr/share/icons/aletheia.png
+    /usr/share/aletheia/example.config
+    /usr/share/aletheia/languages/en
+    /usr/share/aletheia/themes/*
+    /usr/share/aletheia/vimrc/*
+
+----------------------------------------
 GitHub: https://www.github.com/apeitheo/aletheia
+Patreon: https://www.patreon.com/aletheia_project

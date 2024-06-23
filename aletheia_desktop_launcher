@@ -28,37 +28,71 @@ fi
 # to the basename of the terminal you wish to use, provided it's supported below
 
 run_gnome() {
-	/usr/libexec/gnome-terminal-server --app-id=org.gnome.aletheia --class=org.gnome.aletheia --name=org.gnome.aletheia >/dev/null 2>/dev/null &
-	sleep 0.2
-	gnome-terminal --app-id=org.gnome.aletheia --hide-menubar --geometry=48x15 --title "Aletheia" -- "$ALETHEIA_PATH"
+	if [ -e "/usr/libexec/gnome-terminal-server" ] && command -v gnome-terminal >/dev/null; then
+		/usr/libexec/gnome-terminal-server --app-id=org.gnome.aletheia --class=org.gnome.aletheia --name=org.gnome.aletheia >/dev/null 2>/dev/null &
+		while ! gdbus introspect --session --dest org.gnome.aletheia --object-path /org/gnome/aletheia >/dev/null 2>&1; do
+			sleep 0.2
+		done
+		gnome-terminal --app-id=org.gnome.aletheia --hide-menubar --geometry=48x15 --title "Aletheia" -- "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_xfce4() {
-	/usr/bin/xfce4-terminal --geometry=48x15 --title=Aletheia --icon=/usr/share/icons/aletheia.png --color-text=white --color-bg=black --command="$ALETHEIA_PATH"
+	if command -v xfce4-terminal >/dev/null; then
+		/usr/bin/xfce4-terminal --geometry=48x15 --title=Aletheia --icon=/usr/share/icons/aletheia.png --color-text=white --color-bg=black --command="$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_konsole() {
-	/usr/bin/konsole --hide-menubar --hide-tabbar -e "$ALETHEIA_PATH"
+	if command -v konsole >/dev/null; then
+		konsole --hide-menubar --hide-tabbar -e "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_xterm() {
-	xterm +sb -title Aletheia -geometry 48x15 -bg black -fg white -e "$ALETHEIA_PATH"
+	if command -v xterm >/dev/null; then
+		xterm +sb -title Aletheia -geometry 48x15 -bg black -fg white -e "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_urxvt() {
-	urxvt +sb -title Aletheia -geometry 48x15 -bg black -fg white -e "$ALETHEIA_PATH"
+	if command -v urxvt >/dev/null; then
+		urxvt +sb -title Aletheia -geometry 48x15 -bg black -fg white -e "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_alacritty() {
-	alacritty --class org.gnome.aletheia --title Aletheia -e "$ALETHEIA_PATH"
+	if command -v alacritty >/dev/null; then
+		alacritty --class org.gnome.aletheia --title Aletheia -e "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_kitty() {
-	kitty --class org.gnome.aletheia --title Aletheia -e "$ALETHEIA_PATH"
+	if command -v kitty >/dev/null; then
+		kitty --class org.gnome.aletheia --title Aletheia -e "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 run_mate() {
-	mate-terminal --class=org.gnome.aletheia --name=org.gnome.aletheia --hide-menubar --geometry 48x15 --title Aletheia -e "$ALETHEIA_PATH"
+	if command -v mate-terminal >/dev/null; then
+		mate-terminal --class=org.gnome.aletheia --name=org.gnome.aletheia --hide-menubar --geometry 48x15 --title Aletheia -e "$ALETHEIA_PATH"
+	else
+		return 1
+	fi
 }
 
 # If no TERMINAL= line set in ~/.aletheia/config, run what's available,
@@ -92,7 +126,7 @@ run_available() {
 # Check if ~/.aletheia/config has a TERMINAL= override option
 
 if [ -e "$HOME/.aletheia/config" ]; then
-	choice="$(grep "TERMINAL=" "$HOME/.aletheia/config")"
+	choice="$(grep -E "^TERMINAL[[:space:]]*=" "$HOME/.aletheia/config")"
 	choice="${choice#*=}"
 	choice="${choice//\"/}"
 	choice="${choice,,}"
@@ -100,21 +134,21 @@ fi
 
 if [ -n "$choice" ]; then
 	if [ "$choice" == "gnome-terminal" ]; then
-		run_gnome
+		run_gnome || run_available
 	elif [ "$choice" == "xfce4-terminal" ]; then
-		run_xfce4
+		run_xfce4 || run_available
 	elif [ "$choice" == "konsole" ]; then
-		run_konsole
+		run_konsole || run_available
 	elif [ "$choice" == "xterm" ]; then
-		run_xterm
+		run_xterm || run_available
 	elif [ "$choice" == "urxvt" ]; then
-		run_urxvt
+		run_urxvt || run_available
 	elif [ "$choice" == "alacritty" ]; then
-		run_alacritty
+		run_alacritty || run_available
 	elif [ "$choice" == "kitty" ]; then
-		run_kitty
+		run_kitty || run_available
 	elif [ "$choice" == "mate-terminal" ]; then
-		run_mate
+		run_mate || run_available
 	else
 		run_available
 	fi

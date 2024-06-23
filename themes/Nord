@@ -1,0 +1,14 @@
+# Based on 'Nord' by Arctic Ice Studio
+# https://www.nordtheme.com/
+
+COLOR_HIGHLIGHT    =a3be8c
+COLOR_UNSELECTED   =8fbcbb
+COLOR_PANEL        =2e3440
+COLOR_BACKGROUND   =3b4252
+COLOR_WARNING      =ebcb8b
+COLOR_DELETE       =bf616a
+COLOR_TRACKNUMBER  =d08770
+COLOR_ALBUM        =d08770
+COLOR_MENU_END     =d08770
+COLOR_ARROW        =d08770
+COLOR_KEYS         =d08770

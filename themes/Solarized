@@ -1,0 +1,14 @@
+# Based on 'Solarized' by Ethan Schoonover
+# http://ethanschoonover.com/solarized
+
+COLOR_HIGHLIGHT    =859900
+COLOR_UNSELECTED   =b58900
+COLOR_PANEL        =002b36
+COLOR_BACKGROUND   =073642
+COLOR_TRACKNUMBER  =2aa198
+COLOR_KEYS         =2aa198
+COLOR_DELETE       =dc322f
+COLOR_WARNING      =cb4b16
+COLOR_MENU_TEXT    =eee8d5
+COLOR_MENU_END     =859900
+COLOR_ALBUM        =2aa198

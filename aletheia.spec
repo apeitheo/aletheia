@@ -8,15 +8,17 @@ Requires: bc
 Requires: calc
 Requires: espeak-ng
 Requires: ffmpeg
-Requires: gtts
 Requires: mplayer
-Requires: parallel
 Requires: perl-Image-ExifTool
 Requires: pulseaudio-utils
-Requires: python3-eyed3
 Requires: sox
 Requires: sqlite
 Requires: vim
+Recommends: flac
+Recommends: python3-eyed3
+Suggests: gtts
+Suggests: parallel
+BuildArch: noarch
 
 %description
 A command-line media player with pitch and tempo controls using music intervals with the ability to create seamless loops, save custom adjustments, and more.
@@ -32,16 +34,19 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.lo
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.queue" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.queue"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/example.config" "%{buildroot}/%{_datadir}/aletheia/example.config"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Aurora" "%{buildroot}/%{_datadir}/aletheia/themes/Aurora"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Forest" "%{buildroot}/%{_datadir}/aletheia/themes/Forest"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Desert" "%{buildroot}/%{_datadir}/aletheia/themes/Desert"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Dracula" "%{buildroot}/%{_datadir}/aletheia/themes/Dracula"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Everforest" "%{buildroot}/%{_datadir}/aletheia/themes/Everforest"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Gruvbox" "%{buildroot}/%{_datadir}/aletheia/themes/Gruvbox"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Jade" "%{buildroot}/%{_datadir}/aletheia/themes/Jade"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Misty" "%{buildroot}/%{_datadir}/aletheia/themes/Misty"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Moss" "%{buildroot}/%{_datadir}/aletheia/themes/Moss"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Nordic" "%{buildroot}/%{_datadir}/aletheia/themes/Nordic"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Mist" "%{buildroot}/%{_datadir}/aletheia/themes/Mist"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Nord" "%{buildroot}/%{_datadir}/aletheia/themes/Nord"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Oasis" "%{buildroot}/%{_datadir}/aletheia/themes/Oasis"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Ocean" "%{buildroot}/%{_datadir}/aletheia/themes/Ocean"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Slate" "%{buildroot}/%{_datadir}/aletheia/themes/Slate"
-install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Tropical" "%{buildroot}/%{_datadir}/aletheia/themes/Tropical"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Solarized" "%{buildroot}/%{_datadir}/aletheia/themes/Solarized"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Tropics" "%{buildroot}/%{_datadir}/aletheia/themes/Tropics"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Verdant" "%{buildroot}/%{_datadir}/aletheia/themes/Verdant"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Zenburn" "%{buildroot}/%{_datadir}/aletheia/themes/Zenburn"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" "%{buildroot}/%{_datadir}/aletheia/languages/en"
 
 %files
@@ -55,18 +60,21 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" 
 %attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.queue
 %attr(0644, root, root) %{_datadir}/aletheia/example.config
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Aurora
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Forest
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Desert
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Dracula
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Everforest
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Gruvbox
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Jade
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Misty
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Moss
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Nordic
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Mist
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Nord
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Oasis
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Ocean
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Slate
-%attr(0644, root, root) %{_datadir}/aletheia/themes/Tropical
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Solarized
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Tropics
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Verdant
+%attr(0644, root, root) %{_datadir}/aletheia/themes/Zenburn
 %attr(0644, root, root) %{_datadir}/aletheia/languages/en
 
 %changelog
-* %%DATE%% Brad Hermanson %%VERSION%%-%%REVISION%%
-- Initial package release
+* Thu Jun 20 2024 Brad Hermanson 1.0-1
+- Added 'flac' dependency and updated list of themes.

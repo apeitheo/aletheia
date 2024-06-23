@@ -1,0 +1,14 @@
+# Based on 'Dracula' by Zeno Rocha and Lucas de França
+# https://draculatheme.com/
+
+COLOR_BACKGROUND    =44475a
+COLOR_PANEL         =282a36
+COLOR_HIGHLIGHT     =8be9fd
+COLOR_MENU_SELECTED =8be9fd
+COLOR_UNSELECTED    =f8f8f2
+COLOR_SEPARATOR     =6272a4
+COLOR_MENU_END      =ff79c6
+COLOR_KEYS          =ff79c6
+COLOR_TRACKNUMBER   =f1fa8c
+COLOR_CURRENT_SONG  =ff79c6
+COLOR_ARROW         =ff79c6

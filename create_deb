@@ -2,6 +2,7 @@
 
 RED="\033[1;31m"
 NOCOLOR="\033[0m"
+GREEN="\033[1;32m"
 
 if [ "$(whoami)" != "root" ]; then
 	echo -e "${RED}Error:$NOCOLOR Needs root permission"
@@ -9,7 +10,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=10
+REVISION=11
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -17,9 +18,27 @@ if [ -e "$TMPDIR" ]; then
 	rm -rf "$TMPDIR"
 fi
 
-mkdir -p "$TMPDIR"/DEBIAN "$TMPDIR"/usr/bin "$TMPDIR"/usr/share/man/man1/ "$TMPDIR"/usr/share/icons/ "$TMPDIR"/usr/share/applications/ "$TMPDIR"/usr/share/aletheia/themes/ "$TMPDIR"/usr/share/aletheia/vimrc/ "$TMPDIR"/usr/share/aletheia/languages/
+mkdir -p "$TMPDIR"/DEBIAN
+mkdir -p "$TMPDIR"/usr/bin
+mkdir -p "$TMPDIR"/usr/share/man/man1/
+mkdir -p "$TMPDIR"/usr/share/icons/
+mkdir -p "$TMPDIR"/usr/share/applications/
+mkdir -p "$TMPDIR"/usr/share/aletheia/languages/
+mkdir -p "$TMPDIR"/usr/share/aletheia/themes/
+mkdir -p "$TMPDIR"/usr/share/aletheia/vimrc/
 
-echo -e "Package: aletheia\nVersion: ${VERSION}\nArchitecture: all\nMaintainer: Brad Hermanson <apeitheo@gmail.com>\nDepends: bc, calc, espeak-ng, eyed3, ffmpeg, gtts, libimage-exiftool-perl, mplayer, parallel, pulseaudio-utils, sox, sqlite3, vim\nSection: sound\nHomepage: https://github.com/apeitheo/aletheia\nDescription: A CLI media player with speed controls and voice feedback." >"$TMPDIR"/DEBIAN/control
+cat << EOF > "$TMPDIR/DEBIAN/control"
+Package: aletheia
+Version: ${VERSION}
+Architecture: all
+Maintainer: Brad Hermanson <apeitheo@gmail.com>
+Depends: bc, calc, espeak-ng, ffmpeg, libimage-exiftool-perl, mplayer, pulseaudio-utils, sox, sqlite3, vim
+Recommends: eyed3, flac
+Suggests: python3-gtts, parallel
+Section: sound
+Homepage: https://github.com/apeitheo/aletheia
+Description: A CLI media player with speed controls and voice feedback.
+EOF
 
 install -m 755 "$SRCDIR/aletheia" "$TMPDIR/usr/bin/"
 install -m 755 "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/usr/bin/"
@@ -27,9 +46,9 @@ install -m 644 "$SRCDIR/aletheia.1" "$TMPDIR/usr/share/man/man1/"
 install -m 644 "$SRCDIR/aletheia.desktop" "$TMPDIR/usr/share/applications/"
 install -m 644 "$SRCDIR/aletheia.png" "$TMPDIR/usr/share/icons/"
 install -m 644 "$SRCDIR/example.config" "$TMPDIR/usr/share/aletheia/"
+install -m 644 "$SRCDIR/languages/"* "$TMPDIR/usr/share/aletheia/languages/"
 install -m 644 "$SRCDIR/themes/"* "$TMPDIR/usr/share/aletheia/themes/"
 install -m 644 "$SRCDIR/vimrc/"* "$TMPDIR/usr/share/aletheia/vimrc/"
-install -m 644 "$SRCDIR/languages/"* "$TMPDIR/usr/share/aletheia/languages/"
 
 sed -i "/^ALETHEIA_DATA_DIR/s#.*#ALETHEIA_DATA_DIR=\"/usr/share/aletheia/\"#g" "$TMPDIR/usr/bin/aletheia"
 
@@ -38,9 +57,9 @@ chown -R root:root "$TMPDIR"
 dpkg-deb --build "$TMPDIR"
 if [ -e "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" ]; then
 	mv "/tmp/aletheia_${VERSION}-${REVISION}_all.deb" "$SRCDIR"
-	echo -e "\n$SRCDIR/aletheia_${VERSION}-${REVISION}_all.deb\n"
+	echo -e "\n${GREEN}Install:\n\n ${NOCOLOR}sudo apt install ./aletheia_${VERSION}-${REVISION}_all.deb\n"
 else
-	echo -e "\n${RED}Error:$NOCOLOR Package creation not successful.\n"
+	echo -e "\n${RED}Error:$NOCOLOR Package creation failed\n"
 	exit 1
 fi
 

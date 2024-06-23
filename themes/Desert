@@ -1,0 +1,16 @@
+# Based on 'Desert' by Hans Fugal
+# https://github.com/fugalh/desert.vim
+
+COLOR_HIGHLIGHT    =89fb98
+COLOR_KEYS         =fda0a0
+COLOR_DELETE       =fda0a0
+COLOR_MENU_END     =fda0a0
+COLOR_UNSELECTED   =f0e68c
+COLOR_PANEL        =333333
+COLOR_SEPARATOR    =f0e68c
+COLOR_ARROW        =f0e68c
+COLOR_TRACKNUMBER  =fda0a0
+COLOR_BACKGROUND   =4d4d4d
+COLOR_MENU_TEXT    =f3fcf4
+COLOR_CURRENT_TEXT =000000
+COLOR_TIME         =89fb98

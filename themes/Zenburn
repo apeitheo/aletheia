@@ -1,0 +1,14 @@
+# Based on 'Zenburn' by Jani Nurminen
+# https://github.com/jnurmine/Zenburn
+
+COLOR_HIGHLIGHT     =8cd0d3
+COLOR_KEYS          =cc9393
+COLOR_DELETE        =cc9393
+COLOR_MENU_END      =7f9f7f
+COLOR_UNSELECTED    =f0dfaf
+COLOR_PANEL         =3f3f3f
+COLOR_SEPARATOR     =dcdccc
+COLOR_ARROW         =7f9f7f
+COLOR_TRACKNUMBER   =cc9393
+COLOR_BACKGROUND    =4f4f4f
+COLOR_CURRENT_SONG  =8cd0d3
