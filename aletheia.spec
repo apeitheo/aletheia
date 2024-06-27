@@ -33,6 +33,8 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc" "
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.lock" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.lock"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/vimrc/vimrc.queue" "%{buildroot}/%{_datadir}/aletheia/vimrc/vimrc.queue"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/example.config" "%{buildroot}/%{_datadir}/aletheia/example.config"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/example.translation" "%{buildroot}/%{_datadir}/aletheia/example.translation"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/example.translation.help" "%{buildroot}/%{_datadir}/aletheia/example.translation.help"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Aurora" "%{buildroot}/%{_datadir}/aletheia/themes/Aurora"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Desert" "%{buildroot}/%{_datadir}/aletheia/themes/Desert"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Dracula" "%{buildroot}/%{_datadir}/aletheia/themes/Dracula"
@@ -47,6 +49,8 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Solariz
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Tropics" "%{buildroot}/%{_datadir}/aletheia/themes/Tropics"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Verdant" "%{buildroot}/%{_datadir}/aletheia/themes/Verdant"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/themes/Zenburn" "%{buildroot}/%{_datadir}/aletheia/themes/Zenburn"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/de" "%{buildroot}/%{_datadir}/aletheia/languages/de"
+install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/de.help" "%{buildroot}/%{_datadir}/aletheia/languages/de.help"
 install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" "%{buildroot}/%{_datadir}/aletheia/languages/en"
 
 %files
@@ -59,6 +63,8 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" 
 %attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.lock
 %attr(0644, root, root) %{_datadir}/aletheia/vimrc/vimrc.queue
 %attr(0644, root, root) %{_datadir}/aletheia/example.config
+%attr(0644, root, root) %{_datadir}/aletheia/example.translation
+%attr(0644, root, root) %{_datadir}/aletheia/example.translation.help
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Aurora
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Desert
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Dracula
@@ -74,8 +80,13 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" 
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Verdant
 %attr(0644, root, root) %{_datadir}/aletheia/themes/Zenburn
 %attr(0644, root, root) %{_datadir}/aletheia/languages/en
+%attr(0644, root, root) %{_datadir}/aletheia/languages/de
+%attr(0644, root, root) %{_datadir}/aletheia/languages/de.help
 
 %changelog
+* Thu Jun 27 2024 Brad Hermanson 1.0-3
+- Added German translation and templates.
+
 * Sat Jun 22 2024 Brad Hermanson 1.0-2
 - Fixed shellcheck warning.
 

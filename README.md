@@ -18,13 +18,13 @@
 - **On-demand voice feedback**
 - **Support for translations**
 
-## Get Started
-
 ## Download
 
 ```bash
 git clone https://github.com/apeitheo/aletheia.git
 ```
+
+## Change Directory
 
 ```bash
 cd aletheia
@@ -185,7 +185,9 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/local/share/applications/aletheia.desktop
 - /usr/local/share/icons/aletheia.png
 - /usr/local/share/aletheia/example.config
-- /usr/local/share/aletheia/languages/en
+- /usr/local/share/aletheia/example.translation
+- /usr/local/share/aletheia/example.translation.help
+- /usr/local/share/aletheia/languages/*
 - /usr/local/share/aletheia/themes/*
 - /usr/local/share/aletheia/vimrc/*
 
@@ -197,7 +199,9 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/share/applications/aletheia.desktop
 - /usr/share/icons/aletheia.png
 - /usr/share/aletheia/example.config
-- /usr/share/aletheia/languages/en
+- /usr/share/aletheia/example.translation
+- /usr/share/aletheia/example.translation.help
+- /usr/share/aletheia/languages/*
 - /usr/share/aletheia/themes/*
 - /usr/share/aletheia/vimrc/*
 
@@ -209,9 +213,15 @@ DESTDIR=/path/to/directory/ ./install
 - /usr/share/applications/aletheia.desktop
 - /usr/share/icons/aletheia.png
 - /usr/share/aletheia/example.config
-- /usr/share/aletheia/languages/en
+- /usr/share/aletheia/example.translation
+- /usr/share/aletheia/example.translation.help
+- /usr/share/aletheia/languages/*
 - /usr/share/aletheia/themes/*
 - /usr/share/aletheia/vimrc/*
+
+## Contributing
+
+I am seeking native speakers to translate Aletheia into their local language. Submit a translation using the provided example.translation and example.translation.help templates. Refer to the German translation in ./languages/de for an example.
 
 ## Donate (Optional)
 

@@ -1,0 +1,197 @@
+#!/bin/bash
+
+export REPEAT_HELP="Schleifensteuerung
+6  Schleifen wechseln
+^  Wechselschalter rückwärts
+&  Neue Schleife sperren
+^X  Schleife aktualisieren
+%  Schleife entfernen
+Z  Schleife exportieren
+^L  Exportierte Schleife
+S  Start -0,01
+G  Start +0,01
+s  Start -0,05
+g  Start +0,05
+H  Ende -0,01
+L  Ende +0,01
+h  Ende -0,05
+l  Ende +0,05
+<  Lücke -1
+>  Lücke +1
+e  Übergang abspielen
+^H  Zum Start suchen
+5  Startposition
+7  Endposition
+c  Banner bewegen"
+
+export SETUP_HELP="Sprachsteuerung
+d  Seite sprechen
+T  Rückmeldungsstufe
+Lautstärkeeinstellungen der Stimme
+8  Lautstärke runter
+9  Lautstärke hoch
+Tonhöheneinstellungen der Stimme
+J  Runter
+K  Hoch
+Spracheinstellungen
+^X  Sprachmenü
+^V  Sprachengine
+Metadaten-Cache
+c  Tags cachen
+^T  Tags umschalten
+Anpassung
+^X  Sprachmenü
+^A  Themenmenü"
+
+export QUEUE_HELP="Warteschlangensteuerung
+j  Seite runter
+k  Seite hoch
+h  Auswahl runter
+l  Auswahl hoch
+x  Lied entfernen
+<  Lied nach unten verschieben
+>  Lied nach oben verschieben
+s  Schlüsselwortsuche
+c  Dateiname umschalten
+g  Tag bearbeiten
+^G  Tag aktualisieren
+'  Anfang
+\"  Ende"
+
+export SCALE_HELP="Skalensteuerung
+j  Tonhöhe und Tempo verringern
+k  Tonhöhe und Tempo erhöhen
+o  EDO verdoppeln
+m  EDO halbieren
+c  Umkehren
+y  $DEFAULT_EDO-EDO"
+
+export HELP="Grundsteuerung
+i  Menü
+?  Tastensteuerung
+j  Seite runter
+k  Seite hoch
+;  Warteschlange
+p  Pause
+n  Nächstes Lied
+b  Vorheriges Lied
+m  Handbuchseite
+q  Beenden
+Sprachrückmeldung
+d  Stimme umschalten
+T  Rückmeldungsstufe
+^K  Intervall lesen
+I  Ecke lesen
+,  Titel lesen
+^S  Sperrstatus lesen
+Lautstärkesteuerung
+*  1% runter
+(  1% hoch
+8  3% runter
+9  3% hoch
+!  PCM 1% runter
+@  PCM 1% hoch
+1  PCM 5% runter
+2  PCM 5% hoch
+c  Stummschalten
+3  Auf/Abblenden
+Intervallsteuerung
+j  Tonhöhe runter
+k  Tonhöhe hoch
+x  Sperren
+X  Entsperren
+f  Nächste Sperre
+F  Vorherige Sperre
+m  EDO halbieren
+o  EDO verdoppeln
+.  INT setzen
+/  EDO setzen
+w  Auf gesperrt zurücksetzen
+H  Wenig präzise
+L  Vollständig präzise
+J  EDO runter
+K  EDO hoch
+y  $DEFAULT_EDO-EDO
+4  INT/EDO zurücksetzen
+^U  Gesperrt umschalten
+Tonhöhensprungsteuerung
+_  Oktave runter
++  Oktave hoch
+M  INT umkehren
+Y  INT nullen
+Tonhöhenfade-Steuerung
+C  Skalierungsgeschwindigkeit
+t  INT nullen
+u  INT rauf/runter
+U  EDO rauf/runter
+-  Oktave runter
+=  Oktave hoch
+^Y  INT umkehren
+G  Oszillieren
+Balance-Steuerung
+{  1% nach links rauf
+}  1% nach rechts rauf
+[  1% nach links runter
+]  1% nach rechts runter
+0  Fading zurücksetzen
+)  Zurücksetzen
+Titelsteuerung
+h  Rückwärts suchen
+l  Vorwärts suchen
+b  Rückwärts in der Warteschlange
+n  Vorwärts in der Warteschlange
+p  Pause
+\\  Neustarten
+r  Umbenennen
+D  Archivieren
+^D  Löschen
+a  Equalizer
+$  Position speichern
+^H  Zur Position suchen
+P  Fortschrittsanzeige
+O  VIM-Menü
+g  Tag bearbeiten
+^G  Tag aktualisieren
+Warteschlangensteuerung
+;  Warteschlange
+R  Zufällig wiedergeben
+A  Sortieren
+\"  Letzter des Künstlers
+'  Erster des Künstlers
+N  Nächster Künstler
+B  Vorheriger Künstler
+Z  Als exportieren
+e  Schleife umschalten
+^R  Zufallsmodus
+Schleifenschaltung
+E  Titel schleifen
+V  Künstler schleifen
+Suchsteuerung
+S  Neue Suche
+s  Springen zu
+^I  Lieder hinzufügen
+Schleifeneditor
+5  Startposition
+7  Endposition
+6  Schleife betreten
+6  Schleifen wechseln
+&  Neue Schleife sperren
+^X  Schleife aktualisieren
+%  Schleife entfernen
+Z  Schleife exportieren
+^L  Exportierte Schleife
+^E  Nur Schleifen abspielen
+\\  Zum Start suchen
+Videosteuerung
+<  Video aktivieren
+>  Vollbildvideo
+Download-Steuerung
+W  Downloads hinzufügen
+^W  Zu Downloads springen
+^N  Hinzufügen und springen
+Erweiterte Steuerung
+^A  Thema auswählen
+^P  Alle pausieren
+z  Bildschirm neu zeichnen
+~  Schlafmodus
+|  Vanish-Editor"

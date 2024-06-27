@@ -1,0 +1,53 @@
+#!/bin/bash
+
+TMP="$(mktemp .tmp.XXXXXX)"
+TMP2="$(mktemp .tmp.XXXXXX)"
+TMP3="$(mktemp .tmp.XXXXXX)"
+
+grep "get_local_phrase \"" aletheia | sed "s/^.*get_local_phrase \"//g;s/^[ ]*\$.*//g" >"$TMP"
+grep "gtts_speak \"" aletheia | sed "s/^.*gtts_speak \"//g;s/^[ ]*\$.*//g" >>"$TMP"
+grep "gtts_speak_chain \"" aletheia | sed "s/^.*gtts_speak_chain \"//g;s/^[ ]*\$.*//g" >>"$TMP"
+
+sort "$TMP" | uniq | sed "s/^/\"/g;s/)\".*//g" >"$TMP2"
+
+while IFS= read -r line; do
+	str=$(grep -oP '"[^"]+"' <<<"$line" | sed "s/\"//g")
+
+	for _str in "${str[@]}"; do
+		echo "$_str" | tr '[:upper:]' '[:lower:]' >>"$TMP3"
+	done
+done <"$TMP2"
+
+echo -e "german\nenglish" >>"$TMP3"
+
+sort "$TMP3" | uniq | sed "/^$/d;/^\$.*/d;s/$/[en]/g" >example.translation
+
+rm -f "$TMP" "$TMP2" "$TMP3"
+
+start_pattern="^## HELP ##$"
+end_pattern='^## HELP_END ##$'
+export_pattern='^[A-Z_]+='
+
+print=false
+
+echo -e "#!/bin/bash\n" >example.translation.help
+
+while IFS= read -r line; do
+	if [[ $line =~ $start_pattern ]]; then
+		print=true
+		continue
+	fi
+
+	if [[ $line =~ $end_pattern ]]; then
+		print=false
+		break
+	fi
+
+	if [ "$print" == true ]; then
+		if [[ $line =~ $export_pattern ]]; then
+			echo "export $line"
+		else
+			echo "$line"
+		fi
+	fi
+done <aletheia >>example.translation.help

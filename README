@@ -197,7 +197,9 @@ Installed files:
     /usr/local/share/applications/aletheia.desktop
     /usr/local/share/icons/aletheia.png
     /usr/local/share/aletheia/example.config
-    /usr/local/share/aletheia/languages/en
+    /usr/local/share/aletheia/example.translation
+    /usr/local/share/aletheia/example.translation.help
+    /usr/local/share/aletheia/languages/*
     /usr/local/share/aletheia/themes/*
     /usr/local/share/aletheia/vimrc/*
 
@@ -209,7 +211,9 @@ Installed files:
     /usr/share/applications/aletheia.desktop
     /usr/share/icons/aletheia.png
     /usr/share/aletheia/example.config
-    /usr/share/aletheia/languages/en
+    /usr/share/aletheia/example.translation
+    /usr/share/aletheia/example.translation.help
+    /usr/share/aletheia/languages/*
     /usr/share/aletheia/themes/*
     /usr/share/aletheia/vimrc/*
 
@@ -221,7 +225,9 @@ Installed files:
     /usr/share/applications/aletheia.desktop
     /usr/share/icons/aletheia.png
     /usr/share/aletheia/example.config
-    /usr/share/aletheia/languages/en
+    /usr/share/aletheia/example.translation
+    /usr/share/aletheia/example.translation.help
+    /usr/share/aletheia/languages/*
     /usr/share/aletheia/themes/*
     /usr/share/aletheia/vimrc/*
 

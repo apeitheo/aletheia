@@ -1,0 +1,197 @@
+#!/bin/bash
+
+export REPEAT_HELP="Loop Controls
+6  Switch Loops
+^  Reverse Switch
+&  Lock New Loop
+^X  Update Loop
+%  Remove Loop
+Z  Export Loop
+^L  Exported Loop
+S  Start -0.01
+G  Start +0.01
+s  Start -0.05
+g  Start +0.05
+H  End -0.01
+L  End +0.01
+h  End -0.05
+l  End +0.05
+<  Gap -1
+>  Gap +1
+e  Play Transition
+^H  Seek to Start
+5  Start Position
+7  End Position
+c  Move Banner"
+
+export SETUP_HELP="Voice Controls
+d  Speak Page
+T  Feedback Level
+Voice Volume Settings
+8  Volume Down
+9  Volume Up
+Voice Pitch Settings
+J  Down
+K  Up
+Language Settings
+^X  Language Menu
+^V  Voice Engine
+Metadata Cache
+c  Cache Tags
+^T  Toggle Tags
+Customization
+^X  Language Menu
+^A  Theme Menu"
+
+export QUEUE_HELP="Queue Controls
+j  Page Down
+k  Page Up
+h  Selection Down
+l  Selection Up
+x  Remove Song
+<  Move Song Down
+>  Move Song Up
+s  Keyword Search
+c  Toggle Filename
+g  Edit Tag
+^G  Update Tag
+'  Top
+\"  Bottom"
+
+export SCALE_HELP="Scale Controls
+j  Scale Down
+k  Scale Up
+o  Double EDO
+m  Halve EDO
+c  Reverse
+y  $DEFAULT_EDO-EDO"
+
+export HELP="Basic Controls
+i  Menu
+?  Key Controls
+j  Page Down
+k  Page Up
+;  Queue
+p  Pause
+n  Next Song
+b  Previous Song
+m  Man Page
+q  Quit
+Voice Feedback
+d  Toggle Voice
+T  Feedback Level
+^K  Read Interval
+I  Read Corner
+,  Read Title
+^S  Read Lock Status
+Volume Controls
+*  1% Down
+(  1% Up
+8  3% Down
+9  3% Up
+!  PCM 1% Down
+@  PCM 1% Up
+1  PCM 5% Down
+2  PCM 5% Up
+c  Mute
+3  Fade Up/Down
+Interval Controls
+j  Pitch Down
+k  Pitch Up
+x  Lock
+X  Unlock
+f  Next Lock
+F  Previous Lock
+m  Half EDO
+o  Double EDO
+.  Set INT
+/  Set EDO
+w  Reset to Locked
+H  Least Precise
+L  Fully Precise
+J  EDO Down
+K  EDO Up
+y  $DEFAULT_EDO-EDO
+4  Reset INT/EDO
+^U  Toggle Locked
+Pitch Jump Controls
+_  Octave Down
++  Octave Up
+M  Inverse INT
+Y  Zero INT
+Pitch Fade Controls
+C  Scale Speed
+t  Zero INT
+u  INT Up/Down
+U  EDO Up/Down
+-  Octave Down
+=  Octave Up
+^Y  Inverse INT
+G  Oscillate
+Balance Controls
+{  1% Left Up
+}  1% Right Up
+[  1% Left Down
+]  1% Right Down
+0  Reset Fade
+)  Reset
+Track Controls
+h  Seek Backward
+l  Seek Forward
+b  Queue Backward
+n  Queue Forward
+p  Pause
+\\  Restart
+r  Rename
+D  Archive
+^D  Delete
+a  Equalizer
+$  Save Position
+^H  Seek to Position
+P  Progress Bar
+O  VIM Menu
+g  Edit Tag
+^G  Update Tag
+Queue Controls
+;  Queue
+R  Shuffle
+A  Sort
+\"  Last of Artist
+'  First of Artist
+N  Next Artist
+B  Previous Artist
+Z  Export As
+e  Loop Toggle
+^R  Random Mode
+Loop Toggle Controls
+E  Loop Song
+V  Loop Artist
+Search Controls
+S  New Search
+s  Jump To
+^I  Add Songs
+Loop Editor Controls
+5  Start Position
+7  End Position
+6  Enter Loop
+6  Switch Loops
+&  Lock New Loop
+^X  Update Loop
+%  Remove Loop
+Z  Export Loop
+^L  Exported Loop
+^E  Play Only Loops
+\\  Seek to Start
+Video Controls
+<  Enable Video
+>  Fullscreen Video
+Download Controls
+W  Add Downloads
+^W  Jump Downloads
+^N  Add and Jump
+Advanced Controls
+^A  Select Theme
+^P  Pause All
+z  Redraw Screen
+~  Sleep mode
+|  Vanish Editor"

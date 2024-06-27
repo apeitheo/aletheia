@@ -1,0 +1,227 @@
+about[de]über
+album[de]Album
+all[de]alles
+and[de]und
+archive[de]Archiv
+archive canceled[de]Archivierung abgebrochen
+archived[de]archiviert
+archive file?[de]Datei archivieren?
+backward[de]rückwärts
+balancing[de]Ausgleich
+balancing volume[de]Lautstärke ausgleichen
+bass[de]Bass
+caching metadata. this may take a while.[de]Metadaten werden zwischengespeichert. Dies kann eine Weile dauern.
+canceled[de]abgebrochen
+closed[de]geschlossen
+command[de]Befehl
+command mode[de]Befehlsmodus
+config[de]Konfiguration
+config updated[de]Konfiguration aktualisiert
+delete[de]löschen
+delete canceled[de]Löschen abgebrochen
+deleted[de]gelöscht
+delete file?[de]Datei löschen?
+delete loops?[de]Schleifen löschen?
+display album[de]Album anzeigen
+display filename[de]Dateiname anzeigen
+display tags[de]Tags anzeigen
+down[de]runter
+do you want to quit?[de]Möchten Sie beenden?
+do you want to suspend?[de]Möchten Sie pausieren?
+edit[de]bearbeiten
+edo[de]edo
+empty[de]leer
+end[de]Ende
+english[de]Englisch
+enter command[de]Befehl eingeben
+enter e d o[de]E D O eingeben
+enter interval[de]Intervall eingeben
+enter keywords to start new playlist[de]Schlüsselwörter eingeben, um neue Playlist zu starten
+enter number to delete[de]Nummer zum Löschen eingeben
+enter the new title[de]Neuen Titel eingeben
+enter time to sleep[de]Zeit zum Schlafen eingeben
+equalizer off[de]Equalizer aus
+equalizer on[de]Equalizer an
+error[de]Fehler
+e speak[de]e speak
+export[de]exportieren
+export closed[de]Export abgeschlossen
+export loop[de]Schleife exportieren
+fade[de]ausblenden
+fading[de]ausblendend
+filename[de]Dateiname
+finished[de]fertig
+forward[de]vorwärts
+fullscreen[de]Vollbild
+full voice feedback[de]Vollständiges Sprachfeedback
+genre[de]Genre
+german[de]Deutsch
+g t t s[de]g t t s
+help[de]Hilfe
+insert[de]einfügen
+insert mode[de]Einfügemodus
+int[de]int
+invalid number[de]ungültige Nummer
+invert[de]umkehren
+key controls[de]Tastensteuerung
+lang[de]Sprache
+language[de]Sprache
+less precise[de]weniger präzise
+limit[de]Limit
+limit reached[de]Limit erreicht
+loading loop[de]Schleife laden
+lock[de]sperren
+locked[de]gesperrt
+locked off[de]Sperre aus
+locked on[de]Sperre an
+lock off[de]Sperre aus
+lock on[de]Sperre an
+locks[de]Sperren
+lock updated[de]Sperre aktualisiert
+loop[de]Schleife
+loop artist[de]Schleifenkünstler
+loop closed[de]Schleife geschlossen
+loop controls[de]Schleifensteuerung
+loop disabled[de]Schleife deaktiviert
+loop file error[de]Schleifen-Dateifehler
+loop mode[de]Schleifenmodus
+loop mode off[de]Schleifenmodus aus
+loop off[de]Schleife aus
+loops[de]Schleifen
+loops deleted[de]Schleifen gelöscht
+loop song[de]Schleifenlied
+loop updated[de]Schleife aktualisiert
+main screen[de]Hauptbildschirm
+menu[de]Menü
+menu closed[de]Menü geschlossen
+mid[de]Mitte
+minute[de]Minute
+minutes[de]Minuten
+missing[de]fehlt
+music[de]Musik
+mute[de]stummschalten
+muted[de]stummgeschaltet
+n/a[de]n/v
+negative[de]negativ
+new entry[de]neuer Eintrag
+no locks[de]keine Sperren
+no loops[de]keine Schleifen
+no loops to delete[de]keine Schleifen zum Löschen
+no matches[de]keine Treffer
+no more loops[de]keine weiteren Schleifen
+no music[de]keine Musik
+none[de]keine
+no queues[de]keine Playlists
+no repeats[de]keine Wiederholungen
+no sound[de]kein Klang
+no sounds[de]keine Klänge
+not an mp3[de]keine MP3
+nothing downloaded[de]nichts heruntergeladen
+nothing found[de]nichts gefunden
+nothing loaded[de]nichts geladen
+not mp3[de]keine MP3
+no video[de]kein Video
+no videos[de]keine Videos
+number not valid[de]Nummer ungültig
+octave[de]Oktave
+of[de]von
+off[de]aus
+on[de]an
+only artist and title[de]nur Künstler und Titel
+only locked[de]nur gesperrt
+only title[de]nur Titel
+opening vim[de]Vim wird geöffnet
+order reversed[de]Reihenfolge umgekehrt
+oscillate[de]oszillieren
+oscillating[de]oszillierend
+page down[de]Seite runter
+page up[de]Seite hoch
+pause[de]Pause
+paused[de]pausiert
+pitch[de]Tonhöhe
+pitch and tempo[de]Tonhöhe und Tempo
+playing downloaded[de]heruntergeladen wird abgespielt
+please wait[de]bitte warten
+point[de]Punkt
+position saved[de]Position gespeichert
+pos saved[de]Pos gespeichert
+precise[de]präzise
+progress bar disabled[de]Fortschrittsbalken deaktiviert
+progress bar enabled[de]Fortschrittsbalken aktiviert
+queue[de]Playlist
+queue closed[de]Playlist geschlossen
+queue controls[de]Playlist-Steuerung
+queued downloads[de]Downloads in Warteschlange
+queue updated[de]Playlist aktualisiert
+quit[de]beenden
+quit canceled[de]Beenden abgebrochen
+random mode[de]Zufallsmodus
+random mode off[de]Zufallsmodus aus
+random off[de]Zufall aus
+read[de]lesen
+read corner[de]Ecke vorlesen
+reading only artist and title[de]liest nur Künstler und Titel
+rename[de]umbenennen
+rename canceled[de]Umbenennen abgebrochen
+rename file?[de]Datei umbenennen?
+reset[de]zurücksetzen
+saved[de]gespeichert
+saved loop[de]Schleife gespeichert
+save queue[de]Playlist speichern
+save queue as?[de]Playlist speichern unter?
+scale[de]skaliere
+scale closed[de]Skalierung geschlossen
+scale controls[de]Skalierungssteuerung
+scale e d o[de]e d o skalieren
+scale finished[de]Skalierung abgeschlossen
+scale interval[de]Skalierungsintervall
+scale speed set[de]Skalierungsgeschwindigkeit eingestellt
+scaling[de]skalierend
+screen redrawn[de]Bildschirm neu gezeichnet
+search[de]suche
+search canceled[de]Suche abgebrochen
+search keywords[de]Suchbegriffe
+select list[de]Liste auswählen
+select playlist[de]Playlist auswählen
+set scale speed[de]Skalierungsgeschwindigkeit einstellen
+settings[de]Einstellungen
+settings closed[de]Einstellungen geschlossen
+setup[de]Einstellungen
+shuffled[de]gemischt
+sleep[de]Schlafmodus
+sleep canceled[de]Schlafmodus abgebrochen
+sleeping[de]schläft
+sleeping in[de]schläft in
+sorted[de]sortiert
+sound[de]Klang
+speed[de]Geschwindigkeit
+speed reset[de]Geschwindigkeit zurückgesetzt
+start[de]starten
+suspend[de]pausieren
+suspending in[de]pausiert in
+tag[de]Tag
+tags[de]Tags
+tag updated[de]Tag aktualisiert
+tempo[de]Tempo
+theme[de]Thema
+treble[de]Höhen
+tuning reset[de]zurücksetzen
+unable to oscillate[de]kann nicht oszillieren
+unlock[de]entsperren
+unlocked[de]entsperrt
+unmuted[de]Stummschaltung aufgehoben
+unpaused[de]nicht pausiert
+up[de]hoch
+vanish[de]vanish
+vanish closed[de]vanish geschlossen
+video[de]Video
+video disabled[de]Video deaktiviert
+video enabled[de]Video aktiviert
+video fullscreen[de]Video Vollbild
+video normal[de]Video normal
+video on[de]Video an
+voice[de]Stimme
+voice feedback disabled[de]Sprachfeedback deaktiviert
+voice on[de]Stimme an
+wait[de]warten
+zero[de]null

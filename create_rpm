@@ -10,7 +10,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=11
+REVISION=12
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/fedora-package-aletheia/"
 
@@ -36,7 +36,7 @@ cp "$SRCDIR/aletheia_desktop_launcher" "$TMPDIR/rpmbuild/SOURCES/usr/bin/"
 cp "$SRCDIR/aletheia.1" "$TMPDIR/rpmbuild/SOURCES/usr/share/man/man1"
 cp "$SRCDIR/aletheia.desktop" "$TMPDIR/rpmbuild/SOURCES/usr/share/applications/"
 cp "$SRCDIR/aletheia.png" "$TMPDIR/rpmbuild/SOURCES/usr/share/icons/"
-cp "$SRCDIR/example.config" "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/"
+cp "$SRCDIR/example."* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/"
 cp "$SRCDIR/languages/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/languages/"
 cp "$SRCDIR/themes/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/themes/"
 cp "$SRCDIR/vimrc/"* "$TMPDIR/rpmbuild/SOURCES/usr/share/aletheia/vimrc/"
@@ -66,6 +66,11 @@ fi
 
 mv "$path/RPMS/noarch/aletheia-${VERSION}-"*".noarch.rpm" "$SRCDIR"
 file="$(ls "$SRCDIR/aletheia-${VERSION}-"*".noarch.rpm")"
-echo -e "\n${GREEN}Install:\n\n$NOCOLOR sudo dnf install ./${file##*/}\n"
+
+if [[ "$OS" == *"openSUSE"* ]]; then
+	echo -e "\n${GREEN}Install:\n\n${NOCOLOR}sudo zypper install ./${file##*/}\n"
+else
+	echo -e "\n${GREEN}Install:\n\n${NOCOLOR}sudo dnf install ./${file##*/}\n"
+fi
 
 exit 0

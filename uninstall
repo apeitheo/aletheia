@@ -4,8 +4,6 @@ RED="\033[1;31m"
 BLUE="\033[1;36m"
 NOCOLOR="\033[0m"
 
-echo -e "\n${BLUE}Aletheia $(grep "VERSION=" < aletheia | cut -d'"' -f2)\n$NOCOLOR"
-
 DESTDIR=${DESTDIR:-/usr/local}
 if [ "$1" == "--destdir" ]; then
 	if [ -d "$2" ]; then
@@ -36,7 +34,7 @@ FILES[1]="${DESTDIR}/bin/aletheia_desktop_launcher"
 FILES[2]="${DESTDIR}/share/man/man1/aletheia.1"
 FILES[3]="${DESTDIR}/share/applications/aletheia.desktop"
 FILES[4]="${DESTDIR}/share/icons/aletheia.png"
-FILES[5]="${DESTDIR}/share/aletheia/example.config"
+FILES+=("${DESTDIR}/share/aletheia/example."*)
 if [ -d "$DESTDIR/share/aletheia/themes/" ]; then
 	FILES+=("${DESTDIR}/share/aletheia/themes/"*)
 fi
