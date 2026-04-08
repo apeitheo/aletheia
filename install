@@ -60,6 +60,7 @@ check_dep ffprobe
 #check_dep iconv
 check_dep mplayer
 check_dep pactl
+check_dep perl
 check_dep sox
 check_dep sqlite3
 check_dep vim

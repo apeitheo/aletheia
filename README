@@ -28,6 +28,7 @@ Dependencies:
   - ffprobe
   - mplayer
   - pactl
+  - perl
   - sox
   - sqlite3
   - vim

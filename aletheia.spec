@@ -9,6 +9,7 @@ Requires: calc
 Requires: espeak-ng
 Requires: ffmpeg
 Requires: mplayer
+Requires: perl
 Requires: perl-Image-ExifTool
 Requires: pulseaudio-utils
 Requires: sox
@@ -84,6 +85,9 @@ install -D -m 644 "%%TMPDIR%%/rpmbuild/SOURCES/usr/share/aletheia/languages/en" 
 %attr(0644, root, root) %{_datadir}/aletheia/languages/de.help
 
 %changelog
+* Tue Apr 7 2026 Brad Hermanson 1.0-4
+- Added perl dependency.
+
 * Thu Jun 27 2024 Brad Hermanson 1.0-3
 - Added German translation and templates.
 

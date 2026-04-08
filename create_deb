@@ -10,7 +10,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 VERSION="$(grep "VERSION=" < aletheia | cut -d'"' -f2)"
-REVISION=12
+REVISION=13
 SRCDIR=${SRCDIR:-"$(pwd)"}
 TMPDIR="/tmp/aletheia_${VERSION}-${REVISION}_all"
 
@@ -32,7 +32,7 @@ Package: aletheia
 Version: ${VERSION}
 Architecture: all
 Maintainer: Brad Hermanson <apeitheo@gmail.com>
-Depends: bc, calc, espeak-ng, ffmpeg, libimage-exiftool-perl, mplayer, pulseaudio-utils, sox, sqlite3, vim
+Depends: bc, calc, espeak-ng, ffmpeg, libimage-exiftool-perl, mplayer, perl, pulseaudio-utils, sox, sqlite3, vim
 Recommends: eyed3, flac
 Suggests: python3-gtts, parallel
 Section: sound

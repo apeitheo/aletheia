@@ -592,6 +592,7 @@ s  Keyword Search
 c  Toggle Filename
 g  Edit Tag
 ^G  Update Tag
+^T  Toggle Tags
 '  Top
 \"  Bottom"
 
@@ -868,13 +869,13 @@ check_config() {
 				fi
 			fi
 
-			value="$(read_config "DISPLAY_ALBUM")"
-			if [ "$value" != "" ]; then
-				DISPLAY_ALBUM="$value"
-				if [ "$DISPLAY_ALBUM" != true ] && [ "$DISPLAY_ALBUM" != false ]; then
-					DISPLAY_ALBUM=false
-				fi
-			fi
+			#value="$(read_config "DISPLAY_ALBUM")"
+			#if [ "$value" != "" ]; then
+			#	DISPLAY_ALBUM="$value"
+			#	if [ "$DISPLAY_ALBUM" != true ] && [ "$DISPLAY_ALBUM" != false ]; then
+			#		DISPLAY_ALBUM=false
+			#	fi
+			#fi
 
 			value="$(read_config "USE_TAGS")"
 			if [ "$value" != "" ]; then
@@ -1090,6 +1091,7 @@ check_dep ffmpeg
 check_dep ffprobe
 check_dep mplayer
 check_dep pactl
+check_dep perl
 check_dep sox
 check_dep sqlite3
 
@@ -1589,15 +1591,20 @@ draw_banner() {
 }
 
 get_local_phrase() {
+	local line="$1"
+	local orig_line="$line"
+	line="${line//\[/}"
+	line="${line//\]/}"
 	if [ "$3" == true ]; then
-		found="$(sed -n "/^${1//\//\\\/}\[$GTTS_LANGUAGE\]/Ip" <<<"$LANGUAGE" | tail -1)"
+		found="$(sed -n "/^${line//\//\\\/}\[$GTTS_LANGUAGE\]/Ip" <<<"$LANGUAGE" | tail -1)"
 	else
-		found="$(sed -n "/^${1//\//\\\/}\[$GTTS_LANGUAGE\]/I{p;q}" <<<"$LANGUAGE")"
+		found="$(sed -n "/^${line//\//\\\/}\[$GTTS_LANGUAGE\]/I{p;q}" <<<"$LANGUAGE")"
 	fi
+	line="$orig_line"
 	if [ -n "$found" ]; then
 		echo -ne "${found#*\]}"
 	else
-		echo -ne "$1"
+		echo -ne "$line"
 	fi
 }
 
@@ -9140,29 +9147,40 @@ reset_buffer() {
 				offset="$((COLUMNS - 11 - ${#pos} - ${#pad}))"
 			fi
 		fi
+		fixed_line="$(echo -n "$line" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+		if [ -z "$fixed_line" ]; then
+			fixed_line=0
+		fi
 		if [ "$DISPLAY_ALBUM" == true ]; then
-			if [ "${#line}" -gt "$((offset+2))" ]; then
-				line="${line:0:offset+1}…"
+			if [ "${fixed_line}" -gt "$((offset+2))" ]; then
+				#line="${line:0:offset+1}…"
+				line=$(echo -n "$line" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((offset+1))}).*/\$1…/")
 			fi
 		else
 			if [ "${line///}" == "${line}" ]; then
-				if [ "${#line}" -gt "$((offset))" ]; then
-					line="${line:0:offset-1}…"
+				if [ "${fixed_line}" -gt "$offset" ]; then
+					#line="${line:0:offset-1}…"
+					line=$(echo -n "$line" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((offset-1))}).*/\$1…/")
 				fi
 			else
-				if [ "${#line}" -gt "$((offset+1))" ]; then
-					line="${line:0:offset}…"
+				if [ "${fixed_line}" -gt "$((offset+1))" ]; then
+					#line="${line:0:offset}…"
+					line=$(echo -n "$line" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$offset}).*/\$1…/")
 				fi
 			fi
 		fi
 		line_chars=0
+		fixed_line="$(echo -n "$line" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+		if [ -z "$fixed_line" ]; then
+			fixed_line=0
+		fi
 		if [ "$DISPLAY_ALBUM" == true ]; then
-			line_chars="$((${#line}-2))"
+			line_chars="$((fixed_line-2))"
 		else
 			if [ "${line///}" == "${line}" ]; then
-				line_chars="${#line}"
+				line_chars="${fixed_line}"
 			else
-				line_chars="$((${#line}-1))"
+				line_chars="$((fixed_line-1))"
 			fi
 		fi
 		if [ "$hours" != "00" ]; then
@@ -9668,19 +9686,48 @@ get_metadata() {
 		fi
 
 		if [ "$DISPLAY_ALBUM" == true ]; then
-			if [ "${#artist}" -gt "$((album_limit-1))" ]; then
-				artist="${artist:0:album_limit-2}…"
+			fixed_artist="$(echo -n "$artist" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+			if [ -z "$fixed_artist" ]; then
+				fixed_artist=0
 			fi
-			if [ "${#album}" -gt "$((album_limit-1))" ]; then
-				album="${album:0:album_limit-2}…"
+			if [ "${fixed_artist}" -gt "$((album_limit-1))" ]; then
+				artist=$(echo -n "$artist" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((album_limit-2))}).*/\$1…/")
 			fi
-			line="$artist$(printf '%*s' $((album_limit-${#artist})) "")$album$(printf '%*s' $((album_limit-${#album})) "")$song"
+			fixed_album="$(echo -n "$album" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+			if [ -z "$fixed_album" ]; then
+				fixed_album=0
+			fi
+			if [ "${fixed_album}" -gt "$((album_limit-1))" ]; then
+				album=$(echo -n "$album" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((album_limit-2))}).*/\$1…/")
+			fi
+			if [ "$((album_limit-fixed_artist))" -lt "0" ]; then
+				if [ "$((album_limit-fixed_album))" -lt "0" ]; then
+					line="$artist $album $song"
+				else
+					line="$artist $album$(printf '%*s' $((album_limit-fixed_album)) "")$song"
+				fi
+			else
+				if [ "$((album_limit-fixed_album))" -lt "0" ]; then
+					line="$artist$(printf '%*s' $((album_limit-fixed_artist)) "")$album $song"
+				else
+					line="$artist$(printf '%*s' $((album_limit-fixed_artist)) "")$album$(printf '%*s' $((album_limit-fixed_album)) "")$song"
+				fi
+			fi
 		else
-			if [ "${#artist}" -gt "$((artist_limit-1))" ]; then
-				artist="${artist:0:artist_limit-2}…"
+			fixed_artist="$(echo -n "$artist" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+			if [ -z "$fixed_artist" ]; then
+				fixed_artist=0
+			fi
+			if [ "${fixed_artist}" -gt "$((artist_limit-1))" ]; then
+				#artist="${artist:0:artist_limit-2}…"
+				artist=$(echo -n "$artist" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((artist_limit-2))}).*/\$1…/")
 			fi
 			album=""
-			line="$artist$(printf '%*s' $((artist_limit-${#artist})) "")$song"
+			fixed_length="$(echo -n "$artist" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+			if [ -z "$fixed_length" ]; then
+				fixed_length=0
+			fi
+			line="$artist$(printf '%*s' $((artist_limit-fixed_length)) "")$song"
 		fi
 		if [ -z "$artist" ] && [ -z "$album" ] && [ -z "$song" ]; then
 			line="${queue_array[$((pos-1))]}"
@@ -10329,24 +10376,17 @@ get_local_lang() {
 
 toggle_tags() {
 	local initial_screen="$1"
-	if [ "$USE_TAGS" == true ]; then
-		if [ "$DISPLAY_ALBUM" == true ]; then
-			draw_banner "$(get_local_phrase "TAGS")"
-			gtts_speak "display tags"
-			DISPLAY_ALBUM=false
-		else
-			draw_banner "$(get_local_phrase "FILENAME")"
-			gtts_speak "display filename"
-			USE_TAGS=false
-		fi
-	else
-		draw_banner "$(get_local_phrase "ALBUM")"
-		gtts_speak "display album"
-		DISPLAY_ALBUM=true
+	if [ "$USE_TAGS" == false ]; then
+		draw_banner "$(get_local_phrase "TAGS")"
+		gtts_speak "display tags"
 		USE_TAGS=true
+	else
+		draw_banner "$(get_local_phrase "FILENAME")"
+		gtts_speak "display filename"
+		USE_TAGS=false
 	fi
 	_save_setting "USE_TAGS" "$USE_TAGS"
-	_save_setting "DISPLAY_ALBUM" "$DISPLAY_ALBUM"
+	#_save_setting "DISPLAY_ALBUM" "$DISPLAY_ALBUM"
 	echo -e "$CONFIG" >"$ALETHEIA/config"
 	sleep "$BANNER_WAIT_TIME"
 	if [ "$initial_screen" != true ]; then
@@ -12790,8 +12830,13 @@ print_queue() {
 						#((index++))
 						nline=${nline///}
 					fi
-					if [ "${#nline}" -gt "$value" ]; then
-						nline="${nline:0:value-1}…"
+					fixed_line="$(echo -n "$nline" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+					if [ -z "$fixed_line" ]; then
+						fixed_line=0
+					fi
+					if [ "${fixed_line}" -gt "$value" ]; then
+						#nline="${nline:0:value-1}…"
+						nline=$(echo -n "$nline" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((value-1))}).*/\$1…/")
 					fi
 					newline="${nline:0:$value}"
 					_color="$COLOR_CURRENT_SONG_BLACK"
@@ -12814,8 +12859,13 @@ print_queue() {
 						#((index++))
 						nline=${nline///}
 					fi
-					if [ "${#nline}" -gt "$value" ]; then
-						nline="${nline:0:value-1}…"
+					fixed_line="$(echo -n "$nline" | perl -CS -Mutf8 -X -ne 'print s/\X//g')"
+					if [ -z "$fixed_line" ]; then
+						fixed_line=0
+					fi
+					if [ "${fixed_line}" -gt "$value" ]; then
+						#nline="${nline:0:value-1}…"
+						nline=$(echo -n "$nline" | perl -CS -Mutf8 -X -pe "s/^(\X{0,$((value-1))}).*/\$1…/")
 					fi
 					newline="${nline:0:$value}"
 					new_buf="$new_buf${PADDING}$BLUE$INDICATOR$BLUE $display_pad$BLUE$m $WHITE$newline$(tput el)\n"

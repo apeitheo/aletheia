@@ -90,6 +90,7 @@ sudo installpkg /tmp/aletheia-0.9.6-noarch-"$(awk -F'[-}]' '/^BUILD=/ {print $2}
 - ffprobe
 - mplayer
 - pactl
+- perl
 - sox
 - sqlite3
 - vim
